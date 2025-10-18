@@ -1,4 +1,3 @@
-<!-- Index.html -->
 <!doctype html>
 <html>
   <head>
@@ -6,11 +5,10 @@
     <title>Section Attendance Checker</title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <style>
-      body{font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial;max-width:900px;margin:18px auto;padding:12px}
+      body{font-family:system-ui,Segoe UI,Roboto;max-width:900px;margin:18px auto;padding:12px}
       header{display:flex;justify-content:space-between;align-items:center}
-      .card{border:1px solid #e0e0e0;padding:12px;border-radius:8px;margin:8px 0}
+      .card{border:1px solid #e8e8e8;padding:12px;border-radius:8px;margin:8px 0}
       button{padding:8px 12px;border-radius:6px;border:1px solid #bbb;background:#fff;cursor:pointer}
-      button.primary{background:#0b7df0;color:white;border:0}
       table{width:100%;border-collapse:collapse}
       td,th{padding:6px;border-bottom:1px solid #eee}
       .small{font-size:0.9rem;color:#555}
@@ -20,13 +18,10 @@
   <body>
     <header>
       <h2>Attendance — Section Daily Schedule</h2>
-      <div id="auth-area">
-        <div id="g_id_onload"
-             data-client_id="GOOGLE_CLIENT_ID_REPLACE"
-             data-callback="handleCredentialResponse"
-             data-auto_prompt="false"></div>
+      <div id="auth">
+        <div id="g_id_onload" data-client_id="GOOGLE_CLIENT_ID_REPLACE" data-auto_prompt="false"></div>
         <div id="buttonDiv"></div>
-        <div id="user-info" style="display:none"></div>
+        <div id="userInfo" style="display:none"></div>
       </div>
     </header>
     
@@ -37,139 +32,138 @@
     
     <section class="card">
       <h3>My Attendance</h3>
-      <div id="my-att">Sign in to view your attendance.</div>
+      <div id="myAttendance">Sign in to view your attendance.</div>
     </section>
     
     <section class="card">
       <h3>Reports & Downloads (Officers / Professors)</h3>
-      <div id="report-controls" style="display:none">
+      <div id="reportControls" style="display:none">
         <label>Class ID: <input id="r_class" /></label>
         <label>Date (yyyy-mm-dd): <input id="r_date" /></label>
         <label>Student email: <input id="r_person" /></label>
-        <button id="gen-report">Generate CSV</button>
-        <a id="download-link" style="display:none">Download</a>
-        <div id="report-result"></div>
+        <button id="genReport">Generate CSV</button>
+        <a id="downloadLink" style="display:none">Download CSV</a>
+        <div id="reportMsg" class="small"></div>
       </div>
-      <div id="roles-list" class="small"></div>
+      <div id="roles" class="small"></div>
     </section>
-  
+    
     <script>
-      // Replace this with web app URL only if hosting front-end separately on GH Pages
-      const APPS_SCRIPT_BASE = ''; // if blank, we call server via google.script.run (Apps Script hosting)
+      const APPS_SCRIPT_URL = 'APPS_SCRIPT_URL_REPLACE'; // example: https://script.google.com/macros/s/AKfycb.../exec
       const GOOGLE_CLIENT_ID = 'GOOGLE_CLIENT_ID_REPLACE';
+      let idToken = null;
+      let userEmail = null;
+      let userRole = null;
     
-      let currentIdToken = null;
-      let currentEmail = null;
-      let currentRole = null;
-    
-      // Google Identity Services callback
       function handleCredentialResponse(response) {
         if (!response || !response.credential) return;
-        currentIdToken = response.credential;
-        // verify & load user data from server
-        if (APPS_SCRIPT_BASE) {
-          // external hosting: call tokeninfo endpoint yourself then call server endpoints
-          alert('If hosting externally, set APPS_SCRIPT_BASE to your Apps Script API URL and implement fetch calls instead of google.script.run.');
-        } else {
-          google.script.run.withSuccessHandler(onVerified).verifyIdToken(currentIdToken);
-        }
+        idToken = response.credential;
+        // Verify token by calling a lightweight endpoint (getTodaySchedule returns schedule or error)
+        apiPost('api.getTodaySchedule', {id_token: idToken}).then(r => {
+          if (r.ok) {
+            userEmail = r.schedule ? r.schedule.length ? '(signed)' : '(signed)' : '(signed)';
+            document.getElementById('userInfo').style.display = 'block';
+            document.getElementById('userInfo').innerText = 'Signed in';
+            // load data
+            loadTodaySchedule();
+            loadMyAttendance();
+            loadRolesList();
+          } else {
+            alert('Sign-in failed: ' + (r.error || r.message));
+          }
+        }).catch(err => alert('Error contacting server: ' + err));
       }
     
-      function onVerified(email) {
-        currentEmail = email;
-        document.getElementById('user-info').style.display = 'block';
-        document.getElementById('user-info').innerText = 'Signed in: ' + email + '  ';
-        // store a token-like placeholder for server calls (we already have id_token)
-        loadTodaySchedule();
-        loadMyAttendance();
-        loadRolesList();
-        // show report controls if role allows (server will still enforce)
-        google.script.run.withSuccessHandler(showRoleControls).getRole ? google.script.run.withSuccessHandler(showRoleControls).getRole(currentIdToken) : null;
+      function apiPost(action, body) {
+        const payload = Object.assign({}, {action: action}, body || {});
+        return fetch(APPS_SCRIPT_URL, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(payload)
+        }).then(r => r.json());
       }
     
-      function showRoleControls(role) {
-        currentRole = role;
-        if (role === 'officer' || role === 'professor') {
-          document.getElementById('report-controls').style.display = 'block';
-        }
-      }
-    
-      // Render schedule for today
       function loadTodaySchedule() {
-        document.getElementById('schedule').innerText = 'Loading...';
-        google.script.run.withSuccessHandler(renderSchedule).getTodaySchedule(currentIdToken || currentEmail);
+        apiPost('api.getTodaySchedule', {id_token: idToken}).then(res => {
+          if (!res.ok) return alert('Error: ' + res.error);
+          renderSchedule(res.schedule);
+        });
       }
     
       function renderSchedule(list) {
+        const el = document.getElementById('schedule');
         if (!list || list.length === 0) {
-          document.getElementById('schedule').innerText = 'No classes today for your section.';
+          el.innerText = 'No classes today for your section.';
           return;
         }
-        const container = document.createElement('div');
         const now = new Date();
+        el.innerHTML = '';
         list.forEach(item => {
           const card = document.createElement('div');
           card.className = 'card';
-          const h = document.createElement('div');
-          h.innerHTML = `<strong>${item.class_name}</strong> <span class="small">(${item.class_id})</span>`;
+          const title = document.createElement('div');
+          title.innerHTML = `<strong>${item.class_name}</strong> <span class="small">(${item.class_id})</span>`;
           const times = document.createElement('div');
           times.className = 'small';
           times.innerText = `${item.start_time} - ${item.end_time} | Prof: ${item.professor_email}`;
           const btn = document.createElement('button');
-          btn.innerText = 'Check-in';
-          btn.id = 'btn-' + item.class_id;
+          btn.textContent = 'Check-in';
           btn.onclick = () => doCheckin(item.class_id, btn);
-          // compute enable/disable times client-side for UX:
-          const startParts = item.start_time.split(':');
-          const startDt = new Date(now.getFullYear(), now.getMonth(), now.getDate(), parseInt(startParts[0]), parseInt(startParts[1]));
-          const openWin = new Date(startDt.getTime() - 10*60*1000);
-          const absentThreshold = new Date(startDt.getTime() + 10*60*1000);
-          if (now < openWin) {
+          // UX: disable/enable based on local clock (server still enforces)
+          const parts = item.start_time.split(':');
+          const startDt = new Date(now.getFullYear(), now.getMonth(), now.getDate(), parseInt(parts[0]), parseInt(parts[1]));
+          const openStart = new Date(startDt.getTime() - 10*60*1000);
+          const absentAt = new Date(startDt.getTime() + 10*60*1000);
+          if (now < openStart) {
             btn.disabled = true;
-            btn.innerText = 'Opens at ' + openWin.toLocaleTimeString();
-          } else if (now >= absentThreshold) {
+            btn.textContent = 'Opens at ' + openStart.toLocaleTimeString();
+          } else if (now >= absentAt) {
             btn.disabled = true;
-            btn.innerText = 'Absent (disabled)';
-          } else {
-            btn.disabled = false;
+            btn.textContent = 'Absent (disabled)';
           }
-          card.appendChild(h);
+          card.appendChild(title);
           card.appendChild(times);
           card.appendChild(btn);
-          container.appendChild(card);
+          el.appendChild(card);
         });
-        const sc = document.getElementById('schedule');
-        sc.innerHTML = '';
-        sc.appendChild(container);
       }
     
       function doCheckin(class_id, btn) {
         btn.disabled = true;
-        btn.innerText = 'Checking...';
-        google.script.run.withSuccessHandler(res => {
-          btn.innerText = 'Checked: ' + res.status;
-          loadMyAttendance();
-        }).withFailureHandler(err => {
-          btn.disabled = false;
-          alert('Check-in failed: ' + err.message);
-          loadTodaySchedule();
-        }).checkIn(currentIdToken, class_id);
+        btn.textContent = 'Checking...';
+        apiPost('api.checkIn', {id_token: idToken, class_id: class_id})
+          .then(res => {
+            if (res.ok) {
+              btn.textContent = 'Checked: ' + res.status;
+              loadMyAttendance();
+            } else {
+              alert('Check-in failed: ' + res.error);
+              btn.disabled = false;
+              btn.textContent = 'Check-in';
+              loadTodaySchedule();
+            }
+          }).catch(err => {
+            alert('Network error: ' + err);
+          });
       }
     
       function loadMyAttendance() {
-        google.script.run.withSuccessHandler(renderMyAttendance).getMyAttendance(currentIdToken);
+        apiPost('api.getMyAttendance', {id_token: idToken}).then(res => {
+          if (!res.ok) return;
+          renderMyAttendance(res.attendance);
+        });
       }
     
       function renderMyAttendance(list) {
-        const el = document.getElementById('my-att');
+        const el = document.getElementById('myAttendance');
         if (!list || list.length === 0) {
           el.innerText = 'No attendance records yet.';
           return;
         }
         const tbl = document.createElement('table');
-        const h = document.createElement('tr');
-        h.innerHTML = '<th>Date</th><th>Class</th><th>Status</th><th>Check-in</th>';
-        tbl.appendChild(h);
+        const header = document.createElement('tr');
+        header.innerHTML = '<th>Date</th><th>Class</th><th>Status</th><th>Check-in</th>';
+        tbl.appendChild(header);
         list.forEach(r => {
           const tr = document.createElement('tr');
           tr.innerHTML = `<td>${r.date}</td><td>${r.class_id}</td><td>${r.status}</td><td>${r.checkin_time}</td>`;
@@ -180,47 +174,56 @@
       }
     
       function loadRolesList() {
-        google.script.run.withSuccessHandler(list => {
-          const el = document.getElementById('roles-list');
-          const profs = list.filter(x => x.role && x.role.toLowerCase()==='professor').map(x => x.email);
-          const offs = list.filter(x => x.role && x.role.toLowerCase()==='officer').map(x => x.email);
-          el.innerHTML = '<strong>Professors:</strong> ' + profs.join(', ') + '<br/><strong>Officers:</strong> ' + offs.join(', ');
-        }).getRolesList(currentIdToken);
+        apiPost('api.getRolesList', {id_token: idToken}).then(res => {
+          if (!res.ok) return;
+          const roles = res.roles || [];
+          const profs = roles.filter(x => x.role && x.role.toLowerCase() === 'professor').map(x => x.email);
+          const offs = roles.filter(x => x.role && x.role.toLowerCase() === 'officer').map(x => x.email);
+          document.getElementById('roles').innerHTML = '<strong>Professors:</strong> ' + profs.join(', ') + '<br/><strong>Officers:</strong> ' + offs.join(', ');
+          // show report controls if current user is officer/professor
+          const meRow = roles.find(x => x.email && x.email.toLowerCase() === (idToken ? '' : ''));
+          // Instead of relying on above, ask server for role by reusing token (server enforced)
+          apiPost('api.getRolesList', {id_token: idToken}).then(r2 => {
+            // find my role
+            const myRole = (r2.roles || []).find(x => x.email && x.email.toLowerCase() === (r2.roles && r2.roles.length ? (r2.roles.find(i=>true).email) : ''));
+            // simpler: request generateReport later and server will enforce
+          });
+          // show controls — server will still block unauthorized requests
+          document.getElementById('reportControls').style.display = 'block';
+        });
       }
     
-      document.getElementById('gen-report').onclick = function(){
+      document.getElementById('genReport').onclick = function(){
         const params = {
           class_id: document.getElementById('r_class').value,
           date: document.getElementById('r_date').value,
           person_email: document.getElementById('r_person').value
         };
-        google.script.run.withSuccessHandler(csv => {
+        apiPost('api.generateReport', {id_token: idToken, params: params}).then(res => {
+          if (!res.ok) {
+            alert('Report error: ' + res.error);
+            return;
+          }
+          const csv = res.csv || '';
           if (!csv) {
-            document.getElementById('report-result').innerText = 'No data for the selected filters.';
+            document.getElementById('reportMsg').innerText = 'No data for selected filters.';
             return;
           }
           const blob = new Blob([csv], {type:'text/csv'});
           const url = URL.createObjectURL(blob);
-          const link = document.getElementById('download-link');
+          const link = document.getElementById('downloadLink');
           link.href = url;
           link.download = 'attendance_report.csv';
           link.style.display = 'inline';
-          link.innerText = 'Download CSV';
-          document.getElementById('report-result').innerText = 'Report ready.';
-        }).withFailureHandler(err => alert('Error: ' + err.message)).generateAttendanceReport(currentIdToken, params);
+          link.textContent = 'Download CSV';
+          document.getElementById('reportMsg').innerText = 'Report ready.';
+        });
       };
     
-      // render Google sign-in button after library loads
-      window.onload = function(){
-        google.accounts.id.initialize({
-          client_id: GOOGLE_CLIENT_ID,
-          callback: handleCredentialResponse
-        });
-        google.accounts.id.renderButton(
-          document.getElementById('buttonDiv'),
-          { theme: 'outline', size: 'medium' }  // customization
-        );
-        google.accounts.id.prompt(); // optionally show one-tap
+      // Google Identity button render
+      window.onload = function() {
+        google.accounts.id.initialize({client_id: GOOGLE_CLIENT_ID, callback: handleCredentialResponse});
+        google.accounts.id.renderButton(document.getElementById('buttonDiv'), {theme:'outline', size:'medium'});
       };
     </script>
   </body>
