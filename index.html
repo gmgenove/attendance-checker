@@ -78,9 +78,26 @@
         const payload = Object.assign({}, {action: action}, body || {});
         return fetch(APPS_SCRIPT_URL, {
           method: 'POST',
-          headers: {'Content-Type': 'application/json'},
+          mode: 'cors',                // be explicit
+          credentials: 'omit',         // do NOT include credentials unless server supports them
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
           body: JSON.stringify(payload)
-        }).then(r => r.json());
+        }).then(async r => {
+          // Helpful debug: inspect headers if not ok
+          if (!r.ok) {
+            const text = await r.text();
+            console.error('Server returned non-OK status', r.status, text);
+            throw new Error('Network response was not OK: ' + r.status);
+          }
+          return r.json();
+        })
+        .catch(err => {
+          console.error('Fetch error:', err);
+          throw err;
+        });
       }
     
       function loadTodaySchedule() {
