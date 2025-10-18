@@ -1,0 +1,272 @@
+<!--
+Attendance Checker — Single Page App + Google Sheets backend
+Files included in this single document:
+1) index.html  (front-end single-page application)
+2) apps_script.gs (Google Apps Script backend to deploy as Web App)
+3) README / Setup & Deployment instructions
+
+HOW TO USE: follow README steps below to create Google Sheet, paste Apps Script, deploy web app, then host index.html on GitHub Pages or any static hosting.
+
+SECURITY NOTE: This sample uses a roster + passcodes and a simple role field to limit actions. It is NOT hardened for high-security environments. For production, use Google Sign-In / OAuth and restrict the GAS web app to your organization or use published APIs with proper auth.
+-->
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Section Attendance Checker</title>
+    <style>
+      :root{font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial;margin:0}
+      body{margin:0;padding:18px;background:#f4f6fb;color:#111}
+      .container{max-width:980px;margin:0 auto}
+      header{display:flex;align-items:center;gap:12px}
+      h1{margin:0;font-size:20px}
+      .card{background:#fff;border-radius:12px;padding:14px;margin-top:12px;box-shadow:0 6px 18px rgba(20,30,80,0.06)}
+      .row{display:flex;gap:12px;flex-wrap:wrap}
+      .schedule-list{display:grid;grid-template-columns:1fr 160px 110px;gap:8px;align-items:center}
+      .btn{cursor:pointer;padding:8px 12px;border-radius:8px;border:0}
+      .btn-primary{background:#0b66ff;color:#fff}
+      .btn-ghost{background:transparent;border:1px solid #ddd}
+      .muted{color:#666;font-size:13px}
+      input,select{padding:8px;border-radius:8px;border:1px solid #ddd}
+      table{width:100%;border-collapse:collapse}
+      td,th{padding:8px;border-bottom:1px solid #eee;text-align:left}
+      .flex{display:flex;gap:8px;align-items:center}
+      footer{margin-top:18px;font-size:13px;color:#666}
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>Section Attendance Checker</h1>
+        <div class="muted">Single-page app • GitHub Pages friendly • Uses Google Sheets</div>
+      </header>
+  
+      <div class="card" id="authCard">
+        <div style="display:flex;gap:8px;align-items:center">
+          <label><strong>Login as</strong></label>
+          <select id="roleSelect">
+            <option value="student">Student</option>
+            <option value="officer">Officer</option>
+            <option value="professor">Professor</option>
+            <option value="admin">Admin</option>
+          </select>
+          <input id="idInput" placeholder="Student ID / Prof ID / Officer ID" />
+          <input id="passInput" placeholder="Passcode" type="password" />
+          <button class="btn btn-primary" id="loginBtn">Login</button>
+        </div>
+        <div class="muted" style="margin-top:8px">Students must use the given student ID and passcode. Officers and Professors need their IDs and passcodes.</div>
+      </div>
+  
+      <div class="card" id="mainCard" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <strong id="welcome"></strong>
+            <div class="muted" id="roleInfo"></div>
+          </div>
+          <div class="flex">
+            <button class="btn btn-ghost" id="viewMyAttendanceBtn">View My Attendance</button>
+            <button class="btn" id="logoutBtn">Logout</button>
+          </div>
+        </div>
+  
+        <hr />
+  
+        <div>
+          <h3>Today's Schedule</h3>
+          <div id="todaySchedule" class="card"></div>
+        </div>
+  
+        <hr />
+  
+        <div>
+          <h3>Reports & Downloads</h3>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <label>Date</label>
+            <input type="date" id="reportDate" />
+            <select id="reportClass">
+              <option value="all">All classes</option>
+            </select>
+            <select id="reportType">
+              <option value="class">By Class</option>
+              <option value="person">By Person</option>
+              <option value="week">By Week</option>
+              <option value="semester">Whole Semester</option>
+            </select>
+            <button class="btn btn-primary" id="generateReportBtn">Generate / Download</button>
+          </div>
+        </div>
+  
+        <hr />
+  
+        <div>
+          <h3>Officers & Professors</h3>
+          <div id="peopleList" style="max-height:220px;overflow:auto"></div>
+        </div>
+  
+      </div>
+  
+      <footer>
+        <div>Instructions: Deploy the apps_script.gs to Google Apps Script (as a Web App), create the Google Sheet per README, then host this page on GitHub Pages. See README in this file (below the front-end) for full steps and the backend code.
+        </div>
+      </footer>
+    </div>
+  
+    <script>
+    // ---------- CONFIG: replace with your deployed Apps Script web app URL ----------
+    const GAS_BASE = 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec';
+    // -----------------------------------------------------------------------------
+  
+    // client-side state
+    let CURRENT_USER = null;
+  
+    async function api(path, data = null) {
+      const url = new URL(GAS_BASE);
+      url.searchParams.set('action', path);
+      if (data) {
+        return fetch(url.toString(), {
+          method: 'POST',
+          body: JSON.stringify(data),
+          headers: {'Content-Type':'application/json'}
+        }).then(r => r.json());
+      } else {
+        return fetch(url.toString()).then(r => r.json());
+      }
+    }
+  
+    // UI helpers
+    const el = id => document.getElementById(id);
+  
+    document.getElementById('loginBtn').addEventListener('click', async ()=>{
+      const role = el('roleSelect').value;
+      const id = el('idInput').value.trim();
+      const pass = el('passInput').value.trim();
+      if (!id || !pass) return alert('Enter ID and passcode');
+      const resp = await api('login', {role,id,pass});
+      if (resp && resp.ok) {
+        CURRENT_USER = resp.user;
+        showMain();
+      } else {
+        alert(resp?.error || 'Login failed');
+      }
+    });
+  
+    document.getElementById('logoutBtn').addEventListener('click', ()=>{CURRENT_USER=null;el('mainCard').style.display='none';el('authCard').style.display='block';});
+  
+    function showMain(){
+      el('authCard').style.display='none';
+      el('mainCard').style.display='block';
+      el('welcome').textContent = `${CURRENT_USER.name} (${CURRENT_USER.role})`;
+      el('roleInfo').textContent = `ID: ${CURRENT_USER.id}`;
+      loadTodaySchedule();
+      loadPeopleList();
+      populateClassSelect();
+    }
+  
+    async function loadTodaySchedule(){
+      const resp = await api('getScheduleForDay'); // server will return classes for today for the section
+      if (!resp || !resp.ok) return el('todaySchedule').textContent = 'Failed to load schedule';
+      const list = resp.data; // array of {classId, subject, startTime, endTime, dayOfWeek}
+      const container = el('todaySchedule');
+      container.innerHTML='';
+      if (!list.length) return container.textContent='No classes today';
+  
+      const now = new Date();
+      list.forEach(cls => {
+        const row = document.createElement('div');
+        row.className='row card';
+        row.style.justifyContent='space-between';
+        row.innerHTML = `
+          <div>
+            <div><strong>${cls.subject}</strong> <span class="muted">(${cls.classId})</span></div>
+            <div class="muted">${cls.startTime} — ${cls.endTime}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+            <div id="status-${cls.classId}" class="muted">Status</div>
+            <button class="btn btn-primary" id="btn-${cls.classId}">Check In</button>
+          </div>
+        `;
+        container.appendChild(row);
+  
+        const btn = row.querySelector('button');
+        const status = row.querySelector(`#status-${cls.classId}`);
+  
+        // compute activation windows
+        const [sh,sm] = cls.startTime.split(':').map(Number);
+        const [eh,em] = cls.endTime.split(':').map(Number);
+        const startDate = new Date(); startDate.setHours(sh,sm,0,0);
+        const openWindow = new Date(startDate.getTime() - 10*60000); // 10 mins before
+        const lateThreshold = new Date(startDate.getTime() + 5*60000); // 5 mins after start -> still on time
+        const absentThreshold = new Date(startDate.getTime() + 10*60000); // 10 mins after -> absent
+  
+        function updateButton(){
+          const now = new Date();
+          if (now < openWindow) {
+            btn.disabled = true; status.textContent='Opens 10 minutes before class';
+          } else if (now >= openWindow && now < absentThreshold) {
+            btn.disabled = false;
+            if (now <= lateThreshold) status.textContent='On time window'; else status.textContent='Late (will still record)';
+          } else {
+            btn.disabled = true; status.textContent='Absent (check-in closed)';
+          }
+        }
+  
+        updateButton();
+        setInterval(updateButton, 1000*20); // update every 20s
+  
+        btn.addEventListener('click', async ()=>{
+          if (!CURRENT_USER) return alert('Login required');
+          if (CURRENT_USER.role !== 'student' && CURRENT_USER.role !== 'officer' && CURRENT_USER.role !== 'admin') return alert('Only students/officers/admin can check in here');
+          // ensure students can only check themselves in
+          const checkResp = await api('checkin', {classId:cls.classId, userId:CURRENT_USER.id});
+          if (checkResp?.ok) alert('Check-in recorded: ' + checkResp.status);
+          else alert(checkResp?.error || 'Check-in failed');
+        });
+      });
+    }
+  
+    async function loadPeopleList(){
+      const resp = await api('listPeople');
+      if (!resp || !resp.ok) {el('peopleList').textContent='Failed to load';return}
+      const ppl = resp.data;
+      el('peopleList').innerHTML = '<table><thead><tr><th>Name</th><th>Role</th><th>ID (Discord)</th></tr></thead><tbody>' + ppl.map(p=>`<tr><td>${p.name}</td><td>${p.role}</td><td>${p.id}${p.discord? ' ('+p.discord+')':''}</td></tr>`).join('') + '</tbody></table>';
+    }
+  
+    async function populateClassSelect(){
+      const resp = await api('listClasses');
+      if (!resp || !resp.ok) return;
+      const sel = el('reportClass');
+      sel.innerHTML = '<option value="all">All classes</option>' + resp.data.map(c=>`<option value="${c.classId}">${c.subject} (${c.classId})</option>`).join('');
+    }
+  
+    document.getElementById('generateReportBtn').addEventListener('click', async ()=>{
+      if (!CURRENT_USER) return alert('Login first');
+      const date = el('reportDate').value;
+      const classId = el('reportClass').value;
+      const type = el('reportType').value;
+      const resp = await api('downloadReport', {date,classId,type,userId:CURRENT_USER.id});
+      if (resp && resp.ok && resp.csv) {
+        // download CSV
+        const blob = new Blob([resp.csv], {type:'text/csv'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href=url; a.download='attendance_report.csv'; a.click(); URL.revokeObjectURL(url);
+      } else alert(resp?.error || 'Failed to generate report');
+    });
+  
+    document.getElementById('viewMyAttendanceBtn').addEventListener('click', async ()=>{
+      if (!CURRENT_USER) return alert('login');
+      const resp = await api('getMyAttendance',{userId:CURRENT_USER.id});
+      if (!resp || !resp.ok) return alert('Failed');
+      const rows = resp.data;
+      const w = window.open('','_blank');
+      w.document.write('<h3>My Attendance</h3>');
+      w.document.write('<table border="1" cellpadding="6"><tr><th>Date</th><th>Class</th><th>Status</th><th>Time</th></tr>' + rows.map(r=>`<tr><td>${r.date}</td><td>${r.classId}</td><td>${r.status}</td><td>${r.time}</td></tr>`).join('') + '</table>');
+    });
+  
+    // initial: try to load public info (classes/people) even without login
+    (async ()=>{ try { await populateClassSelect(); } catch(e){} })();
+  
+    </script>
+  </body>
+</html>
