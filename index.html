@@ -1,170 +1,227 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Attendance Checker</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-50 text-gray-900 min-h-screen flex flex-col items-center p-6">
-  <div class="w-full max-w-4xl bg-white shadow-lg rounded-2xl p-8 mt-6">
-    <h1 class="text-3xl font-bold text-center mb-6 text-blue-700">Block Section Attendance Checker</h1>
-
-    <!-- Login Section -->
-    <div id="loginSection" class="space-y-4">
-      <h2 class="text-xl font-semibold">Login</h2>
-      <input id="userId" type="text" placeholder="Enter Student/Professor/Officer ID" class="w-full p-2 border rounded-lg" />
-      <button onclick="login()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg w-full">Login</button>
-    </div>
-
-    <!-- Schedule Section -->
-    <div id="scheduleSection" class="hidden">
-      <div class="flex justify-between items-center mb-4">
-        <h2 id="welcomeText" class="text-xl font-semibold"></h2>
-        <button onclick="logout()" class="text-sm text-red-600 hover:underline">Logout</button>
+<!-- Index.html -->
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Section Attendance Checker</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <style>
+      body{font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial;max-width:900px;margin:18px auto;padding:12px}
+      header{display:flex;justify-content:space-between;align-items:center}
+      .card{border:1px solid #e0e0e0;padding:12px;border-radius:8px;margin:8px 0}
+      button{padding:8px 12px;border-radius:6px;border:1px solid #bbb;background:#fff;cursor:pointer}
+      button.primary{background:#0b7df0;color:white;border:0}
+      table{width:100%;border-collapse:collapse}
+      td,th{padding:6px;border-bottom:1px solid #eee}
+      .small{font-size:0.9rem;color:#555}
+    </style>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+  </head>
+  <body>
+    <header>
+      <h2>Attendance — Section Daily Schedule</h2>
+      <div id="auth-area">
+        <div id="g_id_onload"
+             data-client_id="GOOGLE_CLIENT_ID_REPLACE"
+             data-callback="handleCredentialResponse"
+             data-auto_prompt="false"></div>
+        <div id="buttonDiv"></div>
+        <div id="user-info" style="display:none"></div>
       </div>
-      <h3 class="text-lg font-semibold mb-2 text-blue-600">Today's Classes</h3>
-      <div id="scheduleList" class="space-y-4"></div>
-    </div>
-
-    <!-- Reports Section (Professors & Officers) -->
-    <div id="reportSection" class="hidden mt-8">
-      <h3 class="text-lg font-semibold mb-2 text-green-600">Generate Attendance Reports</h3>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label class="font-semibold">Filter Type:</label>
-          <select id="reportType" class="w-full p-2 border rounded-lg">
-            <option value="class">By Class</option>
-            <option value="date">By Date</option>
-            <option value="person">By Person</option>
-            <option value="week">By Week</option>
-            <option value="semester">Whole Semester</option>
-          </select>
-        </div>
-        <div>
-          <label class="font-semibold">Value:</label>
-          <input id="reportValue" type="text" placeholder="Enter Class Name / Date / ID / etc." class="w-full p-2 border rounded-lg" />
-        </div>
+    </header>
+    
+    <section class="card">
+      <h3>Today's classes</h3>
+      <div id="schedule">Loading...</div>
+    </section>
+    
+    <section class="card">
+      <h3>My Attendance</h3>
+      <div id="my-att">Sign in to view your attendance.</div>
+    </section>
+    
+    <section class="card">
+      <h3>Reports & Downloads (Officers / Professors)</h3>
+      <div id="report-controls" style="display:none">
+        <label>Class ID: <input id="r_class" /></label>
+        <label>Date (yyyy-mm-dd): <input id="r_date" /></label>
+        <label>Student email: <input id="r_person" /></label>
+        <button id="gen-report">Generate CSV</button>
+        <a id="download-link" style="display:none">Download</a>
+        <div id="report-result"></div>
       </div>
-      <button onclick="generateReport()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg mt-4 w-full">Generate Report</button>
-      <div id="reportOutput" class="mt-4"></div>
-    </div>
-  </div>
-
-  <script>
-    const scriptURL = "YOUR_APPS_SCRIPT_WEB_APP_URL"; // Replace this with your deployed Google Apps Script URL
-    let currentUser = null;
-
-    async function login() {
-      const userId = document.getElementById('userId').value.trim();
-      if (!userId) return alert("Please enter your ID.");
-
-      const response = await fetch(`${scriptURL}?action=login&id=${encodeURIComponent(userId)}`);
-      const data = await response.json();
-
-      if (data.success) {
-        currentUser = data.user;
-        document.getElementById('loginSection').classList.add('hidden');
-        document.getElementById('scheduleSection').classList.remove('hidden');
-        document.getElementById('welcomeText').innerText = `Welcome, ${currentUser.name} (${currentUser.role})`;
-        loadSchedule();
-        if (['professor', 'officer'].includes(currentUser.role.toLowerCase())) {
-          document.getElementById('reportSection').classList.remove('hidden');
+      <div id="roles-list" class="small"></div>
+    </section>
+  
+    <script>
+      // Replace this with web app URL only if hosting front-end separately on GH Pages
+      const APPS_SCRIPT_BASE = ''; // if blank, we call server via google.script.run (Apps Script hosting)
+      const GOOGLE_CLIENT_ID = 'GOOGLE_CLIENT_ID_REPLACE';
+    
+      let currentIdToken = null;
+      let currentEmail = null;
+      let currentRole = null;
+    
+      // Google Identity Services callback
+      function handleCredentialResponse(response) {
+        if (!response || !response.credential) return;
+        currentIdToken = response.credential;
+        // verify & load user data from server
+        if (APPS_SCRIPT_BASE) {
+          // external hosting: call tokeninfo endpoint yourself then call server endpoints
+          alert('If hosting externally, set APPS_SCRIPT_BASE to your Apps Script API URL and implement fetch calls instead of google.script.run.');
+        } else {
+          google.script.run.withSuccessHandler(onVerified).verifyIdToken(currentIdToken);
         }
-      } else {
-        alert("Login failed. Please check your ID.");
       }
-    }
-
-    function logout() {
-      currentUser = null;
-      document.getElementById('loginSection').classList.remove('hidden');
-      document.getElementById('scheduleSection').classList.add('hidden');
-      document.getElementById('reportSection').classList.add('hidden');
-    }
-
-    async function loadSchedule() {
-      const today = new Date().toLocaleDateString('en-PH', { weekday: 'long' });
-      const response = await fetch(`${scriptURL}?action=getSchedule&day=${encodeURIComponent(today)}`);
-      const data = await response.json();
-
-      const container = document.getElementById('scheduleList');
-      container.innerHTML = "";
-
-      if (data.length === 0) {
-        container.innerHTML = "<p>No classes today.</p>";
-        return;
+    
+      function onVerified(email) {
+        currentEmail = email;
+        document.getElementById('user-info').style.display = 'block';
+        document.getElementById('user-info').innerText = 'Signed in: ' + email + '  ';
+        // store a token-like placeholder for server calls (we already have id_token)
+        loadTodaySchedule();
+        loadMyAttendance();
+        loadRolesList();
+        // show report controls if role allows (server will still enforce)
+        google.script.run.withSuccessHandler(showRoleControls).getRole ? google.script.run.withSuccessHandler(showRoleControls).getRole(currentIdToken) : null;
       }
-
-      data.forEach(cls => {
-        const classCard = document.createElement('div');
-        classCard.className = "border p-4 rounded-lg shadow-sm";
-
+    
+      function showRoleControls(role) {
+        currentRole = role;
+        if (role === 'officer' || role === 'professor') {
+          document.getElementById('report-controls').style.display = 'block';
+        }
+      }
+    
+      // Render schedule for today
+      function loadTodaySchedule() {
+        document.getElementById('schedule').innerText = 'Loading...';
+        google.script.run.withSuccessHandler(renderSchedule).getTodaySchedule(currentIdToken || currentEmail);
+      }
+    
+      function renderSchedule(list) {
+        if (!list || list.length === 0) {
+          document.getElementById('schedule').innerText = 'No classes today for your section.';
+          return;
+        }
+        const container = document.createElement('div');
         const now = new Date();
-        const startTime = new Date();
-        const [h, m] = cls.start.split(':');
-        startTime.setHours(h, m, 0, 0);
-        const endTime = new Date(startTime.getTime() + cls.duration * 60000);
-
-        const checkinOpen = new Date(startTime.getTime() - 10 * 60000);
-        const graceEnd = new Date(startTime.getTime() + 5 * 60000);
-        const absentTime = new Date(startTime.getTime() + 10 * 60000);
-
-        let buttonState = "";
-        let buttonText = "Check In";
-        let disabled = false;
-
-        if (now < checkinOpen) {
-          buttonText = "Not Yet Available";
-          disabled = true;
-        } else if (now > absentTime) {
-          buttonText = "Absent";
-          disabled = true;
-        } else if (now > startTime && now <= graceEnd) {
-          buttonText = "Check In (Late)";
-        }
-
-        classCard.innerHTML = `
-          <h4 class="font-semibold text-lg">${cls.name}</h4>
-          <p>${cls.time}</p>
-          <button class="mt-2 bg-blue-600 text-white px-4 py-2 rounded-lg ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'}"
-            ${disabled ? 'disabled' : ''}
-            onclick="checkIn('${cls.name}', '${cls.time}')">
-            ${buttonText}
-          </button>
-        `;
-        container.appendChild(classCard);
-      });
-    }
-
-    async function checkIn(className, time) {
-      if (!currentUser) return alert("You must be logged in.");
-
-      const response = await fetch(`${scriptURL}?action=checkIn&id=${currentUser.id}&class=${encodeURIComponent(className)}&time=${encodeURIComponent(time)}`);
-      const data = await response.json();
-      alert(data.message);
-      loadSchedule();
-    }
-
-    async function generateReport() {
-      const type = document.getElementById('reportType').value;
-      const value = document.getElementById('reportValue').value.trim();
-
-      const response = await fetch(`${scriptURL}?action=generateReport&type=${type}&value=${encodeURIComponent(value)}`);
-      const data = await response.json();
-
-      const output = document.getElementById('reportOutput');
-      if (data.length === 0) {
-        output.innerHTML = "<p>No records found.</p>";
-      } else {
-        let html = `<table class="w-full border mt-2 text-sm"><tr class="bg-gray-200"><th>Student</th><th>Class</th><th>Date</th><th>Status</th></tr>`;
-        data.forEach(row => {
-          html += `<tr><td>${row.student}</td><td>${row.class}</td><td>${row.date}</td><td>${row.status}</td></tr>`;
+        list.forEach(item => {
+          const card = document.createElement('div');
+          card.className = 'card';
+          const h = document.createElement('div');
+          h.innerHTML = `<strong>${item.class_name}</strong> <span class="small">(${item.class_id})</span>`;
+          const times = document.createElement('div');
+          times.className = 'small';
+          times.innerText = `${item.start_time} - ${item.end_time} | Prof: ${item.professor_email}`;
+          const btn = document.createElement('button');
+          btn.innerText = 'Check-in';
+          btn.id = 'btn-' + item.class_id;
+          btn.onclick = () => doCheckin(item.class_id, btn);
+          // compute enable/disable times client-side for UX:
+          const startParts = item.start_time.split(':');
+          const startDt = new Date(now.getFullYear(), now.getMonth(), now.getDate(), parseInt(startParts[0]), parseInt(startParts[1]));
+          const openWin = new Date(startDt.getTime() - 10*60*1000);
+          const absentThreshold = new Date(startDt.getTime() + 10*60*1000);
+          if (now < openWin) {
+            btn.disabled = true;
+            btn.innerText = 'Opens at ' + openWin.toLocaleTimeString();
+          } else if (now >= absentThreshold) {
+            btn.disabled = true;
+            btn.innerText = 'Absent (disabled)';
+          } else {
+            btn.disabled = false;
+          }
+          card.appendChild(h);
+          card.appendChild(times);
+          card.appendChild(btn);
+          container.appendChild(card);
         });
-        html += "</table>";
-        output.innerHTML = html;
+        const sc = document.getElementById('schedule');
+        sc.innerHTML = '';
+        sc.appendChild(container);
       }
-    }
-  </script>
-</body>
+    
+      function doCheckin(class_id, btn) {
+        btn.disabled = true;
+        btn.innerText = 'Checking...';
+        google.script.run.withSuccessHandler(res => {
+          btn.innerText = 'Checked: ' + res.status;
+          loadMyAttendance();
+        }).withFailureHandler(err => {
+          btn.disabled = false;
+          alert('Check-in failed: ' + err.message);
+          loadTodaySchedule();
+        }).checkIn(currentIdToken, class_id);
+      }
+    
+      function loadMyAttendance() {
+        google.script.run.withSuccessHandler(renderMyAttendance).getMyAttendance(currentIdToken);
+      }
+    
+      function renderMyAttendance(list) {
+        const el = document.getElementById('my-att');
+        if (!list || list.length === 0) {
+          el.innerText = 'No attendance records yet.';
+          return;
+        }
+        const tbl = document.createElement('table');
+        const h = document.createElement('tr');
+        h.innerHTML = '<th>Date</th><th>Class</th><th>Status</th><th>Check-in</th>';
+        tbl.appendChild(h);
+        list.forEach(r => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td>${r.date}</td><td>${r.class_id}</td><td>${r.status}</td><td>${r.checkin_time}</td>`;
+          tbl.appendChild(tr);
+        });
+        el.innerHTML = '';
+        el.appendChild(tbl);
+      }
+    
+      function loadRolesList() {
+        google.script.run.withSuccessHandler(list => {
+          const el = document.getElementById('roles-list');
+          const profs = list.filter(x => x.role && x.role.toLowerCase()==='professor').map(x => x.email);
+          const offs = list.filter(x => x.role && x.role.toLowerCase()==='officer').map(x => x.email);
+          el.innerHTML = '<strong>Professors:</strong> ' + profs.join(', ') + '<br/><strong>Officers:</strong> ' + offs.join(', ');
+        }).getRolesList(currentIdToken);
+      }
+    
+      document.getElementById('gen-report').onclick = function(){
+        const params = {
+          class_id: document.getElementById('r_class').value,
+          date: document.getElementById('r_date').value,
+          person_email: document.getElementById('r_person').value
+        };
+        google.script.run.withSuccessHandler(csv => {
+          if (!csv) {
+            document.getElementById('report-result').innerText = 'No data for the selected filters.';
+            return;
+          }
+          const blob = new Blob([csv], {type:'text/csv'});
+          const url = URL.createObjectURL(blob);
+          const link = document.getElementById('download-link');
+          link.href = url;
+          link.download = 'attendance_report.csv';
+          link.style.display = 'inline';
+          link.innerText = 'Download CSV';
+          document.getElementById('report-result').innerText = 'Report ready.';
+        }).withFailureHandler(err => alert('Error: ' + err.message)).generateAttendanceReport(currentIdToken, params);
+      };
+    
+      // render Google sign-in button after library loads
+      window.onload = function(){
+        google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: handleCredentialResponse
+        });
+        google.accounts.id.renderButton(
+          document.getElementById('buttonDiv'),
+          { theme: 'outline', size: 'medium' }  // customization
+        );
+        google.accounts.id.prompt(); // optionally show one-tap
+      };
+    </script>
+  </body>
 </html>
