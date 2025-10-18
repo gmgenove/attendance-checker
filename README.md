@@ -27,7 +27,7 @@ CS101A | Programming 1 | 2 | 08:00 | 09:30
 
 
 6) In the Spreadsheet go to Extensions → Apps Script, paste the Apps Script code below and save.
-
+```
     <!-- ===================================================================
                             GOOGLE APPS SCRIPT (BACKEND)
       Paste the following code into the script editor for your Google Sheet (Extensions → Apps Script)
@@ -199,7 +199,7 @@ CS101A | Programming 1 | 2 | 08:00 | 09:30
   
   // end of apps script
   </script>
-
+```
 
 8) Deploy the Apps Script as a Web App: Publish → Deploy as web app (or Deploy -> New deployment)
 - Set "Execute as" to: Me (so the script can read and write the sheet)
