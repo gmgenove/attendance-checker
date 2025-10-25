@@ -101,13 +101,18 @@
     <script>
       // CONFIG: set this to your deployed Apps Script WebApp URL
 
-      const YOUR_DEPLOYED_WEBAPP_ID = 'AKfycbzvhSlA-cqMqMxyEjGhTGkjLIn8xVH1BoxeFRZdaIeU5Ue54oTPeU6Y_1934WRK3Dij';
+      const YOUR_DEPLOYED_WEBAPP_ID = 'AKfycbxD24eWBc53G_ia0UUEyn1kUXhc_KHZczGaEFDKyWWQyfPpvKO_C56cbxUzHgYxK1Q_';
       const API_BASE = 'https://script.google.com/macros/s/' + YOUR_DEPLOYED_WEBAPP_ID + '/exec';
 
       // Utility: call backend
       async function api(action, payload={}) {
         const body = Object.assign({action}, payload);
-        const res = await fetch(API_BASE, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+        const res = await fetch(API_BASE, {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify(body),
+          mode: 'cors'   // 👈 ADD THIS LINE
+        });
         return res.json();
       }
 
