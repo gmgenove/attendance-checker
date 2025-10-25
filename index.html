@@ -100,10 +100,7 @@
     
     <script>
       // CONFIG: set this to your deployed Apps Script WebApp URL
-
-      const YOUR_DEPLOYED_WEBAPP_ID = 'AKfycbyw8dkqwNpmy3OraiJVgWg9fSEFiAyqvLBfwRsN-4CnDTisrTK0ZyDtjovSAXFTRWkO';
-      const CORS_API = 'https://cors-anywhere.herokuapp.com/';
-      const API_BASE = CORS_API + 'https://script.google.com/macros/s/' + YOUR_DEPLOYED_WEBAPP_ID + '/exec';
+      const API_BASE = 'https://attendance-proxy.onrender.com/api';
 
       // Utility: call backend
       async function api(action, payload={}) {
