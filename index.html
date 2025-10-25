@@ -1,102 +1,107 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Attendance Checker</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-    <meta http-equiv="Pragma" content="no-cache" />
-    <meta http-equiv="Expires" content="0" />
-    <meta name="referrer" content="no-referrer" />
     <style>
-      body { font-family: Arial; padding: 20px; max-width: 500px; margin: auto; }
-      input, button { padding: 10px; margin: 5px; width: 100%; }
-      table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-      th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
-      th { background-color: #f0f0f0; }
+      body { font-family: Arial, sans-serif; margin: 0; background: #f9f9fb; }
+      header { background: #2563eb; color: #fff; padding: 1rem; text-align: center; }
+      .container { max-width: 800px; margin: 2rem auto; background: #fff; padding: 2rem; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+      .hidden { display: none; }
+      table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+      th, td { padding: 0.75rem; border-bottom: 1px solid #ddd; text-align: center; }
+      button { background: #2563eb; color: white; padding: 0.5rem 1rem; border: none; border-radius: 6px; cursor: pointer; }
+      button:disabled { background: #ccc; cursor: not-allowed; }
+      .logout { background: #ef4444; float: right; }
     </style>
   </head>
   <body>
-  
-    <div id="login-section">
-      <h2>Student Login</h2>
-      <input id="student_id" placeholder="Enter your Student ID">
-      <button onclick="login()">Login</button>
+    <header>
+      <h2>Attendance Checker</h2>
+    </header>
+    <div class="container">
+      <div id="login">
+        <h3>Login</h3>
+        <input type="text" id="student_id" placeholder="Student ID" /><br><br>
+        <input type="password" id="password" placeholder="Password" /><br><br>
+        <button onclick="signin()">Sign In</button>
+        <p id="loginError" style="color:red;"></p>
+      </div>
+      <div id="dashboard" class="hidden">
+        <h3>Welcome, <span id="userName"></span></h3>
+        <button class="logout" onclick="logout()">Logout</button>
+        <p>Today’s Classes:</p>
+        <table id="scheduleTable">
+          <thead><tr><th>Class</th><th>Time</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div id="reports" class="hidden">
+          <h4>Reports</h4>
+          <button onclick="generateReport('class')">By Class</button>
+          <button onclick="generateReport('date')">By Date</button>
+          <button onclick="generateReport('student')">By Student</button>
+          <button onclick="generateReport('week')">By Week</button>
+          <button onclick="generateReport('semester')">Full Semester</button>
+        </div>
+      </div>
     </div>
-  
-    <div id="app" style="display:none;">
-      <h3>Welcome, <span id="user-name"></span></h3>
-      <button onclick="logout()">Logout</button>
-      <hr>
-      <h4>Today’s Schedule</h4>
-      <div id="schedule"></div>
-    </div>
-  
     <script>
-    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxOUNrkFLY0oTIYtucapUS3FKNL7FB2OChPtpeZW5l7uWnD5LBNKhcFJRBGl-H8IU4W/exec"; // <-- replace this!
+      const res = await fetch(`${API_BASE}?action=signin&student_id=${id}&password=${pw}`);
+      const data = await res.json();
+      if (data.success) {
+        user = data.user;
+        document.getElementById('login').classList.add('hidden');
+        document.getElementById('dashboard').classList.remove('hidden');
+        document.getElementById('userName').textContent = user.name;
+        if (user.role !== 'student') document.getElementById('reports').classList.remove('hidden');
+        loadSchedule();
+      } else {
+        document.getElementById('loginError').textContent = 'Invalid credentials';
+      }
+
+      function logout() {
+        user = null;
+        document.getElementById('dashboard').classList.add('hidden');
+        document.getElementById('login').classList.remove('hidden');
+      }
+
+      async function loadSchedule() {
+        const res = await fetch(`${API_BASE}?action=today_schedule&student_id=${user.student_id}`);
+        const data = await res.json();
+        const tbody = document.querySelector('#scheduleTable tbody');
+        tbody.innerHTML = '';
+        data.classes.forEach(cls => {
+          const tr = document.createElement('tr');
+          const now = new Date();
+          const start = new Date(`${now.toDateString()} ${cls.start_time}`);
+          const diff = (start - now) / 60000; // minutes
+          let status = 'Upcoming';
+          let disabled = false;
+          if (diff <= 10 && diff >= -10) status = 'Open';
+          else if (diff < -10) { status = 'Closed'; disabled = true; }
     
-    let currentUser = localStorage.getItem("student_id") || null;
-    
-    if (currentUser) {
-      document.getElementById("login-section").style.display = "none";
-      document.getElementById("app").style.display = "block";
-      document.getElementById("user-name").textContent = currentUser;
-      loadTodaySchedule();
-    }
-    
-    function login() {
-      const id = document.getElementById('student_id').value.trim();
-      if (!id) return alert("Enter your Student ID");
-      currentUser = id;
-      localStorage.setItem("student_id", id);
-      document.getElementById("login-section").style.display = "none";
-      document.getElementById("app").style.display = "block";
-      document.getElementById("user-name").textContent = id;
-      loadTodaySchedule();
-    }
-    
-    function logout() {
-      localStorage.removeItem("student_id");
-      currentUser = null;
-      location.reload();
-    }
-    
-    async function apiPost(action, body) {
-      const payload = Object.assign({}, { action: action }, body || {});
-      const res = await fetch(APPS_SCRIPT_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify(payload)
-      });
-      return res.json();
-    }
-    
-    async function loadTodaySchedule() {
-      const data = await apiPost('api.getSchedule');
-      if (!data.ok) return alert(data.error);
-    
-      let html = `<table><tr><th>Class Code</th><th>Subject</th><th>Time</th><th>Action</th></tr>`;
-      data.schedule.forEach(row => {
-        const classCode = row[0];
-        const subject = row[1];
-        const time = row[3];
-        html += `<tr>
-          <td>${classCode}</td>
-          <td>${subject}</td>
-          <td>${time}</td>
-          <td><button onclick="checkIn('${classCode}')">Check In</button></td>
-        </tr>`;
-      });
-      html += `</table>`;
-      document.getElementById("schedule").innerHTML = html;
-    }
-    
-    async function checkIn(classCode) {
-      const res = await apiPost('api.checkIn', { student_id: currentUser, class_code: classCode });
-      if (!res.ok) return alert(res.error);
-      alert(`Checked in: ${res.status} (${res.checkin_time})`);
-    }
+          tr.innerHTML = `<td>${cls.class_name}</td><td>${cls.start_time}</td><td>${status}</td><td><button ${disabled?'disabled':''} onclick=checkin('${cls.class_code}')>Check In</button></td>`;
+          tbody.appendChild(tr);
+        });
+      }
+
+      async function checkin(class_code) {
+        const res = await fetch(`${API_BASE}?action=checkin&student_id=${user.student_id}&class_code=${class_code}`);
+        const data = await res.json();
+        alert(data.message);
+        loadSchedule();
+      }
+      
+      async function generateReport(type) {
+        const res = await fetch(`${API_BASE}?action=report&type=${type}`);
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `attendance_${type}.csv`;
+        a.click();
+      }
     </script>
-  
   </body>
 </html>
