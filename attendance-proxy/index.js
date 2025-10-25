@@ -6,7 +6,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const TARGET_URL = "https://script.google.com/macros/s/AKfycbzPQe4xRUFpmtkEv1YDMc1iqPRWjAWXLfN-9r9oax95bYp0YXHeHdI3YFSjVP3ISvuy/exec";
+const YOUR_DEPLOYED_WEBAPP_ID = "AKfycbzPQe4xRUFpmtkEv1YDMc1iqPRWjAWXLfN-9r9oax95bYp0YXHeHdI3YFSjVP3ISvuy";
+const TARGET_URL = "https://script.google.com/macros/s/" + YOUR_DEPLOYED_WEBAPP_ID + "/exec";
 
 app.post("/api", async (req, res) => {
   try {
