@@ -100,7 +100,9 @@
     
     <script>
       // CONFIG: set this to your deployed Apps Script WebApp URL
-      const API_BASE = 'https://script.google.com/macros/s/YOUR_DEPLOYED_WEBAPP_ID/exec';
+
+      const YOUR_DEPLOYED_WEBAPP_ID = 'AKfycby-3BDqOzVRqQoH7qf2O1kQD60Oqvc3ebzG2fNQBHT5nfOBAO5SyQ6YFOLj-iPUsGhi';
+      const API_BASE = 'https://script.google.com/macros/s/' + YOUR_DEPLOYED_WEBAPP_ID + '/exec';
 
       // Utility: call backend
       async function api(action, payload={}) {
