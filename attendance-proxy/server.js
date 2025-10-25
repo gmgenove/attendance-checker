@@ -6,7 +6,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzPQe4xRUFpmtkEv1YDMc1iqPRWjAWXLfN-9r9oax95bYp0YXHeHdI3YFSjVP3ISvuy/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/" + YOUR_DEPLOYED_WEBAPP_ID + "/exec";
 
 // Handle POST requests from your front-end
 app.post("/api", async (req, res) => {
