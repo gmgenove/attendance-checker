@@ -101,15 +101,19 @@
     <script>
       // CONFIG: set this to your deployed Apps Script WebApp URL
 
-      const YOUR_DEPLOYED_WEBAPP_ID = 'AKfycbyDreu_GSEDidzK_KE-xl9PT9QNHdJ9_-xjCZgGZWAMiuXcp6f3Ckk0zwLD9NSk_rV0';
-      const API_BASE = 'https://script.google.com/macros/s/' + YOUR_DEPLOYED_WEBAPP_ID + '/exec';
+      const YOUR_DEPLOYED_WEBAPP_ID = 'AKfycbzAKsH67WJS1cquf6hK8bA55bwNovl66032eMhfFdfKw_EJ9NWMrBalvngOc8fjZcEI';
+      const CORS_API = 'https://cors-anywhere.herokuapp.com/';
+      const API_BASE = CORS_API + 'https://script.google.com/macros/s/' + YOUR_DEPLOYED_WEBAPP_ID + '/exec';
 
       // Utility: call backend
       async function api(action, payload={}) {
         const body = Object.assign({action}, payload);
         const res = await fetch(API_BASE, {
           method:'POST',
-          headers:{'Content-Type':'application/json'},
+          headers: {
+            'Content-Type': 'application/json',
+            'x-requested-with': 'XMLHttpRequest'
+          },
           body:JSON.stringify(body),
         });
         return res.json();
