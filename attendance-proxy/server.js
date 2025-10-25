@@ -1,59 +1,39 @@
 import express from "express";
 import fetch from "node-fetch";
-import cors from "cors";
 
 const app = express();
-
-// ✅ Allow CORS for all origins and methods
-app.use(cors({
-  origin: "*",
-  methods: ["GET", "POST", "OPTIONS"],
-  allowedHeaders: ["Content-Type"]
-}));
-
-app.use(express.json());
-
-// Your Google Apps Script URL
 const YOUR_DEPLOYED_WEBAPP_ID = "AKfycbzPQe4xRUFpmtkEv1YDMc1iqPRWjAWXLfN-9r9oax95bYp0YXHeHdI3YFSjVP3ISvuy";
 const SCRIPT_URL = "https://script.google.com/macros/s/" + YOUR_DEPLOYED_WEBAPP_ID + "/exec";
 
-// ✅ Handle OPTIONS preflight requests properly
-app.options("/api", (req, res) => {
-  res.set({
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-  });
-  return res.status(204).send(); // No content response
-});
-
-// ✅ Handle POST requests
-app.post("/api", async (req, res) => {
-  try {
-    const response = await fetch(SCRIPT_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(req.body),
-    });
-
-    const text = await response.text();
-    res.set("Access-Control-Allow-Origin", "*");
-    res.send(text);
-  } catch (err) {
-    console.error("Proxy error (POST):", err);
-    res.status(500).json({ error: "Proxy failed" });
+// --- GLOBAL CORS HANDLER ---
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type");
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
   }
+  next();
 });
 
-// ✅ Handle GET requests
-app.get("/api", async (req, res) => {
+app.use(express.json());
+
+// --- MAIN API ROUTE ---
+app.all("/api", async (req, res) => {
   try {
-    const response = await fetch(SCRIPT_URL);
+    const opts = {
+      method: req.method,
+      headers: { "Content-Type": "application/json" },
+    };
+    if (req.method === "POST") opts.body = JSON.stringify(req.body);
+
+    const response = await fetch(SCRIPT_URL, opts);
     const text = await response.text();
+
     res.set("Access-Control-Allow-Origin", "*");
-    res.send(text);
+    res.status(response.status).send(text);
   } catch (err) {
-    console.error("Proxy error (GET):", err);
+    console.error("Proxy error:", err);
     res.status(500).json({ error: "Proxy failed" });
   }
 });
