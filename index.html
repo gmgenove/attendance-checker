@@ -136,7 +136,7 @@
         }
       });
 
-      document.getElementById("hdr").innerHTML=new Date().toLocaleString();
+      document.getElementById("hdr").innerHTML=new Date().toLocaleString("en-US", { dateStyle: 'full' });
 
       // Sign in
       document.getElementById('signinBtn').onclick = async ()=> {
