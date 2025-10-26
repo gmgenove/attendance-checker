@@ -120,6 +120,22 @@
 
       let currentUser = null; // {id, name, role}
 
+      // submit on enter
+      /*document.addEventListener("keydown", function(event) {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          document.getElementById("loginBtn").click(); // triggers existing login button
+        }
+      });*/
+
+      // login area only submit on enter
+      document.getElementById("auth").addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          document.getElementById("loginBtn").click();
+        }
+      });
+
       // Sign in
       document.getElementById('signinBtn').onclick = async ()=> {
         const id = document.getElementById('userId').value.trim();
@@ -291,22 +307,6 @@
           document.getElementById('dl2').onclick = ()=>{downloadCSV(r.csv,'my_attendance.csv')}
         } else out.textContent='No data';
       }
-
-      // submit on enter
-      /*document.addEventListener("keydown", function(event) {
-        if (event.key === "Enter") {
-          event.preventDefault();
-          document.getElementById("loginBtn").click(); // triggers existing login button
-        }
-      });*/
-
-      // login area only submit on enter
-      document.getElementById("loginSection").addEventListener("keydown", (event) => {
-        if (event.key === "Enter") {
-          event.preventDefault();
-          document.getElementById("loginBtn").click();
-        }
-      });
     </script>
   </body>
 </html>
