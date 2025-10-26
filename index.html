@@ -136,7 +136,7 @@
         }
       });
 
-      document.getElementById("hdr").innerHTML=Utilities.formatDate(new Date(), timeZone, 'yyyy-MM-dd');
+      document.getElementById("hdr").innerHTML=new Date().toLocaleString();
 
       // Sign in
       document.getElementById('signinBtn').onclick = async ()=> {
