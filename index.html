@@ -88,11 +88,13 @@
             <div id="myAttendanceOutput" style="margin-top:8px"></div>
           </div>
         </div>
-  
+
+        <!--
         <div class="card">
           <h3>Officers & Professors</h3>
           <div id="peopleList" class="small muted">Loading...</div>
         </div>
+        -->
   
         <div class="card small muted"><strong>Notes:</strong> Check-in opens 10 minutes before class. On-time if checked-in within first 5 minutes; late if checked between 5 and 10 minutes; absent after 10 minutes and button is disabled.</div>
       </div>
@@ -160,10 +162,10 @@
         document.getElementById('officerControls').style.display = currentUser.role==='officer'?'block':'none';
         document.getElementById('studentControls').style.display = currentUser.role==='student'?'block':'none';
         // load people list
-        const people = await api('list_people',{});
+        /*const people = await api('list_people',{});
         if (people.ok) {
           document.getElementById('peopleList').innerHTML = people.html;
-        }
+        }*/
         // load today's schedule
         loadTodaySchedule();
       }
