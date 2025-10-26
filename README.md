@@ -66,3 +66,12 @@ attendance-checker/
 | date | class_code | student_id | status | time_in |
 |------|-------------|-------------|---------|----------|
 | 2025-10-25 | IT101 | 2023001 | On Time | 09:02 |
+
+
+## 📤 Deployment Steps
+1. Create Google Sheet with `Users`, `Schedule`, `Roster`, `Attendance` tabs.
+2. Open Apps Script editor → paste `Code.gs`.
+3. Deploy as Web App (`Execute as Me`, `Anyone` access).
+4. Copy the Web App URL and paste it in `index.html` under `API_BASE`.
+5. Upload the `index.html` & `backend/Code.gs` to your GitHub repo.
+6. Enable GitHub Pages (or connect to Render).
