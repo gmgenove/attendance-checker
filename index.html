@@ -152,7 +152,7 @@
           } else {
           document.getElementById('authMsg').textContent = 'Sign in failed: '+r.error;
           }
-        } catch(e){document.getElementById('authMsg').textContent='Network error'}
+        } catch(e) {document.getElementById('authMsg').textContent='Network error'}
       }
 
       // Sign out
@@ -167,7 +167,7 @@
         // pre-load schedule for today
       });
 
-      async function showApp(){
+      async function showApp() {
         document.getElementById('auth').style.display='none';
         document.getElementById('app').style.display='block';
         document.getElementById('welcome').textContent = (currentUser.name || currentUser.id) ;
@@ -186,8 +186,8 @@
         loadTodaySchedule();
       }
 
-            // load today's schedule and draw check-in buttons
-      async function loadTodaySchedule(){
+      // load today's schedule and draw check-in buttons
+      async function loadTodaySchedule() {
         document.getElementById('todayMsg').textContent='Loading...';
         const r = await api('today_schedule',{});
         if (!r.ok) {document.getElementById('todayMsg').textContent='Failed to load schedule';return}
@@ -205,45 +205,75 @@
           el.appendChild(btn);el.appendChild(statusSpan);
     
           // attach update loop for enabling/disabling based on current time
-          (function(cls,btn,statusSpan) {
-            // calculate next state every 5 seconds
+          (function(cls, btn, statusSpan) {
+            let iv; // interval reference so we can clear it later
+          
             async function update() {
               const tzNow = new Date();
-              // parse times (assumes HH:MM 24h from Apps Script)
-              function parseTime(t) {const [hh,mm]=t.split(':').map(Number);const d=new Date(tzNow);d.setHours(hh,mm,0,0);return d}
+          
+              // helper to parse "HH:MM"
+              function parseTime(t) {
+                const [hh, mm] = t.split(':').map(Number);
+                const d = new Date(tzNow);
+                d.setHours(hh, mm, 0, 0);
+                return d;
+              }
+          
               const start = parseTime(cls.start_time);
-              const enableFrom = new Date(start.getTime()-10*60000);
-              const lateAfter = new Date(start.getTime()+5*60000);
-              const absentAfter = new Date(start.getTime()+10*60000);
-              // check if already checked for this user
-              const checkRes = await api('get_attendance',{class_code:cls.class_code, date: isoDate(tzNow), student_id: currentUser.id});
-              let att = null; if (checkRes.ok) att = checkRes.record;
-        
-              if (att && att.status!=='not_recorded') {
+              const enableFrom = new Date(start.getTime() - 10 * 60000);
+              const lateAfter = new Date(start.getTime() + 5 * 60000);
+              const absentAfter = new Date(start.getTime() + 10 * 60000);
+          
+              // check if already checked in
+              const checkRes = await api('get_attendance', {
+                class_code: cls.class_code,
+                date: isoDate(tzNow),
+                student_id: currentUser.id
+              });
+          
+              let att = null;
+              if (checkRes.ok) att = checkRes.record;
+          
+              if (att && att.status !== 'not_recorded') {
                 btn.disabled = true;
                 statusSpan.textContent = `Status: ${att.status} (checked at ${att.timestamp || '—'})`;
+                clearInterval(iv); // ✅ stop updating this card — already checked in
               } else if (tzNow >= enableFrom && tzNow < absentAfter) {
                 btn.disabled = false;
-                if(tzNow < lateAfter) statusSpan.textContent = 'On time window — click to check in';
+                if (tzNow < lateAfter)
+                  statusSpan.textContent = 'On time window — click to check in';
                 else statusSpan.textContent = 'Late — you will be tagged late if you check in now';
-              } else if(tzNow >= absentAfter) {
-                btn.disabled = true;statusSpan.textContent='Absent — checkin disabled';
+              } else if (tzNow >= absentAfter) {
+                btn.disabled = true;
+                statusSpan.textContent = 'Absent — checkin disabled';
+                clearInterval(iv);
               } else {
-                btn.disabled = true; statusSpan.textContent = `Check-in opens at ${timeStr(enableFrom)}`;
+                btn.disabled = true;
+                statusSpan.textContent = `Check-in opens at ${timeStr(enableFrom)}`;
               }
             }
-            // initial update
+          
+            // initial run + start the timer
             update();
-            // run every 10 seconds
-            const iv = setInterval(update,10000);
-            // attach click
-            btn.onclick = async ()=> {
-              btn.disabled=true;statusSpan.textContent='Checking in...';
-              const res = await api('checkin',{class_code:cls.class_code, student_id:currentUser.id});
-              if (res.ok) {statusSpan.textContent=`Checked in: ${res.status} at ${res.timestamp}`;}
-              else {statusSpan.textContent='Checkin failed: '+res.error;btn.disabled=false}
-            }
-          })(cls,btn,statusSpan);
+            iv = setInterval(update, 10000);
+          
+            // click handler
+            btn.onclick = async () => {
+              btn.disabled = true;
+              statusSpan.textContent = 'Checking in...';
+              const res = await api('checkin', {
+                class_code: cls.class_code,
+                student_id: currentUser.id
+              });
+              if (res.ok) {
+                statusSpan.textContent = `Checked in: ${res.status} at ${res.timestamp}`;
+                clearInterval(iv); // ✅ stop checking once successful
+              } else {
+                statusSpan.textContent = 'Checkin failed: ' + res.error;
+                btn.disabled = false; // allow retry
+              }
+            };
+          })(cls, btn, statusSpan);
 
           container.appendChild(el);
         }
