@@ -25,7 +25,7 @@
     <div class="container">
       <header>
         <h1>BPAOUMN 1-B Attendance Checker</h1>
-        <div class="small muted"></div>
+        <div id="hdr" class="small muted"></div>
       </header>
 
       <div id="auth" class="card">
@@ -135,6 +135,8 @@
           document.getElementById("loginBtn").click();
         }
       });
+
+      document.getElementById("hdr").innerHTML=Utilities.formatDate(new Date(), timeZone, 'yyyy-MM-dd');
 
       // Sign in
       document.getElementById('signinBtn').onclick = async ()=> {
