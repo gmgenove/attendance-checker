@@ -264,6 +264,7 @@
 	      	} else { // ✅ Save session
 			  currentUser = data.user;
 	          localStorage.setItem("currentUser", JSON.stringify(currentUser));
+			  document.getElementById('authMsg').textContent='';
 			  showApp();
 		    }
           } catch (err) {
