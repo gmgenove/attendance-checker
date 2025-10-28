@@ -3,6 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <title>BPAOUMN 1-B Attendance Checker</title>
     <style>
       /* Minimal clean styling */
@@ -72,7 +73,7 @@
             <label for="passwordInput">Password</label><br>
             <div class="password-wrapper">
               <input id="passwordInput" type="password" placeholder="Enter your password" required />
-              <button type="button" id="togglePassword" class="toggle-btn">&#x1F441;</button>
+              <button type="button" id="togglePassword" class="toggle-btn"><i class="fa fa-eye"></i></button>
             </div>
           </div>
         </div>
@@ -185,7 +186,9 @@
         togglePassword.addEventListener("click", () => {
           const isPassword = passwordInput.type === "password";
           passwordInput.type = isPassword ? "text" : "password";
-          togglePassword.textContent = isPassword ? "🙈" : "👁️";
+          togglePassword.textContent = isPassword ? '<i class="fa fa-eye-slash"></i>' : '<i class="fa fa-eye"></i>';
+
+          <i class="fa fa-eye-slash"></i>
         });
       
         // ✅ Submit on Enter
