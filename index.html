@@ -61,34 +61,26 @@
       </header>
 
       <div id="auth" class="card">
-        <h2>Sign In</h2>
+        <h3>Sign in</h3>
         <form id="loginForm">
+        <div class="grid">
+          <div>
+            <label for="userId">Student ID / Officer / Professor ID</label><br>
+            <input id="userId" placeholder="e.g. 202012345" required />
+          </div>
           <div class="form-group">
-            <label for="idInput">Student ID / Officer / Professor ID</label>
-            <input type="text" id="idInuserIdput" placeholder="Enter your ID" required />
+            <label for="passwordInput">Password</label><br>
+            <input id="passwordInput" type="password" placeholder="Enter your password" required />
+            <button type="button" id="togglePassword" class="toggle-btn">&#x1F441;</button>
           </div>
-      
-          <div class="form-group">
-            <label for="passwordInput">Password</label>
-            <div class="password-wrapper">
-              <input type="password" id="passwordInput" placeholder="Enter your password" required />
-              <button type="button" id="togglePassword" class="toggle-btn">&#x1F441;</button>
-            </div>
-          </div>
-      
-          <div class="form-group" style="margin-top:12px">
-            <label for="roleSelect">Role</label>
-            <select id="roleSelect" required>
-              <option value="">Select Role</option>
-              <option value="student">Student</option>
-              <option value="officer">Officer</option>
-              <option value="professor">Professor</option>
-            </select>
-          </div>
-      
-          <button type="submit" id="loginBtn">Sign In</button>
-          <div id="authMsg" class="small muted"></div>
-          <div id="errorMsg" class="error-message"></div>
+        </div>
+        <div style="margin-top:12px">
+          <label for="roleSelect">Role</label>
+          <select id="roleSelect"><option value="">Select Role</option><option value="student">Student</option><option value="officer">Officer</option><option value="professor">Professor</option></select>
+          <button id="signinBtn">Sign in</button>
+        </div>
+        <div id="authMsg" class="small muted"></div>
+        <div id="errorMsg" class="error-message"></div>
         </form>
       </div>
       
@@ -165,14 +157,6 @@
 
       let currentUser = null; // {id, name, role}
 
-      // submit on enter
-      /*document.addEventListener("keydown", function(event) {
-        if (event.key === "Enter") {
-          event.preventDefault();
-          document.getElementById("loginBtn").click(); // triggers existing login button
-        }
-      });*/
-
       // login area only submit on enter
       document.getElementById("auth").addEventListener("keydown", (event) => {
         if (event.key === "Enter") {
@@ -240,7 +224,7 @@
       // Sign in
       document.getElementById('signinBtn').onclick = async ()=> {
         const id = document.getElementById('userId').value.trim();
-        const pwd = document.getElementById('password').value;
+        const pwd = document.getElementById('passwordInput').value;
         const role = document.getElementById('roleSelect').value;
         if (!id||!pwd) {
           document.getElementById('errorMsg').textContent='Enter id and password';
