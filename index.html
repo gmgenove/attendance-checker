@@ -65,7 +65,7 @@
 
       <div id="auth" class="card">
         <h3 id="formTitle">Sign In</h3>
-        <form id="loginForm">
+        <form id="authForm">
 			<div class="grid">
 			  <div>
 				<label for="userId">Student ID / Officer / Professor ID</label><br>
@@ -88,7 +88,7 @@
 				<option value="professor">Professor</option>
 			  </select>
 			  <button type="submit" id="submitBtn">Sign In</button>
-			  <p id="switchText" class="small">Don’t have an account? <a href="#" id="toggleForm">Sign up</a></p>
+			  <p id="switchText" class="small">Don’t have an account? <a href="#">Sign up</a></p>
 			</div>
 			<div id="authMsg" class="small muted"></div>
 			<div id="errorMsg" class="error-message"></div>
@@ -177,20 +177,19 @@
       });
 
       document.addEventListener("DOMContentLoaded", () => {
-        const form = document.getElementById("loginForm");
+        const form = document.getElementById("authForm");
         const idInput = document.getElementById("userId");
         const passwordInput = document.getElementById("passwordInput");
         const roleSelect = document.getElementById("roleSelect");
         const togglePassword = document.getElementById("togglePassword");
         const errorMsg = document.getElementById("errorMsg");
         const submitBtn = document.getElementById("submitBtn");
-		const toggleForm = document.getElementById("toggleForm");
 		const formTitle = document.getElementById("formTitle");
 		const switchText = document.getElementById("switchText");
 
 		let isSignup = false;
 
-        // ✅ Toggle password visibility
+        // Toggle password visibility
         togglePassword.addEventListener("click", () => {
           const isPassword = passwordInput.type === "password";
           passwordInput.type = isPassword ? "text" : "password";
@@ -204,15 +203,15 @@
         });
 
 		// Toggle between Sign In / Sign Up
-		toggleForm.addEventListener("click", (e) => {
-		   e.preventDefault();
-		   isSignup = !isSignup;
-		   formTitle.textContent = isSignup ? "Sign Up" : "Sign In";
-		   submitBtn.textContent = isSignup ? "Sign Up" : "Sign In";
-		   switchText.innerHTML = isSignup
-		     ? 'Already have an account? <a href="#" id="toggleForm">Sign in</a>'
-		     : 'Don’t have an account? <a href="#" id="toggleForm">Sign up</a>';
-		   errorMsg.textContent = "";
+		switchText.addEventListener("click", (e) => {
+		  e.preventDefault();
+		  isSignup = !isSignup;
+		  formTitle.textContent = isSignup ? "Sign Up" : "Sign In";
+		  submitBtn.textContent = isSignup ? "Sign Up" : "Sign In";
+		  switchText.innerHTML = isSignup
+			? 'Already have an account? <a href="#">Sign in</a>'
+			: 'Don’t have an account? <a href="#">Sign up</a>';
+		  errorMsg.textContent = "";
 		});
       
         // Handle form submit
@@ -220,6 +219,13 @@
           e.preventDefault();
           errorMsg.textContent = "";
           submitBtn.disabled = true;
+		  
+          if (!idInput.value.trim()||!passwordInput.value.trim()) {
+			document.getElementById('errorMsg').textContent='Enter id and password';
+			document.getElementById('authMsg').textContent='';
+			return;
+          }
+		  document.getElementById('authMsg').textContent = isSignup ? "Signing up..." : "Signing in...";
       
           const payload = {
             action: isSignup ? "signup" : "signin",
@@ -238,6 +244,7 @@
       
             if (!data.ok) {
               errorMsg.textContent = data.error || isSignup ? "Signup failed" : "Login failed";
+			  document.getElementById('authMsg').textContent='';
               submitBtn.disabled = false;
               return;
             }
@@ -249,11 +256,13 @@
 		      formTitle.textContent = "Sign In";
 		      submitBtn.textContent = "Sign In";
 	      	} else { // ✅ Save session
-	          localStorage.setItem("user", JSON.stringify(data.user));
-		      window.location.href = "dashboard.html";
+			  currentUser = data.user;
+	          localStorage.setItem("currentUser", JSON.stringify(currentUser));
+			  showApp();
 		    }
           } catch (err) {
             errorMsg.textContent = "Network error: " + err.message;
+			document.getElementById('authMsg').textContent='';
           } finally {
             submitBtn.disabled = false;
           }
@@ -261,33 +270,6 @@
       });
 
       document.getElementById("hdr").innerHTML=new Date().toLocaleString("en-US", { dateStyle: 'full' });
-
-      // Sign in
-      document.getElementById('submitBtn').onclick = async ()=> {
-        const id = document.getElementById('userId').value.trim();
-        const pwd = document.getElementById('passwordInput').value;
-        const role = document.getElementById('roleSelect').value;
-        if (!id||!pwd) {
-          document.getElementById('errorMsg').textContent='Enter id and password';
-          document.getElementById('authMsg').textContent='';
-          return;
-        }
-        document.getElementById('authMsg').textContent='Signing in...';
-        try {
-          const r = await api('signin',{id, password:pwd, role});
-          if (r.ok) {
-            currentUser = r.user;
-            localStorage.setItem('attendance_user', JSON.stringify(currentUser));
-            showApp();
-          } else {
-            document.getElementById('errorMsg').textContent = 'Sign in failed: '+r.error;
-            document.getElementById('authMsg').textContent='';
-          }
-        } catch(e) {
-          document.getElementById('errorMsg').textContent='Network error';
-          document.getElementById('authMsg').textContent='';
-        }
-      }
 
       // Sign out
       document.getElementById('signoutBtn').onclick = ()=> {
