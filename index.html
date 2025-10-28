@@ -28,16 +28,13 @@
         background: #f9f9f9;
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
       }
-      
       .form-group {
         margin-bottom: 15px;
       }
-      
       .password-wrapper {
         display: flex;
         align-items: center;
       }
-      
       .password-wrapper input {
         flex: 1;
       }
@@ -49,7 +46,6 @@
         cursor: pointer;
         font-size: 1.1em;
       }
-      
       .error-message {
         color: #d93025; /* Google-style red */
         margin-top: 10px;
@@ -69,7 +65,7 @@
         <form id="loginForm">
           <div class="form-group">
             <label for="idInput">ID</label>
-            <input type="text" id="idInput" placeholder="Enter your ID" required />
+            <input type="text" id="idInuserIdput" placeholder="Enter your ID" required />
           </div>
       
           <div class="form-group">
@@ -186,7 +182,7 @@
 
       document.addEventListener("DOMContentLoaded", () => {
         const form = document.getElementById("loginForm");
-        const idInput = document.getElementById("idInput");
+        const idInput = document.getElementById("userId");
         const passwordInput = document.getElementById("passwordInput");
         const roleSelect = document.getElementById("roleSelect");
         const togglePassword = document.getElementById("togglePassword");
