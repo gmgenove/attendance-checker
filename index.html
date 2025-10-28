@@ -172,7 +172,7 @@
       document.getElementById("auth").addEventListener("keydown", (event) => {
         if (event.key === "Enter") {
           event.preventDefault();
-          document.getElementById("signinBtn").click(); // correct id
+          document.getElementById("submitBtn").click(); // correct id
         }
       });
 
@@ -263,7 +263,7 @@
       document.getElementById("hdr").innerHTML=new Date().toLocaleString("en-US", { dateStyle: 'full' });
 
       // Sign in
-      document.getElementById('signinBtn').onclick = async ()=> {
+      document.getElementById('submitBtn').onclick = async ()=> {
         const id = document.getElementById('userId').value.trim();
         const pwd = document.getElementById('passwordInput').value;
         const role = document.getElementById('roleSelect').value;
