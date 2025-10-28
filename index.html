@@ -70,13 +70,20 @@
           </div>
           <div class="form-group">
             <label for="passwordInput">Password</label><br>
-            <input id="passwordInput" type="password" placeholder="Enter your password" required />
-            <button type="button" id="togglePassword" class="toggle-btn">&#x1F441;</button>
+            <div class="password-wrapper">
+              <input id="passwordInput" type="password" placeholder="Enter your password" required />
+              <button type="button" id="togglePassword" class="toggle-btn">&#x1F441;</button>
+            </div>
           </div>
         </div>
         <div style="margin-top:12px">
           <label for="roleSelect">Role</label>
-          <select id="roleSelect"><option value="">Select Role</option><option value="student">Student</option><option value="officer">Officer</option><option value="professor">Professor</option></select>
+          <select id="roleSelect">
+            <option value="">Select Role</option>
+            <option value="student">Student</option>
+            <option value="officer">Officer</option>
+            <option value="professor">Professor</option>
+          </select>
           <button id="signinBtn">Sign in</button>
         </div>
         <div id="authMsg" class="small muted"></div>
