@@ -246,7 +246,7 @@
 			  password: passwordInput.value.trim(),
 			  role: roleSelect.value
 			});
-			console.log("data: " + data);
+			console.log(data);
       
             if (!data.ok) {
               errorMsg.textContent = data.error || isSignup ? "Signup failed" : "Login failed";
