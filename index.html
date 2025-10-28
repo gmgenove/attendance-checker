@@ -153,18 +153,24 @@
       const API_BASE = 'https://attendance-proxy.onrender.com/api';
 
       // Utility: call backend
-      async function api(action, payload={}) {
-        const body = Object.assign({action}, payload);
-        const res = await fetch(API_BASE, {
-          method:'POST',
-          headers: {
+	  async function api(action, payload = {}) {
+	    const body = Object.assign({ action }, payload);
+		const res = await fetch(API_BASE, {
+		  method: 'POST',
+		  headers: {
             'Content-Type': 'application/json',
             'x-requested-with': 'XMLHttpRequest'
           },
-          body:JSON.stringify(body),
-        });
-        return res.json();
-      }
+		  body: JSON.stringify(body)
+		});
+		const text = await res.text();
+		try {
+		  return JSON.parse(text);
+		} catch {
+		  console.error("Invalid JSON response:", text);
+		  return { ok: false, error: "Invalid JSON from server" };
+		}
+	  }
 
       let currentUser = null; // {id, name, role}
 
@@ -235,13 +241,12 @@
           };
       
           try {
-            const res = await fetch("/api", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(payload)
-            });
-            const data = await res.json();
-			  console.log(data);
+			const data = await api(isSignup ? "signup" : "signin", {
+			  id: idInput.value.trim(),
+			  password: passwordInput.value.trim(),
+			  role: roleSelect.value
+			});
+			console.log(data);
       
             if (!data.ok) {
               errorMsg.textContent = data.error || isSignup ? "Signup failed" : "Login failed";
