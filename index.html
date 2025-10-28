@@ -132,7 +132,7 @@
       document.getElementById("auth").addEventListener("keydown", (event) => {
         if (event.key === "Enter") {
           event.preventDefault();
-          document.getElementById("loginBtn").click();
+          document.getElementById("signinBtn").click(); // correct id
         }
       });
 
@@ -232,6 +232,15 @@
                 date: isoDate(tzNow),
                 student_id: currentUser.id
               });
+
+              // before checking time windows
+              const localKey = `checkedin_${currentUser.id}_${cls.class_code}_${isoDate(tzNow)}`;
+              if (localStorage.getItem(localKey)) {
+                btn.disabled = true;
+                statusSpan.textContent = 'Already checked in (saved locally)';
+                clearInterval(iv);
+                return;
+              }
           
               let att = null;
               if (checkRes.ok) att = checkRes.record;
@@ -268,11 +277,13 @@
                 student_id: currentUser.id
               });
               if (res.ok) {
+                const key = `checkedin_${currentUser.id}_${cls.class_code}_${isoDate(new Date())}`;
+                localStorage.setItem(key, 'true'); // ✅ remember this check-in
                 statusSpan.textContent = `Checked in: ${res.status} at ${res.timestamp}`;
-                clearInterval(iv); // ✅ stop checking once successful
+                clearInterval(iv);
               } else {
                 statusSpan.textContent = 'Checkin failed: ' + res.error;
-                btn.disabled = false; // allow retry
+                btn.disabled = false;
               }
             };
           })(cls, btn, statusSpan);
