@@ -219,6 +219,7 @@
 			: 'Don’t have an account? <a href="#">Sign up</a>';
 		  errorMsg.textContent = "";
 		});
+		  console.log("isSignup: " + isSignup);
       
         // Handle form submit
         form.addEventListener("submit", async (e) => {
@@ -246,7 +247,7 @@
 			  password: passwordInput.value.trim(),
 			  role: roleSelect.value
 			});
-			console.log(data);
+			console.log("data: " + data);
       
             if (!data.ok) {
               errorMsg.textContent = data.error || isSignup ? "Signup failed" : "Login failed";
