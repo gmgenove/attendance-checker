@@ -87,7 +87,8 @@
 				<option value="officer">Officer</option>
 				<option value="professor">Professor</option>
 			  </select>
-			  <button id="signinBtn">Sign in</button>
+			  <button type="submit" id="submitBtn">Sign In</button>
+			  <p id="switchText" class="small">Don’t have an account? <a href="#" id="toggleForm">Sign up</a></p>
 			</div>
 			<div id="authMsg" class="small muted"></div>
 			<div id="errorMsg" class="error-message"></div>
@@ -182,8 +183,13 @@
         const roleSelect = document.getElementById("roleSelect");
         const togglePassword = document.getElementById("togglePassword");
         const errorMsg = document.getElementById("errorMsg");
-        const loginBtn = document.getElementById("loginBtn");
-      
+        const submitBtn = document.getElementById("submitBtn");
+		const toggleForm = document.getElementById("toggleForm");
+		const formTitle = document.getElementById("formTitle");
+		const switchText = document.getElementById("switchText");
+
+		let isSignup = false;
+
         // ✅ Toggle password visibility
         togglePassword.addEventListener("click", () => {
           const isPassword = passwordInput.type === "password";
@@ -196,15 +202,27 @@
 			document.getElementById("togglePassword").classList.add("fa-eye");
 		  }
         });
+
+		// Toggle between Sign In / Sign Up
+		toggleForm.addEventListener("click", (e) => {
+		   e.preventDefault();
+		   isSignup = !isSignup;
+		   formTitle.textContent = isSignup ? "Sign Up" : "Sign In";
+		   submitBtn.textContent = isSignup ? "Sign Up" : "Sign In";
+		   switchText.innerHTML = isSignup
+		     ? 'Already have an account? <a href="#" id="toggleForm">Sign in</a>'
+		     : 'Don’t have an account? <a href="#" id="toggleForm">Sign up</a>';
+		   errorMsg.textContent = "";
+		});
       
-        // ✅ Submit on Enter
+        // Handle form submit
         form.addEventListener("submit", async (e) => {
           e.preventDefault();
           errorMsg.textContent = "";
-          loginBtn.disabled = true;
+          submitBtn.disabled = true;
       
           const payload = {
-            action: "signin",
+            action: isSignup ? "signup" : "signin",
             id: idInput.value.trim(),
             password: passwordInput.value.trim(),
             role: roleSelect.value
@@ -219,18 +237,25 @@
             const data = await res.json();
       
             if (!data.ok) {
-              errorMsg.textContent = data.error || "Login failed";
-              loginBtn.disabled = false;
+              errorMsg.textContent = data.error || isSignup ? "Signup failed" : "Login failed";
+              submitBtn.disabled = false;
               return;
             }
-      
-            // ✅ Save session
-            localStorage.setItem("user", JSON.stringify(data.user));
-            window.location.href = "dashboard.html";
+
+			if (isSignup) {
+		      errorMsg.style.color = "green";
+		      errorMsg.textContent = data.message || "Signup successful!";
+		      isSignup = false;
+		      formTitle.textContent = "Sign In";
+		      submitBtn.textContent = "Sign In";
+	      	} else { // ✅ Save session
+	          localStorage.setItem("user", JSON.stringify(data.user));
+		      window.location.href = "dashboard.html";
+		    }
           } catch (err) {
             errorMsg.textContent = "Network error: " + err.message;
           } finally {
-            loginBtn.disabled = false;
+            submitBtn.disabled = false;
           }
         });
       });
