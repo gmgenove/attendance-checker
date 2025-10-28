@@ -249,7 +249,7 @@
 			console.log(data);
       
             if (!data.ok) {
-              errorMsg.textContent = (isSignup ? "Signup failed" : "Login failed") + data.error ? ": " + data.error: "";
+              errorMsg.textContent = data.error ? data.error : isSignup ? "Signup failed" : "Login failed";
 			  document.getElementById('authMsg').textContent='';
               submitBtn.disabled = false;
               return;
