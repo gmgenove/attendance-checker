@@ -37,11 +37,13 @@
         align-items: center;
       }
       .password-wrapper input {
-        flex: 1;
+        /*flex: 1;*/
       }
-      
-      .toggle-btn {
-        margin-left: 6px;
+      .field-icon {
+		float: right;
+        margin-left: -25px;
+		position: relative;
+		z-index: 2;
         background: none;
         border: none;
         cursor: pointer;
@@ -64,31 +66,31 @@
       <div id="auth" class="card">
         <h3>Sign in</h3>
         <form id="loginForm">
-        <div class="grid">
-          <div>
-            <label for="userId">Student ID / Officer / Professor ID</label><br>
-            <input id="userId" placeholder="e.g. 202012345" required />
-          </div>
-          <div class="form-group">
-            <label for="passwordInput">Password</label><br>
-            <div class="password-wrapper">
-              <input id="passwordInput" type="password" placeholder="Enter your password" required />
-              <button type="button" id="togglePassword" class="toggle-btn"><i class="fa fa-eye"></i></button>
-            </div>
-          </div>
-        </div>
-        <div style="margin-top:12px">
-          <label for="roleSelect">Role</label>
-          <select id="roleSelect">
-            <option value="">Select Role</option>
-            <option value="student">Student</option>
-            <option value="officer">Officer</option>
-            <option value="professor">Professor</option>
-          </select>
-          <button id="signinBtn">Sign in</button>
-        </div>
-        <div id="authMsg" class="small muted"></div>
-        <div id="errorMsg" class="error-message"></div>
+			<div class="grid">
+			  <div>
+				<label for="userId">Student ID / Officer / Professor ID</label><br>
+				<input id="userId" placeholder="e.g. 2025-XXXXXX-MN-X" required />
+			  </div>
+			  <div class="form-group">
+				<label for="passwordInput">Password</label><br>
+				<div class="password-wrapper">
+				  <input id="passwordInput" type="password" placeholder="Enter your password" required> <span id="togglePassword" class="fa fa-fw fa-eye field-icon"></span>
+				  </input>
+				</div>
+			  </div>
+			</div>
+			<div style="margin-top:12px">
+			  <label for="roleSelect">Role</label>
+			  <select id="roleSelect">
+				<option value="">Select Role</option>
+				<option value="student">Student</option>
+				<option value="officer">Officer</option>
+				<option value="professor">Professor</option>
+			  </select>
+			  <button id="signinBtn">Sign in</button>
+			</div>
+			<div id="authMsg" class="small muted"></div>
+			<div id="errorMsg" class="error-message"></div>
         </form>
       </div>
       
@@ -186,9 +188,13 @@
         togglePassword.addEventListener("click", () => {
           const isPassword = passwordInput.type === "password";
           passwordInput.type = isPassword ? "text" : "password";
-          togglePassword.textContent = isPassword ? '<i class="fa fa-eye-slash"></i>' : '<i class="fa fa-eye"></i>';
-
-          <i class="fa fa-eye-slash"></i>
+          if (isPassword) {
+			document.getElementById("togglePassword").classList.remove("fa-eye");
+			document.getElementById("togglePassword").classList.add("fa-eye-slash");
+		  } else {
+			document.getElementById("togglePassword").classList.remove("fa-eye-slash");
+			document.getElementById("togglePassword").classList.add("fa-eye");
+		  }
         });
       
         // ✅ Submit on Enter
