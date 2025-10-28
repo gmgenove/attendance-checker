@@ -19,6 +19,42 @@
       .pill{display:inline-block;padding:6px 10px;border-radius:999px;background:#e6f4ea;color:#064e3b}
       .danger{background:#fff1f2;color:#7f1d1d}
       .muted{color:#94a3b8}
+
+      .login-card {
+        max-width: 300px;
+        margin: 40px auto;
+        padding: 20px;
+        border-radius: 12px;
+        background: #f9f9f9;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      }
+      
+      .form-group {
+        margin-bottom: 15px;
+      }
+      
+      .password-wrapper {
+        display: flex;
+        align-items: center;
+      }
+      
+      .password-wrapper input {
+        flex: 1;
+      }
+      
+      .toggle-btn {
+        margin-left: 6px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 1.1em;
+      }
+      
+      .error-message {
+        color: #d93025; /* Google-style red */
+        margin-top: 10px;
+        font-size: 0.9em;
+      }
     </style>
   </head>
   <body>
@@ -28,23 +64,35 @@
         <div id="hdr" class="small muted"></div>
       </header>
 
-      <div id="auth" class="card">
-        <h3>Sign in</h3>
-        <div class="grid">
-          <div>
-            <label>Student ID / Officer / Professor ID</label><br>
-            <input id="userId" placeholder="e.g. 202012345" />
+      <div class="login-card">
+        <h2>Sign In</h2>
+        <form id="loginForm">
+          <div class="form-group">
+            <label for="idInput">ID</label>
+            <input type="text" id="idInput" placeholder="Enter your ID" required />
           </div>
-          <div>
-            <label>Password</label><br>
-            <input id="password" type="password" placeholder="your password" />
+      
+          <div class="form-group">
+            <label for="passwordInput">Password</label>
+            <div class="password-wrapper">
+              <input type="password" id="passwordInput" placeholder="Enter your password" required />
+              <button type="button" id="togglePassword" class="toggle-btn">👁️</button>
+            </div>
           </div>
-        </div>
-        <div style="margin-top:12px">
-          <select id="roleSelect"><option value="student">Student</option><option value="officer">Officer</option><option value="professor">Professor</option></select>
-          <button id="signinBtn">Sign in</button>
-        </div>
-        <div id="authMsg" class="small muted"></div>
+      
+          <div class="form-group">
+            <label for="roleSelect">Role</label>
+            <select id="roleSelect" required>
+              <option value="">Select Role</option>
+              <option value="student">Student</option>
+              <option value="officer">Officer</option>
+              <option value="professor">Professor</option>
+            </select>
+          </div>
+      
+          <button type="submit" id="loginBtn">Sign In</button>
+          <div id="errorMsg" class="error-message"></div>
+        </form>
       </div>
       
       <div id="app" style="display:none">
@@ -134,6 +182,60 @@
           event.preventDefault();
           document.getElementById("signinBtn").click(); // correct id
         }
+      });
+
+      document.addEventListener("DOMContentLoaded", () => {
+        const form = document.getElementById("loginForm");
+        const idInput = document.getElementById("idInput");
+        const passwordInput = document.getElementById("passwordInput");
+        const roleSelect = document.getElementById("roleSelect");
+        const togglePassword = document.getElementById("togglePassword");
+        const errorMsg = document.getElementById("errorMsg");
+        const loginBtn = document.getElementById("loginBtn");
+      
+        // ✅ Toggle password visibility
+        togglePassword.addEventListener("click", () => {
+          const isPassword = passwordInput.type === "password";
+          passwordInput.type = isPassword ? "text" : "password";
+          togglePassword.textContent = isPassword ? "🙈" : "👁️";
+        });
+      
+        // ✅ Submit on Enter
+        form.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          errorMsg.textContent = "";
+          loginBtn.disabled = true;
+      
+          const payload = {
+            action: "signin",
+            id: idInput.value.trim(),
+            password: passwordInput.value.trim(),
+            role: roleSelect.value
+          };
+      
+          try {
+            const res = await fetch("/api", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+      
+            if (!data.ok) {
+              errorMsg.textContent = data.error || "Login failed";
+              loginBtn.disabled = false;
+              return;
+            }
+      
+            // ✅ Save session
+            localStorage.setItem("user", JSON.stringify(data.user));
+            window.location.href = "dashboard.html";
+          } catch (err) {
+            errorMsg.textContent = "Network error: " + err.message;
+          } finally {
+            loginBtn.disabled = false;
+          }
+        });
       });
 
       document.getElementById("hdr").innerHTML=new Date().toLocaleString("en-US", { dateStyle: 'full' });
