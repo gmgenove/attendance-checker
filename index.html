@@ -164,25 +164,42 @@
       // CONFIG: set this to your deployed Apps Script WebApp URL
       const API_BASE = 'https://attendance-proxy.onrender.com/api';
 
-      // Utility: call backend
+      // Utility: call backend safely
 	  async function api(action, payload = {}) {
-		try {
-		  const body = Object.assign({ action }, payload);
-		  const res = await fetch(API_BASE, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-	      	body: JSON.stringify(body)
-		  });
-		  const text = await res.text();
-		  try {
-			return JSON.parse(text);
-		  } catch {
-		    console.error("Invalid JSON response:", text);
-			return { ok: false, error: "Invalid JSON from server", raw: text };
-		  }
-		} catch (err) {
-    	  return { ok: false, error: "Network error: " + err.message };
-  		}
+	    const body = { action, ...payload };
+	    try {
+	      const res = await fetch(API_BASE, {
+	        method: "POST",
+	        headers: { "Content-Type": "application/json" },
+	        body: JSON.stringify(body),
+	      });
+	
+	      const text = await res.text();
+	
+	      // Empty or non-JSON response → return structured error
+	      if (!text.trim()) {
+	        console.error("Empty response from backend for", action);
+	        return { ok: false, error: "Empty response from server" };
+	      }
+	
+	      try {
+	        return JSON.parse(text);
+	      } catch (err) {
+	        console.error("Invalid JSON:", text);
+	        // Try to extract readable error if HTML
+	        const match = text.match(/<title>(.*?)<\/title>/i);
+	        return {
+	          ok: false,
+	          error:
+	            "Invalid JSON from server" +
+	            (match ? ` (${match[1]})` : ""),
+	          raw: text,
+	        };
+	      }
+	    } catch (err) {
+	      console.error("Network error", err);
+	      return { ok: false, error: "Network error: " + err.message };
+	    }
 	  }
 
       let currentUser = null; // {id, name, role}
