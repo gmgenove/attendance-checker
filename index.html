@@ -218,7 +218,6 @@
 			: 'Don’t have an account? <a href="#">Sign up</a>';
 		  errorMsg.textContent = "";
 		});
-		  console.log("isSignup: " + isSignup);
       
         // Handle form submit
         form.addEventListener("submit", async (e) => {
@@ -231,14 +230,12 @@
 			document.getElementById('authMsg').textContent='';
 			return;
           }
+		  if (!roleSelect.value)) {
+			document.getElementById('errorMsg').textContent='Select role';
+			document.getElementById('authMsg').textContent='';
+			return;
+          }
 		  document.getElementById('authMsg').textContent = isSignup ? "Signing up..." : "Signing in...";
-      
-          const payload = {
-            action: isSignup ? "signup" : "signin",
-            id: idInput.value.trim(),
-            password: passwordInput.value.trim(),
-            role: roleSelect.value
-          };
       
           try {
 			const data = await api(isSignup ? "signup" : "signin", {
@@ -246,7 +243,6 @@
 			  password: passwordInput.value.trim(),
 			  role: roleSelect.value
 			});
-			console.log(data);
       
             if (!data.ok) {
               errorMsg.textContent = data.error ? data.error : isSignup ? "Signup failed" : "Login failed";
