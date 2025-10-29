@@ -72,6 +72,12 @@ attendance-checker/
 1. Create Google Sheet with `Users`, `Schedule`, `Roster`, `Attendance` tabs.
 2. Open Apps Script editor → paste `Code.gs`.
 3. Deploy as Web App (`Execute as Me`, `Anyone` access).
-4. Copy the Web App URL and paste it in `index.html` under `API_BASE`.
-5. Upload the `index.html` & `backend/Code.gs` to your GitHub repo.
-6. Enable GitHub Pages (or connect to Render).
+4. From the Script Editor menu:
+    Select function → createDailyTriggerForScheduling
+    Click ▶️ Run (Authorize if needed)
+5. Check your triggers:
+    Go to Triggers (clock icon) → You should see:
+      scheduleAutoTagTriggersForToday → daily, 6:00 AM
+6. Copy the Web App URL and paste it in `index.html` under `API_BASE`.
+7. Upload the `index.html` & `backend/Code.gs` to your GitHub repo.
+8. Enable GitHub Pages (or connect to Render).
