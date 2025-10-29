@@ -74,8 +74,7 @@
 			  <div class="form-group">
 				<label for="passwordInput">Password</label><br>
 				<div class="password-wrapper">
-				  <input id="passwordInput" type="password" placeholder="Enter your password" required> <span id="togglePassword" class="fa fa-fw fa-eye field-icon"></span>
-				  </input>
+				  <input id="passwordInput" type="password" placeholder="Enter your password" required><span id="togglePassword" class="fa fa-fw fa-eye field-icon"></span></input>
 				</div>
 			  </div>
 			</div>
@@ -125,7 +124,12 @@
   
           <div id="officerControls" style="display:none">
             <label>Officer Reports</label><br>
-            <select id="reportType"><option value="class_date">Class & Date</option><option value="person">Person</option><option value="week">Week</option><option value="semester">Whole Semester</option></select>
+            <select id="reportType">
+				<option value="class_date">Class & Date</option>
+				<option value="person">Person</option>
+				<option value="week">Week</option>
+				<option value="semester">Whole Semester</option>
+			</select>
             <div id="reportParams" style="margin-top:8px"></div>
             <button id="generateReport">Generate</button>
             <div id="reportOutput" style="margin-top:8px"></div>
@@ -144,7 +148,9 @@
         </div>
         -->
   
-        <div class="card small muted"><strong>Notes:</strong> Check-in opens 10 minutes before class. On-time if checked-in within first 5 minutes; late if checked between 5 and 10 minutes; absent after 10 minutes and button is disabled.</div>
+        <div class="card small muted">
+			<strong>Notes:</strong> Check-in opens 10 minutes before class. On-time if checked-in within first 5 minutes; late if checked between 5 and 10 minutes; absent after 10 minutes and button is disabled.
+		</div>
       </div>
     </div>
     
