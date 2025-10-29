@@ -121,7 +121,7 @@
             <input id="profDate" type="date" />
             <button id="profDownload">Download CSV</button>
           </div>
-  
+			
           <div id="officerControls" style="display:none">
             <label>Officer Reports</label><br>
             <select id="reportType">
@@ -133,6 +133,7 @@
             <div id="reportParams" style="margin-top:8px"></div>
             <button id="generateReport">Generate</button>
             <div id="reportOutput" style="margin-top:8px"></div>
+
 			<hr style="margin:12px 0" />
 			<button id="runAutoTag" style="margin-top:10px;background:#0f766e;color:white">
 				Run Auto-Tag Absentees Now
@@ -297,23 +298,44 @@
         // pre-load schedule for today
       });
 	  
-	  // Officer: Manually trigger auto-tag absentees
+	  // Officer: Manually trigger auto-tag absentees and auto-refresh attendance
 	  const runAutoTagBtn = document.getElementById('runAutoTag');
-	  if (runAutoTagBtn) {
-		runAutoTagBtn.addEventListener('click', async () => {
+		if (runAutoTagBtn) {
+		  runAutoTagBtn.addEventListener('click', async () => {
 		  const msg = document.getElementById('autoTagMsg');
 		  msg.textContent = "Running absentee tagging...";
 		  runAutoTagBtn.disabled = true;
 
 		  try {
-		    const res = await api('auto_tag_absentees', {});
+			const res = await api('auto_tag_absentees', {});
 			if (res.ok) {
-		 	  msg.textContent = res.message || "Absentees tagged successfully.";
+			  msg.textContent = res.message || "Absentees tagged successfully.";
+				
+			  // Optional: give user feedback visually
+			  msg.style.color = "green";
+			  setTimeout(() => msg.style.color = "", 3000);
+
+			  // 🔁 Auto-refresh attendance data if officer is viewing it
+			  if (typeof loadTodaySchedule === "function") {
+			    await loadTodaySchedule(); // refresh schedule list if visible
+			  }
+
+			  // If officer has an attendance view or report open, reload it too
+			  const reportOutput = document.getElementById("reportOutput");
+			  if (reportOutput && reportOutput.innerHTML.trim() !== "") {
+			    // re-generate the current report type automatically
+			    const reportType = document.getElementById("reportType").value;
+			    const genBtn = document.getElementById("generateReport");
+			    if (genBtn) genBtn.click();
+			  }
+
 			} else {
-			  msg.textContent = "Failed: " + (res.error || "Unknown error");
+		      msg.textContent = "Failed: " + (res.error || "Unknown error");
+			  msg.style.color = "red";
 			}
 		  } catch (err) {
 			msg.textContent = "Network error: " + err.message;
+			msg.style.color = "red";
 		  } finally {
 			runAutoTagBtn.disabled = false;
 		  }
