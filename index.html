@@ -133,6 +133,11 @@
             <div id="reportParams" style="margin-top:8px"></div>
             <button id="generateReport">Generate</button>
             <div id="reportOutput" style="margin-top:8px"></div>
+			<hr style="margin:12px 0" />
+			<button id="runAutoTag" style="margin-top:10px;background:#0f766e;color:white">
+				Run Auto-Tag Absentees Now
+			</button>
+			<div id="autoTagMsg" class="small muted" style="margin-top:8px"></div>
           </div>
     
           <div id="studentControls" style="display:none">
@@ -291,6 +296,29 @@
         if (raw) {currentUser=JSON.parse(raw);showApp();} else {document.getElementById('auth').style.display='block'}
         // pre-load schedule for today
       });
+	  
+	  // Officer: Manually trigger auto-tag absentees
+	  const runAutoTagBtn = document.getElementById('runAutoTag');
+	  if (runAutoTagBtn) {
+		runAutoTagBtn.addEventListener('click', async () => {
+		  const msg = document.getElementById('autoTagMsg');
+		  msg.textContent = "Running absentee tagging...";
+		  runAutoTagBtn.disabled = true;
+
+		  try {
+		    const res = await api('auto_tag_absentees', {});
+			if (res.ok) {
+		 	  msg.textContent = res.message || "Absentees tagged successfully.";
+			} else {
+			  msg.textContent = "Failed: " + (res.error || "Unknown error");
+			}
+		  } catch (err) {
+			msg.textContent = "Network error: " + err.message;
+		  } finally {
+			runAutoTagBtn.disabled = false;
+		  }
+		});
+	  }
 
       async function showApp() {
         document.getElementById('auth').style.display='none';
