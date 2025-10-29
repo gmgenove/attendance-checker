@@ -166,21 +166,23 @@
 
       // Utility: call backend
 	  async function api(action, payload = {}) {
-	    const body = Object.assign({ action }, payload);
-		const res = await fetch(API_BASE, {
-		  method: 'POST',
-		  headers: {
-            'Content-Type': 'application/json'
-          },
-		  body: JSON.stringify(body)
-		});
-		const text = await res.text();
 		try {
-		  return JSON.parse(text);
-		} catch {
-		  console.error("Invalid JSON response:", text);
-		  return { ok: false, error: "Invalid JSON from server" };
-		}
+		  const body = Object.assign({ action }, payload);
+		  const res = await fetch(API_BASE, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+	      	body: JSON.stringify({ action, ...payload }),
+		  });
+		  const text = await res.text();
+		  try {
+			return JSON.parse(text);
+		  } catch {
+		    console.error("Invalid JSON response:", text);
+			return { ok: false, error: "Invalid JSON from server", raw: text };
+		  }
+		} catch (err) {
+    	  return { ok: false, error: "Network error: " + err.message };
+  		}
 	  }
 
       let currentUser = null; // {id, name, role}
