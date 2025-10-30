@@ -41,7 +41,7 @@ attendance-checker/
 
 
 ### 1. `Users`
-| student_id | name | password_hash | role |
+| id | name | password_hash | role |
 |-------------|------|----------------|------|
 | 2023001 | Juan Dela Cruz | 9b74c9897bac770ffc029102a200c5de | student |
 | prof001 | Prof. Reyes | 5e884898da28047151d0e56f8dc62927 | professor |
