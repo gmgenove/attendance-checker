@@ -577,11 +577,8 @@
 			link.style.color = '#007bff';
 			link.style.textDecoration = 'underline';
 			link.style.cursor = 'pointer';
-			  
-			const reportArea = document.getElementById('reportArea');
-			reportArea.innerHTML = ''; // clear previous content
-			reportArea.appendChild(link);
-
+			out.innerHTML = '';
+			out.appendChild(link);
 		  } else {
 			out.textContent = 'No data: ' + res.error;
 			alert('❌ ' + res.error);
