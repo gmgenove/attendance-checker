@@ -559,10 +559,15 @@
       document.getElementById('viewMyAttendance').onclick = async ()=> {
         const out = document.getElementById('myAttendanceOutput');out.textContent='Loading...';
         const r = await api('my_attendance',{student_id:currentUser.id});
-        if (r.ok && r.csv) {
-          out.innerHTML = `<a href='#' id='dl2'>Download my attendance (CSV)</a>`;
-          document.getElementById('dl2').onclick = ()=>{downloadCSV(r.csv,'my_attendance.csv')}
-        } else out.textContent='No data';
+        if (res.ok) {
+		  const link = document.createElement('a');
+		  link.href = 'data:application/pdf;base64,' + res.pdf;
+		  link.download = res.filename;
+		  link.click();
+		} else {
+		  out.textContent='No data'
+		  alert('Failed to generate PDF: ' + res.error);
+		}
       }
     </script>
   </body>
