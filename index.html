@@ -556,32 +556,41 @@
       }
 
       // Student view my attendance
-      document.getElementById('viewMyAttendance').onclick = async ()=> {
-        const out = document.getElementById('myAttendanceOutput');out.textContent='Loading...';
-        const r = await api('my_attendance',{student_id:currentUser.id});
-        if (res.ok) {
-		  // Create and show a download link dynamically
-		  const pdfBlobUrl = 'data:application/pdf;base64,' + res.pdf;
-		  const link = document.createElement('a');
-		  link.href = pdfBlobUrl;
-		  link.download = res.filename;
-		  link.textContent = '📄 Download Attendance PDF';
-		  link.style.display = 'block';
-		  link.style.color = '#007bff';
-		  link.style.marginTop = '10px';
-		  document.getElementById('reportArea').innerHTML = '';
-		  document.getElementById('reportArea').appendChild(link);
-		} else {
-		  out.textContent='No data: ' + res.error;
-		  alert('❌ ' + res.error);
+      document.getElementById('viewMyAttendance').onclick = async () => {
+		const out = document.getElementById('myAttendanceOutput');
+		out.textContent = 'Loading...';
+
+		try {
+		  const res = await api('my_attendance', { student_id: currentUser.id });
+
+		  if (res.ok) {
+			out.textContent = ''; // clear "Loading..."
+			  
+			// Create and show a download link dynamically
+			const pdfBlobUrl = 'data:application/pdf;base64,' + res.pdf;
+		    const link = document.createElement('a');
+			link.href = pdfBlobUrl;
+			link.download = res.filename;
+			link.textContent = '📄 Download Attendance PDF';
+			link.style.display = 'inline-block';
+			link.style.marginTop = '10px';
+			link.style.color = '#007bff';
+			link.style.textDecoration = 'underline';
+			link.style.cursor = 'pointer';
+			  
+			const reportArea = document.getElementById('reportArea');
+			reportArea.innerHTML = ''; // clear previous content
+			reportArea.appendChild(link);
+
+		  } else {
+			out.textContent = 'No data: ' + res.error;
+			alert('❌ ' + res.error);
+		  }
+		} catch (err) {
+			out.textContent = 'Error fetching attendance.';
+			alert('⚠️ ' + err.message);
 		}
-      }
-	  
-	  function downloadCSV(csv, filename) {
-        const blob = new Blob([csv], {type:'text/csv'});
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
-      }
+	  };
     </script>
   </body>
 </html>
