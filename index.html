@@ -560,14 +560,27 @@
         const out = document.getElementById('myAttendanceOutput');out.textContent='Loading...';
         const r = await api('my_attendance',{student_id:currentUser.id});
         if (res.ok) {
+		  // Create and show a download link dynamically
+		  const pdfBlobUrl = 'data:application/pdf;base64,' + res.pdf;
 		  const link = document.createElement('a');
-		  link.href = 'data:application/pdf;base64,' + res.pdf;
+		  link.href = pdfBlobUrl;
 		  link.download = res.filename;
-		  link.click();
+		  link.textContent = '📄 Download Attendance PDF';
+		  link.style.display = 'block';
+		  link.style.color = '#007bff';
+		  link.style.marginTop = '10px';
+		  document.getElementById('reportArea').innerHTML = '';
+		  document.getElementById('reportArea').appendChild(link);
 		} else {
-		  out.textContent='No data'
-		  alert('Failed to generate PDF: ' + res.error);
+		  out.textContent='No data: ' + res.error;
+		  alert('❌ ' + res.error);
 		}
+      }
+	  
+	  function downloadCSV(csv, filename) {
+        const blob = new Blob([csv], {type:'text/csv'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
       }
     </script>
   </body>
