@@ -291,14 +291,15 @@
 	      	} else { // ✅ Save session
 			  currentUser = data.user;
 	          localStorage.setItem("currentUser", JSON.stringify(currentUser));
-			  document.getElementById('authMsg').textContent='';
 			  showApp();
 		    }
           } catch (err) {
             errorMsg.textContent = "Network error: " + err.message;
-			document.getElementById('authMsg').textContent='';
           } finally {
             submitBtn.disabled = false;
+			setTimeout(() => {
+			  document.getElementById('authMsg').textContent = "";
+			}, 6000);
           }
         });
       });
@@ -324,6 +325,12 @@
 		  const msg = document.getElementById('autoTagMsg');
 		  msg.textContent = "Running absentee tagging...";
 		  runAutoTagBtn.disabled = true;
+		  
+		  // Disable button and show loading text
+		  runAutoTagBtn.disabled = true;
+		  runAutoTagBtn.textContent = "Tagging absentees...";
+		  msg.textContent = "";
+		  msg.style.color = "";
 
 		  try {
 			const res = await api('auto_tag_absentees', {});
@@ -353,10 +360,16 @@
 			  msg.style.color = "red";
 			}
 		  } catch (err) {
+			console.error("Auto tag error:", err);
 			msg.textContent = "Network error: " + err.message;
 			msg.style.color = "red";
 		  } finally {
+			// Re-enable button and reset text
 			runAutoTagBtn.disabled = false;
+			runAutoTagBtn.textContent = "Run Auto-Tag Absentees Now";
+			setTimeout(() => {
+			  msg.textContent = "";
+			}, 6000);
 		  }
 		});
 	  }
