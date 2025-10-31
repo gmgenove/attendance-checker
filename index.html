@@ -608,6 +608,11 @@
 			  btnCredit.style.display = 'none';
 			  btnCheckin.disabled = true;
 			  statusSpan.textContent = '🟡 Excuse';
+			} else if (att.status === 'HOLIDAY') {
+		      btnExcuse.style.display = 'none';
+			  btnCredit.style.display = 'none';
+			  btnCheckin.disabled = false;
+			  statusSpan.textContent = 'HOLIDAY';
 			} else if (att.status && att.status !== 'not_recorded') {
 			  btnCheckin.disabled = true;
 			  btnExcuse.style.display = 'none'
