@@ -55,107 +55,55 @@
         font-size: 0.9em;
       }
 	  .class-card {
-		display: flex;
-		justify-content: space-between;
-		align-items: flex-start;
-		background: #f9fafb;
-		border: 1px solid #e5e7eb;
-		border-radius: 12px;
-		padding: 12px 16px;
-		margin-bottom: 10px;
-	  }
-
-	  .class-content {
-		flex: 1;
-	  }
-
-	  .class-actions {
-		display: flex;
-		flex-direction: center;
-		gap: 8px;
-	  }
-
-	  .class-actions button {
-		padding: 6px 10px;
-		border-radius: 6px;
-		border: none;
-		font-size: 0.85rem;
-		cursor: pointer;
-	  }
-
-	  .credit-btn {
-		background: #3b82f6;
-		color: white;
-		width: 100%;
-	  }
-
-	  .excuse-btn {
-		background: #facc15;
-		color: #111827;
-		width: 100%;
-	  }
-	  
-	  .checkin-btn {
-		background: #10b981;
-		color: white;
-	  }
-
-	  button:disabled {
-		opacity: 0.6;
-		cursor: not-allowed;
-	  }
-
-	  .status-label {
-		margin-top: 6px;
-		font-weight: 500;
-	  }
-	  
-	  /* --- Dropdown menu --- */
-		.dropdown {
-		  position: relative;
-		}
-		.more-btn {
-		  background: #d1d5db;
-		  border-radius: 50%;
-		  width: 28px;
-		  height: 28px;
-		  font-size: 1.1rem;
-		  line-height: 1;
-		}
-		.dropdown-content {
-		  display: none;
-		  position: absolute;
-		  right: 0;
-		  top: 35px;
-		  background: white;
-		  border: 1px solid #e5e7eb;
-		  border-radius: 8px;
-		  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-		  flex-direction: column;
-		  padding: 4px;
-		  z-index: 10;
-		}
-		.dropdown-content button {
-		  display: block;
-		  width: 100%;
-		  margin: 2px 0;
-		}
-		.dropdown.show .dropdown-content {
 		  display: flex;
+		  justify-content: space-between;
+		  align-items: flex-start;
+		  background: #f9fafb;
+		  border: 1px solid #e5e7eb;
+		  border-radius: 12px;
+		  padding: 12px 16px;
+		  margin-bottom: 10px;
 		}
 
-		/* --- Responsive: show ⋯ menu instead of buttons --- */
-		@media (max-width: 600px) {
-		  .class-actions {
-			flex-direction: row;
-		  }
-		  .credit-btn,
-		  .excuse-btn {
-			display: none;
-		  }
-		  .dropdown .more-btn {
-			display: inline-block;
-		  }
+		.class-content {
+		  flex: 1;
+		}
+
+		.class-actions {
+		  display: flex;
+		  flex-direction: column;
+		  gap: 6px;
+		}
+
+		.class-actions button {
+		  padding: 6px 10px;
+		  border-radius: 6px;
+		  border: none;
+		  cursor: pointer;
+		  font-size: 0.85rem;
+		}
+
+		.credit-btn {
+		  background: #3b82f6;
+		  color: white;
+		}
+		.excuse-btn {
+		  background: #facc15;
+		  color: #111827;
+		}
+		.checkin-btn {
+		  background: #10b981;
+		  color: white;
+		}
+
+		.class-actions button:disabled {
+		  opacity: 0.6;
+		  cursor: not-allowed;
+		}
+
+		.status-label {
+		  margin-top: 6px;
+		  font-weight: 500;
 		}
     </style>
   </head>
@@ -515,7 +463,7 @@
 		}
 
 		const schedule = r.schedule;
-		const container = document.getElementById('scheduleList');
+	    const container = document.getElementById('scheduleList');
 		if (!schedule.length) {
 		  document.getElementById('todayMsg').textContent = 'No classes for today';
 		  container.innerHTML = '';
@@ -540,43 +488,39 @@
 				<div class="small muted">Professor: ${cls.professor_name || cls.professor_id}</div>
 				<div class="status-label"></div>
 			  </div>
-
 			  <div class="class-actions">
 				<button class="checkin-btn">Check in</button>
-				<div class="dropdown">
-				  <button class="more-btn">⋯</button>
-				  <div class="dropdown-content">
-					<button class="credit-btn">Credit</button>
-					<button class="excuse-btn">Excuse</button>
-				  </div>
-				</div>
-			  </div>`;
+				<button class="credit-btn">Credit</button>
+				<button class="excuse-btn">Excuse</button>
+			  </div>
+			`;
 		  container.appendChild(card);
+
 		  const btnCheckin = card.querySelector('.checkin-btn');
 		  const btnCredit = card.querySelector('.credit-btn');
 		  const btnExcuse = card.querySelector('.excuse-btn');
 		  const statusSpan = card.querySelector('.status-label');
-		  const dropdown = card.querySelector('.dropdown');
 
 		  // Hide Credit button if outside adjustment period
 		  if (!adjustEnd || now > adjustEnd) btnCredit.style.display = 'none';
 
-		  // Fetch attendance
+		  // Check existing attendance
 		  const attRes = await api('get_attendance', {
-			class_code: cls.class_code,
+		    class_code: cls.class_code,
 			date: isoDate(now),
 			student_id: currentUser.id
 		  });
+
 		  let att = attRes.ok ? attRes.record : null;
 
-		  // Apply existing status rules
+		  // Update button visibility based on status
 		  if (att) {
 			if (att.status === 'CREDITED') {
 			  btnCredit.disabled = true;
 			  btnExcuse.style.display = 'none';
 			  statusSpan.textContent = '✅ Credited';
 			} else if (att.status === 'EXCUSE') {
-			  btnExcuse.disabled = true;
+		      btnExcuse.disabled = true;
 			  btnCredit.style.display = 'none';
 			  statusSpan.textContent = '🟡 Excused';
 			} else if (att.status && att.status !== 'not_recorded') {
@@ -585,7 +529,7 @@
 			}
 		  }
 
-		  // --- Check-in logic (same as before) ---
+		  // --- Check-in logic (time-based) ---
 		  (function (cls, btnCheckin, statusSpan) {
 			let iv;
 			async function update() {
@@ -593,66 +537,68 @@
 			  function parseTime(t) {
 				const [hh, mm] = t.split(':').map(Number);
 				const d = new Date(tzNow);
-				  d.setHours(hh, mm, 0, 0);
-				  return d;
-				}
-				const start = parseTime(cls.start_time);
-				const enableFrom = new Date(start.getTime() - 10 * 60000);
-				const lateAfter = new Date(start.getTime() + 5 * 60000);				const absentAfter = new Date(start.getTime() + 10 * 60000);
+				d.setHours(hh, mm, 0, 0);
+				return d;
+			  }
+			  const start = parseTime(cls.start_time);
+			  const enableFrom = new Date(start.getTime() - 10 * 60000);
+			  const lateAfter = new Date(start.getTime() + 5 * 60000);
+			  const absentAfter = new Date(start.getTime() + 10 * 60000);
 
-				const localKey = `checkedin_${currentUser.id}_${cls.class_code}_${isoDate(tzNow)}`;
-				if (localStorage.getItem(localKey)) {
-				  btnCheckin.disabled = true;
-				  statusSpan.textContent = 'Already checked in (saved locally)';
-				  clearInterval(iv);
-				  return;
-				}
+			  const localKey = `checkedin_${currentUser.id}_${cls.class_code}_${isoDate(tzNow)}`;
+			  if (localStorage.getItem(localKey)) {
+			    btnCheckin.disabled = true;
+				statusSpan.textContent = 'Already checked in (saved locally)';
+				clearInterval(iv);
+				return;
+			  }
 
-				const checkRes = await api('get_attendance', {
-				  class_code: cls.class_code,
-				  date: isoDate(tzNow),
-				  student_id: currentUser.id
-				});
-				let att = checkRes.ok ? checkRes.record : null;
+			  const checkRes = await api('get_attendance', {
+				class_code: cls.class_code,
+				date: isoDate(tzNow),
+				student_id: currentUser.id
+			  });
+			  let att = checkRes.ok ? checkRes.record : null;
 
-				if (att && att.status !== 'not_recorded') {
-				  btnCheckin.disabled = true;
-				  statusSpan.textContent = `Status: ${att.status} (${att.timestamp || '—'})`;
-				  clearInterval(iv);
-				} else if (tzNow >= enableFrom && tzNow < absentAfter) {
-				  btnCheckin.disabled = false;
-				  statusSpan.textContent =
-					tzNow < lateAfter ? 'On time window — click to check in' : 'Late — will be marked late';
-				} else if (tzNow >= absentAfter) {
-				  btnCheckin.disabled = true;
-				  statusSpan.textContent = 'Absent — check-in disabled';
-				  clearInterval(iv);
-				} else {
-				  btnCheckin.disabled = true;
-				  statusSpan.textContent = `Check-in opens at ${timeStr(enableFrom)}`;
-				}
+			  if (att && att.status !== 'not_recorded') {
+				btnCheckin.disabled = true;
+				statusSpan.textContent = `Status: ${att.status} (${att.timestamp || '—'})`;
+				clearInterval(iv);
+			  } else if (tzNow >= enableFrom && tzNow < absentAfter) {
+				btnCheckin.disabled = false;
+				if (tzNow < lateAfter)
+				  statusSpan.textContent = 'On time window — click to check in';
+				else statusSpan.textContent = 'Late — will be marked late';
+			  } else if (tzNow >= absentAfter) {
+				btnCheckin.disabled = true;
+				statusSpan.textContent = 'Absent — check-in disabled';
+				clearInterval(iv);
+			  } else {
+				btnCheckin.disabled = true;
+				statusSpan.textContent = `Check-in opens at ${timeStr(enableFrom)}`;
+			  }
 			}
 
 			update();
 			iv = setInterval(update, 10000);
 
 			btnCheckin.onclick = async () => {
-			  btnCheckin.disabled = true;
-			  statusSpan.textContent = 'Checking in...';
-			  const res = await api('checkin', { class_code: cls.class_code, student_id: currentUser.id });
-			  if (res.ok) {
-				const key = `checkedin_${currentUser.id}_${cls.class_code}_${isoDate(new Date())}`;
-				localStorage.setItem(key, 'true');
-				statusSpan.textContent = `Checked in: ${res.status} at ${res.timestamp}`;
-				clearInterval(iv);
-			  } else {
-				statusSpan.textContent = 'Check-in failed: ' + res.error;
-				btnCheckin.disabled = false;
-			  }
-			};
-		  })(cls, btnCheckin, statusSpan);
+			btnCheckin.disabled = true;
+			statusSpan.textContent = 'Checking in...';
+			const res = await api('checkin', { class_code: cls.class_code, student_id: currentUser.id });
+			if (res.ok) {
+			  const key = `checkedin_${currentUser.id}_${cls.class_code}_${isoDate(new Date())}`;
+			  localStorage.setItem(key, 'true');
+			  statusSpan.textContent = `Checked in: ${res.status} at ${res.timestamp}`;
+			  clearInterval(iv);
+			} else {
+			  statusSpan.textContent = 'Check-in failed: ' + res.error;
+			  btnCheckin.disabled = false;
+			}
+		  };
+		})(cls, btnCheckin, statusSpan);
 
-			// --- Credit Button ---
+		  // --- Credit Button ---
 		  btnCredit.onclick = async () => {
 			if (!confirm('Credit attendance for the whole semester?')) return;
 			const res = await api('credit_attendance', { class_code: cls.class_code, student_id: currentUser.id });
@@ -678,14 +624,6 @@
 			  btnCredit.style.display = 'none';
 			} else alert('❌ ' + res.error);
 		  };
-
-		  // --- Dropdown toggle ---
-		  dropdown.querySelector('.more-btn').onclick = (e) => {
-			e.stopPropagation();
-			dropdown.classList.toggle('show');
-		  };
-
-		  document.addEventListener('click', () => dropdown.classList.remove('show'));
 		}
 	  }
 
