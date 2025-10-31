@@ -587,11 +587,18 @@
 			if (att.status === 'CREDITED') {
 			  btnCredit.disabled = true;
 			  btnExcuse.style.display = 'none';
+			  btnCheckin.style.display = 'none';
 			  statusSpan.textContent = '✅ Credited';
 			} else if (att.status === 'EXCUSE') {
 		      btnExcuse.disabled = true;
 			  btnCredit.style.display = 'none';
+			  btnCheckin.style.display = 'none';
 			  statusSpan.textContent = '🟡 Excuse';
+			} else if (att.status === 'ABSENT') {
+		      btnExcuse.style.display = 'none'
+			  btnCredit.style.display = 'none';
+			  btnCheckin.disabled = true;
+			  statusSpan.textContent = '🟡 Absent — check-in disabled';
 			} else if (att.status && att.status !== 'not_recorded') {
 			  btnCheckin.disabled = true;
 			  statusSpan.textContent = `Status: ${att.status} (${att.timestamp || '—'})`;
