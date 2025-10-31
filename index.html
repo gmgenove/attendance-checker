@@ -473,11 +473,6 @@
 		document.getElementById('todayMsg').textContent = '';
 		container.innerHTML = '';
 
-		// Fetch adjustment period once for all
-		const configRes = await api('get_adjustment_period', {});
-		const adjustEnd = configRes.ok ? new Date(configRes.adjustEnd) : null;
-		const now = new Date();
-
 		for (const cls of schedule) {
 		  const card = document.createElement('div');
 		  card.className = 'class-card';
@@ -500,34 +495,6 @@
 		  const btnCredit = card.querySelector('.credit-btn');
 		  const btnExcuse = card.querySelector('.excuse-btn');
 		  const statusSpan = card.querySelector('.status-label');
-
-		  // Hide Credit button if outside adjustment period
-		  if (!adjustEnd || now > adjustEnd) btnCredit.style.display = 'none';
-
-		  // Check existing attendance
-		  const attRes = await api('get_attendance', {
-		    class_code: cls.class_code,
-			date: isoDate(now),
-			student_id: currentUser.id
-		  });
-
-		  let att = attRes.ok ? attRes.record : null;
-
-		  // Update button visibility based on status
-		  if (att) {
-			if (att.status === 'CREDITED') {
-			  btnCredit.disabled = true;
-			  btnExcuse.style.display = 'none';
-			  statusSpan.textContent = '✅ Credited';
-			} else if (att.status === 'EXCUSE') {
-		      btnExcuse.disabled = true;
-			  btnCredit.style.display = 'none';
-			  statusSpan.textContent = '🟡 Excused';
-			} else if (att.status && att.status !== 'not_recorded') {
-			  btnCheckin.disabled = true;
-			  statusSpan.textContent = `Status: ${att.status} (${att.timestamp || '—'})`;
-			}
-		  }
 
 		  // --- Check-in logic (time-based) ---
 		  (function (cls, btnCheckin, statusSpan) {
@@ -583,21 +550,54 @@
 			iv = setInterval(update, 10000);
 
 			btnCheckin.onclick = async () => {
-			btnCheckin.disabled = true;
-			statusSpan.textContent = 'Checking in...';
-			const res = await api('checkin', { class_code: cls.class_code, student_id: currentUser.id });
-			if (res.ok) {
-			  const key = `checkedin_${currentUser.id}_${cls.class_code}_${isoDate(new Date())}`;
-			  localStorage.setItem(key, 'true');
-			  statusSpan.textContent = `Checked in: ${res.status} at ${res.timestamp}`;
-			  clearInterval(iv);
-			} else {
-			  statusSpan.textContent = 'Check-in failed: ' + res.error;
-			  btnCheckin.disabled = false;
-			}
-		  };
-		})(cls, btnCheckin, statusSpan);
+			  btnCheckin.disabled = true;
+			  statusSpan.textContent = 'Checking in...';
+			  const res = await api('checkin', { class_code: cls.class_code, student_id: currentUser.id });
+			  if (res.ok) {
+			    const key = `checkedin_${currentUser.id}_${cls.class_code}_${isoDate(new Date())}`;
+			    localStorage.setItem(key, 'true');
+			    statusSpan.textContent = `Checked in: ${res.status} at ${res.timestamp}`;
+			    clearInterval(iv);
+			  } else {
+			    statusSpan.textContent = 'Check-in failed: ' + res.error;
+			    btnCheckin.disabled = false;
+			  }
+		    };
+		  })(cls, btnCheckin, statusSpan);
 
+		  // Fetch adjustment period once for all
+		  const configRes = await api('get_adjustment_period', {});
+		  const adjustEnd = configRes.ok ? new Date(configRes.adjustEnd) : null;
+		  const now = new Date();
+		  
+		  // Hide Credit button if outside adjustment period
+		  if (!adjustEnd || now > adjustEnd) btnCredit.style.display = 'none';
+
+		  // Check existing attendance
+		  const attRes = await api('get_attendance', {
+		    class_code: cls.class_code,
+			date: isoDate(now),
+			student_id: currentUser.id
+		  });
+
+		  let att = attRes.ok ? attRes.record : null;
+
+		  // Update button visibility based on status
+		  if (att) {
+			if (att.status === 'CREDITED') {
+			  btnCredit.disabled = true;
+			  btnExcuse.style.display = 'none';
+			  statusSpan.textContent = '✅ Credited';
+			} else if (att.status === 'EXCUSE') {
+		      btnExcuse.disabled = true;
+			  btnCredit.style.display = 'none';
+			  statusSpan.textContent = '🟡 Excused';
+			} else if (att.status && att.status !== 'not_recorded') {
+			  btnCheckin.disabled = true;
+			  statusSpan.textContent = `Status: ${att.status} (${att.timestamp || '—'})`;
+			}
+		  }
+		  
 		  // --- Credit Button ---
 		  btnCredit.onclick = async () => {
 			if (!confirm('Credit attendance for the whole semester?')) return;
