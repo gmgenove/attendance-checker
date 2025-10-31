@@ -112,6 +112,7 @@
       <header>
         <h1>BPAOUMN 1-B Attendance Checker</h1>
         <div id="hdr" class="small muted"></div>
+		<div id="holidayNotice" class="small muted" style="margin-bottom: 10px;"></div>
       </header>
 
       <div id="auth" class="card">
@@ -452,10 +453,23 @@
         // load today's schedule
         loadTodaySchedule();
       }
+	  
+	  async function checkHolidayAndDisplay() {
+		const res = await api('check_holiday', {});
+		const el = document.getElementById('holidayNotice');
+
+		if (res.ok && res.isHoliday) {
+		  el.textContent = `🎉 ${res.holidayName}! (res.type)`;
+		  el.style.color = 'red';
+		} else {
+		  el.textContent = '';
+		}
+	  }
 
       // load today's schedule and draw check-in buttons
       async function loadTodaySchedule() {
 		document.getElementById('todayMsg').textContent = 'Loading...';
+		await checkHolidayAndDisplay();
 		const r = await api('today_schedule', {});
 		if (!r.ok) {
 		  document.getElementById('todayMsg').textContent = 'Failed to load schedule';
