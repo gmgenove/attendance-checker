@@ -253,6 +253,28 @@
 	      return { ok: false, error: "Network error: " + err.message };
 	    }
 	  }
+	  
+	  let appConfig = null;
+
+		async function loadConfig() {
+		  google.script.run
+			.withSuccessHandler((res) => {
+			  if (!res.ok) {
+				console.error("Failed to load config:", res.error);
+				return;
+			  }
+
+			  appConfig = res.config;
+			  console.log("Loaded config:", appConfig);
+			  //applyConfigUI();
+			})
+			.getJSONConfig();
+		}
+
+		// Run when page loads
+		window.onload = () => {
+		  loadConfig();
+		};
 
       let currentUser = null; // {id, name, role}
 
@@ -519,9 +541,9 @@
 		  
 		  const tzNow = new Date();
 		  const start = parseTime(cls.start_time);
-		  const enableFrom = new Date(start.getTime() - 10 * 60000);
-		  const lateAfter = new Date(start.getTime() + 5 * 60000);
-		  const absentAfter = new Date(start.getTime() + 20 * 60000);
+		  const enableFrom = new Date(start.getTime() - appConfig.checkin_window_minutes * 60000);
+		  const lateAfter = new Date(start.getTime() + appConfig.late_window_minutes * 60000);
+		  const absentAfter = new Date(start.getTime() + appConfig.absent_window_minutes * 60000);
 
 		  // --- Check-in logic (time-based) ---
 		  (function (cls, btnCheckin, statusSpan) {
