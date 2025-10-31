@@ -422,11 +422,17 @@
 		    const btnCheckin = document.createElement('button'); btnCheckin.textContent = 'Check in'; btnCheckin.disabled = true; btnCheckin.style.marginTop = '8px';
 		    const btnCredit = document.createElement('button'); btnCredit.textContent = 'Credit'; btnCredit.style.marginLeft = '6px';
 		    const btnExcuse = document.createElement('button'); btnExcuse.textContent = 'Excuse'; btnExcuse.style.marginLeft = '6px';
+			const reasonField = document.createElement('input');
+			reasonField.type = 'text';
+			reasonField.placeholder = 'Reason for excuse';
+			reasonField.style.display = 'none';
+			reasonField.style.marginTop = '6px';
 		    const statusSpan = document.createElement('div'); statusSpan.className = 'small muted'; statusSpan.style.marginTop = '8px';
 		
 		    el.appendChild(btnCheckin);
 		    el.appendChild(btnCredit);
 		    el.appendChild(btnExcuse);
+			el.appendChild(reasonField);
 		    el.appendChild(statusSpan);
 		
 		    // Time-based enabling logic for check-in
@@ -499,16 +505,40 @@
 		      }
 		    };
 		  })(cls, btnCheckin, statusSpan);
+		  
+		  // Hide Credit button if outside adjustment period
+		  const config = await api('get_adjustment_period', {});
+		  if (!config.ok || new Date() > new Date(config.adjustEnd)) {
+			btnCredit.style.display = 'none';
+		  }
 		
 		  // ✅ Credit Button
 		  btnCredit.onclick = async () => {
 		    if (!confirm('Credit attendance for the whole semester?')) return;
 		    const res = await api('credit_attendance', { class_code: cls.class_code, student_id: currentUser.id });
-		    if (res.ok) alert('✅ ' + res.message);
-		    else alert('❌ ' + res.error);
+		    if (res.ok) {
+			  statusSpan.textContent = '✅ Credited';
+			  btnCredit.disabled = true;
+			  btnExcuse.disabled = true;
+			} else alert('❌ ' + res.error);
 		  };
 		
 		  // ✅ Excuse Button
+		  btnExcuse.onclick = () => {
+			reasonField.style.display = reasonField.style.display === 'none' ? 'block' : 'none';
+		  };
+		  reasonField.onchange = async () => {
+			const res = await api('excuse_attendance', {
+			  class_code: cls.class_code, 
+			  student_id: currentUser.id, 
+			  reason: reasonField.value
+			});
+			if (res.ok) {
+			  statusSpan.textContent = '🟡 Excused';
+			  btnExcuse.disabled = true;
+			  btnCredit.disabled = true;
+			} else alert('❌ ' + res.error);
+		  };
 		  btnExcuse.onclick = async () => {
 		    const reason = prompt('Enter reason for excuse:');
 		    if (!reason) return alert('Reason is required.');
