@@ -259,15 +259,11 @@
 	  async function loadConfig() {
 		try {
 		  const res = await api('getConfig', {});
-		  const data = await res.json();
-
-		  if (!data.ok) {
-			console.error("Failed to load config:", data.error);
+		  if (!res.ok) {
+			console.error("Failed to load config:", res.error);
 			return;
 		  }
-
-		  appConfig = data.config;
-		  applyConfigUI();
+		  appConfig = res.config;
 		} catch (err) {
 		  console.error("Error fetching config:", err);
 		}
