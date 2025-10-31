@@ -258,7 +258,7 @@
 
 	  async function loadConfig() {
 		try {
-		  const res = await fetch(`${API_BASE}?action=getJSONConfig`);
+		  const res = await api('getConfig', {});
 		  const data = await res.json();
 
 		  if (!data.ok) {
