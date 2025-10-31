@@ -591,7 +591,7 @@
 			} else if (att.status === 'EXCUSE') {
 		      btnExcuse.disabled = true;
 			  btnCredit.style.display = 'none';
-			  statusSpan.textContent = '🟡 Excused';
+			  statusSpan.textContent = '🟡 Excuse';
 			} else if (att.status && att.status !== 'not_recorded') {
 			  btnCheckin.disabled = true;
 			  statusSpan.textContent = `Status: ${att.status} (${att.timestamp || '—'})`;
@@ -619,7 +619,7 @@
 			  reason
 			});
 			if (res.ok) {
-			  statusSpan.textContent = '🟡 Excused';
+			  statusSpan.textContent = '🟡 Excuse';
 			  btnExcuse.disabled = true;
 			  btnCredit.style.display = 'none';
 			} else alert('❌ ' + res.error);
