@@ -256,25 +256,27 @@
 	  
 	  let appConfig = null;
 
-		async function loadConfig() {
-		  google.script.run
-			.withSuccessHandler((res) => {
-			  if (!res.ok) {
-				console.error("Failed to load config:", res.error);
-				return;
-			  }
+	  async function loadConfig() {
+		try {
+		  const res = await fetch(`${API_BASE}?action=getConfig`);
+		  const data = await res.json();
 
-			  appConfig = res.config;
-			  console.log("Loaded config:", appConfig);
-			  //applyConfigUI();
-			})
-			.getJSONConfig();
+		  if (!data.ok) {
+			console.error("Failed to load config:", data.error);
+			return;
+		  }
+
+		  appConfig = data.config;
+		  applyConfigUI();
+		} catch (err) {
+		  console.error("Error fetching config:", err);
 		}
+	  }
 
-		// Run when page loads
-		window.onload = () => {
-		  loadConfig();
-		};
+	  // Run when page loads
+	  window.onload = () => {
+		loadConfig();
+	  };
 
       let currentUser = null; // {id, name, role}
 
