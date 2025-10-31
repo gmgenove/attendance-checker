@@ -510,6 +510,13 @@
 		  const btnExcuse = card.querySelector('.excuse-btn');
 		  const statusSpan = card.querySelector('.status-label');
 		  
+		  function parseTime(t) {
+			const [hh, mm] = t.split(':').map(Number);
+			const d = new Date(tzNow);
+			d.setHours(hh, mm, 0, 0);
+			return d;
+		  }
+		  
 		  const tzNow = new Date();
 		  const start = parseTime(cls.start_time);
 		  const enableFrom = new Date(start.getTime() - 10 * 60000);
@@ -520,13 +527,6 @@
 		  (function (cls, btnCheckin, statusSpan) {
 			let iv;
 			async function update() {
-			  function parseTime(t) {
-				const [hh, mm] = t.split(':').map(Number);
-				const d = new Date(tzNow);
-				d.setHours(hh, mm, 0, 0);
-				return d;
-			  }
-
 			  const localKey = `checkedin_${currentUser.id}_${cls.class_code}_${isoDate(tzNow)}`;
 			  if (localStorage.getItem(localKey)) {
 			    btnCheckin.disabled = true;
