@@ -509,22 +509,23 @@
 		  const btnCredit = card.querySelector('.credit-btn');
 		  const btnExcuse = card.querySelector('.excuse-btn');
 		  const statusSpan = card.querySelector('.status-label');
+		  
+		  const tzNow = new Date();
+		  const start = parseTime(cls.start_time);
+		  const enableFrom = new Date(start.getTime() - 10 * 60000);
+		  const lateAfter = new Date(start.getTime() + 5 * 60000);
+		  const absentAfter = new Date(start.getTime() + 10 * 60000);
 
 		  // --- Check-in logic (time-based) ---
 		  (function (cls, btnCheckin, statusSpan) {
 			let iv;
 			async function update() {
-			  const tzNow = new Date();
 			  function parseTime(t) {
 				const [hh, mm] = t.split(':').map(Number);
 				const d = new Date(tzNow);
 				d.setHours(hh, mm, 0, 0);
 				return d;
 			  }
-			  const start = parseTime(cls.start_time);
-			  const enableFrom = new Date(start.getTime() - 10 * 60000);
-			  const lateAfter = new Date(start.getTime() + 5 * 60000);
-			  const absentAfter = new Date(start.getTime() + 10 * 60000);
 
 			  const localKey = `checkedin_${currentUser.id}_${cls.class_code}_${isoDate(tzNow)}`;
 			  if (localStorage.getItem(localKey)) {
@@ -598,7 +599,6 @@
 
 		  // Update button visibility based on status
 		  if (att) {
-			const tzNow = new Date();
 			if (att.status === 'CREDITED') {
 			  btnCredit.style.display = 'none';
 			  btnExcuse.style.display = 'none';
