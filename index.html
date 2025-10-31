@@ -526,10 +526,10 @@
 			btnCredit.disabled = true;
 		    btnExcuse.style.display = 'none'; // hide Excuse
 			statusSpan.textContent = '✅ Credited';
-		  } else if (att && att.status === 'EXCUSED') {
+		  } else if (att && att.status === 'EXCUSE') {
 			btnExcuse.disabled = true;
 			btnCredit.style.display = 'none'; // hide Credit
-			statusSpan.textContent = '🟡 Excused';
+			statusSpan.textContent = '🟡 Excuse';
 		  }
 		
 		  // ✅ Credit Button
@@ -554,7 +554,7 @@
 			  reason: reasonField.value
 			});
 			if (res.ok) {
-			  statusSpan.textContent = '🟡 Excused';
+			  statusSpan.textContent = '🟡 Excuse';
 			  btnExcuse.disabled = true;
 			  btnCredit.disabled = true;
 			} else alert('❌ ' + res.error);
