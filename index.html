@@ -585,20 +585,20 @@
 		  // Update button visibility based on status
 		  if (att) {
 			if (att.status === 'CREDITED') {
-			  btnCredit.disabled = true;
+			  btnCredit.style.display = 'none';
 			  btnExcuse.style.display = 'none';
 			  btnCheckin.style.display = 'none';
 			  statusSpan.textContent = '✅ Credited';
 			} else if (att.status === 'EXCUSE') {
-		      btnExcuse.disabled = true;
+		      btnExcuse.style.display = 'none';
 			  btnCredit.style.display = 'none';
-			  btnCheckin.style.display = 'none';
+			  btnCheckin.disabled = true;
 			  statusSpan.textContent = '🟡 Excuse';
 			} else if (att.status && att.status !== 'not_recorded') {
 			  btnCheckin.disabled = true;
 			  btnExcuse.style.display = 'none'
 			  btnCredit.style.display = 'none';
-			  statusSpan.textContent = `Status: ${att.status} (${att.timestamp || '—'})`;
+			  statusSpan.textContent = `Status: ${att.status} (${att.time_in || '—'}) (${att.reason || ''})`;
 			}
 		  }
 		  
