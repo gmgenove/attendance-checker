@@ -54,6 +54,109 @@
         margin-top: 10px;
         font-size: 0.9em;
       }
+	  .class-card {
+		display: flex;
+		justify-content: space-between;
+		align-items: flex-start;
+		background: #f9fafb;
+		border: 1px solid #e5e7eb;
+		border-radius: 12px;
+		padding: 12px 16px;
+		margin-bottom: 10px;
+	  }
+
+	  .class-content {
+		flex: 1;
+	  }
+
+	  .class-actions {
+		display: flex;
+		flex-direction: center;
+		gap: 8px;
+	  }
+
+	  .class-actions button {
+		padding: 6px 10px;
+		border-radius: 6px;
+		border: none;
+		font-size: 0.85rem;
+		cursor: pointer;
+	  }
+
+	  .credit-btn {
+		background: #3b82f6;
+		color: white;
+		width: 100%;
+	  }
+
+	  .excuse-btn {
+		background: #facc15;
+		color: #111827;
+		width: 100%;
+	  }
+	  
+	  .checkin-btn {
+		background: #10b981;
+		color: white;
+	  }
+
+	  button:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
+	  }
+
+	  .status-label {
+		margin-top: 6px;
+		font-weight: 500;
+	  }
+	  
+	  /* --- Dropdown menu --- */
+		.dropdown {
+		  position: relative;
+		}
+		.more-btn {
+		  background: #d1d5db;
+		  border-radius: 50%;
+		  width: 28px;
+		  height: 28px;
+		  font-size: 1.1rem;
+		  line-height: 1;
+		}
+		.dropdown-content {
+		  display: none;
+		  position: absolute;
+		  right: 0;
+		  top: 35px;
+		  background: white;
+		  border: 1px solid #e5e7eb;
+		  border-radius: 8px;
+		  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+		  flex-direction: column;
+		  padding: 4px;
+		  z-index: 10;
+		}
+		.dropdown-content button {
+		  display: block;
+		  width: 100%;
+		  margin: 2px 0;
+		}
+		.dropdown.show .dropdown-content {
+		  display: flex;
+		}
+
+		/* --- Responsive: show ⋯ menu instead of buttons --- */
+		@media (max-width: 600px) {
+		  .class-actions {
+			flex-direction: row;
+		  }
+		  .credit-btn,
+		  .excuse-btn {
+			display: none;
+		  }
+		  .dropdown .more-btn {
+			display: inline-block;
+		  }
+		}
     </style>
   </head>
   <body>
@@ -406,168 +509,183 @@
       async function loadTodaySchedule() {
 		document.getElementById('todayMsg').textContent = 'Loading...';
 		const r = await api('today_schedule', {});
-		if (!r.ok) { document.getElementById('todayMsg').textContent = 'Failed to load schedule'; return; }
-		  const schedule = r.schedule;
-		  if (!schedule.length) { document.getElementById('todayMsg').textContent = 'No classes for today'; document.getElementById('scheduleList').innerHTML = ''; return; }
-		  document.getElementById('todayMsg').textContent = '';
-		  const container = document.getElementById('scheduleList'); container.innerHTML = '';
-		
-		  for (const cls of schedule) {
-		    const el = document.createElement('div'); el.className = 'card';
-		    const h = document.createElement('div');
-		    h.innerHTML = `<strong>${cls.class_code} — ${cls.class_name}</strong> 
-		                   <div class="small muted">${cls.start_time} – ${cls.end_time} (${cls.day})</div>`;
-		    el.appendChild(h);
-		
-		    const btnCheckin = document.createElement('button'); btnCheckin.textContent = 'Check in'; btnCheckin.disabled = true; btnCheckin.style.marginTop = '8px';
-		    const btnCredit = document.createElement('button'); btnCredit.textContent = 'Credit'; btnCredit.style.marginLeft = '6px';
-		    const btnExcuse = document.createElement('button'); btnExcuse.textContent = 'Excuse'; btnExcuse.style.marginLeft = '6px';
-			const reasonField = document.createElement('input');
-			reasonField.type = 'text';
-			reasonField.placeholder = 'Reason for excuse';
-			reasonField.style.display = 'none';
-			reasonField.style.marginTop = '6px';
-		    const statusSpan = document.createElement('div'); statusSpan.className = 'small muted'; statusSpan.style.marginTop = '8px';
-		
-		    el.appendChild(btnCheckin);
-		    el.appendChild(btnCredit);
-		    el.appendChild(btnExcuse);
-			el.appendChild(reasonField);
-		    el.appendChild(statusSpan);
-		
-		    // Time-based enabling logic for check-in
-		    (function (cls, btnCheckin, statusSpan) {
-		      let iv;
-		      async function update() {
-		        const tzNow = new Date();
-		        function parseTime(t) {
-		          const [hh, mm] = t.split(':').map(Number);
-		          const d = new Date(tzNow);
-		          d.setHours(hh, mm, 0, 0);
-		          return d;
-		        }
-		        const start = parseTime(cls.start_time);
-		        const enableFrom = new Date(start.getTime() - 10 * 60000);
-		        const lateAfter = new Date(start.getTime() + 5 * 60000);
-		        const absentAfter = new Date(start.getTime() + 10 * 60000);
-		
-		        const checkRes = await api('get_attendance', {
-		          class_code: cls.class_code,
-		          date: isoDate(tzNow),
-		          student_id: currentUser.id
-		      });
-		
-		      const localKey = `checkedin_${currentUser.id}_${cls.class_code}_${isoDate(tzNow)}`;
-		      if (localStorage.getItem(localKey)) {
-		        btnCheckin.disabled = true;
-		        statusSpan.textContent = 'Already checked in (saved locally)';
-		        clearInterval(iv);
-		        return;
-		      }
-		
-		      let att = null;
-		      if (checkRes.ok) att = checkRes.record;
-		
-		      if (att && att.status !== 'not_recorded') {
-		        btnCheckin.disabled = true;
-		        statusSpan.textContent = `Status: ${att.status} (${att.timestamp || '—'})`;
-		        clearInterval(iv);
-		      } else if (tzNow >= enableFrom && tzNow < absentAfter) {
-		        btnCheckin.disabled = false;
-		        if (tzNow < lateAfter)
-		          statusSpan.textContent = 'On time window — click to check in';
-		        else statusSpan.textContent = 'Late — you will be tagged late if you check in now';
-		      } else if (tzNow >= absentAfter) {
-		        btnCheckin.disabled = true;
-		        statusSpan.textContent = 'Absent — check-in disabled';
-		        clearInterval(iv);
-		      } else {
-		        btnCheckin.disabled = true;
-		        statusSpan.textContent = `Check-in opens at ${timeStr(enableFrom)}`;
-		      }
-		    }
-		
-		    update();
-		    iv = setInterval(update, 10000);
-		
-		    btnCheckin.onclick = async () => {
-		      btnCheckin.disabled = true;
-		      statusSpan.textContent = 'Checking in...';
-		      const res = await api('checkin', { class_code: cls.class_code, student_id: currentUser.id });
-		      if (res.ok) {
-		        const key = `checkedin_${currentUser.id}_${cls.class_code}_${isoDate(new Date())}`;
-		        localStorage.setItem(key, 'true');
-		        statusSpan.textContent = `Checked in: ${res.status} at ${res.timestamp}`;
-		        clearInterval(iv);
-		      } else {
-		        statusSpan.textContent = 'Check-in failed: ' + res.error;
-		        btnCheckin.disabled = false;
-		      }
-		    };
-		  })(cls, btnCheckin, statusSpan);
-		  
+		if (!r.ok) {
+		  document.getElementById('todayMsg').textContent = 'Failed to load schedule';
+		  return;
+		}
+
+		const schedule = r.schedule;
+		const container = document.getElementById('scheduleList');
+		if (!schedule.length) {
+		  document.getElementById('todayMsg').textContent = 'No classes for today';
+		  container.innerHTML = '';
+		  return;
+		}
+
+		document.getElementById('todayMsg').textContent = '';
+		container.innerHTML = '';
+
+		// Fetch adjustment period once for all
+		const configRes = await api('get_adjustment_period', {});
+		const adjustEnd = configRes.ok ? new Date(configRes.adjustEnd) : null;
+		const now = new Date();
+
+		for (const cls of schedule) {
+		  const card = document.createElement('div');
+		  card.className = 'class-card';
+		  card.innerHTML = `
+			  <div class="class-content">
+				<strong>${cls.class_code} — ${cls.class_name}</strong>
+				<div class="small muted">${cls.start_time} – ${cls.end_time} (${cls.day})</div>
+				<div class="small muted">Professor: ${cls.professor_name || cls.professor_id}</div>
+				<div class="status-label"></div>
+			  </div>
+
+			  <div class="class-actions">
+				<button class="checkin-btn">Check in</button>
+				<div class="dropdown">
+				  <button class="more-btn">⋯</button>
+				  <div class="dropdown-content">
+					<button class="credit-btn">Credit</button>
+					<button class="excuse-btn">Excuse</button>
+				  </div>
+				</div>
+			  </div>`;
+		  container.appendChild(card);
+		  const btnCheckin = card.querySelector('.checkin-btn');
+		  const btnCredit = card.querySelector('.credit-btn');
+		  const btnExcuse = card.querySelector('.excuse-btn');
+		  const statusSpan = card.querySelector('.status-label');
+		  const dropdown = card.querySelector('.dropdown');
+
 		  // Hide Credit button if outside adjustment period
-		  const config = await api('get_adjustment_period', {});
-		  if (!config.ok || new Date() > new Date(config.adjustEnd)) {
-			btnCredit.style.display = 'none';
-		  }
-		  
-		  const attCheck = await api('get_attendance', {
+		  if (!adjustEnd || now > adjustEnd) btnCredit.style.display = 'none';
+
+		  // Fetch attendance
+		  const attRes = await api('get_attendance', {
 			class_code: cls.class_code,
-			date: isoDate(new Date()),
+			date: isoDate(now),
 			student_id: currentUser.id
 		  });
+		  let att = attRes.ok ? attRes.record : null;
 
-		  let att = null;
-		  if (attCheck.ok) att = attCheck.record;
-
-		  // Hide or disable buttons based on status
-		  if (att && att.status === 'CREDITED') {
-			btnCredit.disabled = true;
-		    btnExcuse.style.display = 'none'; // hide Excuse
-			statusSpan.textContent = '✅ Credited';
-		  } else if (att && att.status === 'EXCUSE') {
-			btnExcuse.disabled = true;
-			btnCredit.style.display = 'none'; // hide Credit
-			statusSpan.textContent = '🟡 Excuse';
+		  // Apply existing status rules
+		  if (att) {
+			if (att.status === 'CREDITED') {
+			  btnCredit.disabled = true;
+			  btnExcuse.style.display = 'none';
+			  statusSpan.textContent = '✅ Credited';
+			} else if (att.status === 'EXCUSE') {
+			  btnExcuse.disabled = true;
+			  btnCredit.style.display = 'none';
+			  statusSpan.textContent = '🟡 Excused';
+			} else if (att.status && att.status !== 'not_recorded') {
+			  btnCheckin.disabled = true;
+			  statusSpan.textContent = `Status: ${att.status} (${att.timestamp || '—'})`;
+			}
 		  }
-		
-		  // ✅ Credit Button
+
+		  // --- Check-in logic (same as before) ---
+		  (function (cls, btnCheckin, statusSpan) {
+			let iv;
+			async function update() {
+			  const tzNow = new Date();
+			  function parseTime(t) {
+				const [hh, mm] = t.split(':').map(Number);
+				const d = new Date(tzNow);
+				  d.setHours(hh, mm, 0, 0);
+				  return d;
+				}
+				const start = parseTime(cls.start_time);
+				const enableFrom = new Date(start.getTime() - 10 * 60000);
+				const lateAfter = new Date(start.getTime() + 5 * 60000);				const absentAfter = new Date(start.getTime() + 10 * 60000);
+
+				const localKey = `checkedin_${currentUser.id}_${cls.class_code}_${isoDate(tzNow)}`;
+				if (localStorage.getItem(localKey)) {
+				  btnCheckin.disabled = true;
+				  statusSpan.textContent = 'Already checked in (saved locally)';
+				  clearInterval(iv);
+				  return;
+				}
+
+				const checkRes = await api('get_attendance', {
+				  class_code: cls.class_code,
+				  date: isoDate(tzNow),
+				  student_id: currentUser.id
+				});
+				let att = checkRes.ok ? checkRes.record : null;
+
+				if (att && att.status !== 'not_recorded') {
+				  btnCheckin.disabled = true;
+				  statusSpan.textContent = `Status: ${att.status} (${att.timestamp || '—'})`;
+				  clearInterval(iv);
+				} else if (tzNow >= enableFrom && tzNow < absentAfter) {
+				  btnCheckin.disabled = false;
+				  statusSpan.textContent =
+					tzNow < lateAfter ? 'On time window — click to check in' : 'Late — will be marked late';
+				} else if (tzNow >= absentAfter) {
+				  btnCheckin.disabled = true;
+				  statusSpan.textContent = 'Absent — check-in disabled';
+				  clearInterval(iv);
+				} else {
+				  btnCheckin.disabled = true;
+				  statusSpan.textContent = `Check-in opens at ${timeStr(enableFrom)}`;
+				}
+			}
+
+			update();
+			iv = setInterval(update, 10000);
+
+			btnCheckin.onclick = async () => {
+			  btnCheckin.disabled = true;
+			  statusSpan.textContent = 'Checking in...';
+			  const res = await api('checkin', { class_code: cls.class_code, student_id: currentUser.id });
+			  if (res.ok) {
+				const key = `checkedin_${currentUser.id}_${cls.class_code}_${isoDate(new Date())}`;
+				localStorage.setItem(key, 'true');
+				statusSpan.textContent = `Checked in: ${res.status} at ${res.timestamp}`;
+				clearInterval(iv);
+			  } else {
+				statusSpan.textContent = 'Check-in failed: ' + res.error;
+				btnCheckin.disabled = false;
+			  }
+			};
+		  })(cls, btnCheckin, statusSpan);
+
+			// --- Credit Button ---
 		  btnCredit.onclick = async () => {
-		    if (!confirm('Credit attendance for the whole semester?')) return;
-		    const res = await api('credit_attendance', { class_code: cls.class_code, student_id: currentUser.id });
-		    if (res.ok) {
+			if (!confirm('Credit attendance for the whole semester?')) return;
+			const res = await api('credit_attendance', { class_code: cls.class_code, student_id: currentUser.id });
+			if (res.ok) {
 			  statusSpan.textContent = '✅ Credited';
 			  btnCredit.disabled = true;
-			  btnExcuse.disabled = true;
+			  btnExcuse.style.display = 'none';
 			} else alert('❌ ' + res.error);
 		  };
-		
-		  // ✅ Excuse Button
-		  btnExcuse.onclick = () => {
-			reasonField.style.display = reasonField.style.display === 'none' ? 'block' : 'none';
-		  };
-		  reasonField.onchange = async () => {
+
+		  // --- Excuse Button ---
+		  btnExcuse.onclick = async () => {
+			const reason = prompt('Enter reason for excuse:');
+			if (!reason) return alert('Reason is required.');
 			const res = await api('excuse_attendance', {
-			  class_code: cls.class_code, 
-			  student_id: currentUser.id, 
-			  reason: reasonField.value
+			  class_code: cls.class_code,
+			  student_id: currentUser.id,
+			  reason
 			});
 			if (res.ok) {
-			  statusSpan.textContent = '🟡 Excuse';
+			  statusSpan.textContent = '🟡 Excused';
 			  btnExcuse.disabled = true;
-			  btnCredit.disabled = true;
+			  btnCredit.style.display = 'none';
 			} else alert('❌ ' + res.error);
 		  };
-		  btnExcuse.onclick = async () => {
-		    const reason = prompt('Enter reason for excuse:');
-		    if (!reason) return alert('Reason is required.');
-		    const res = await api('excuse_attendance', { class_code: cls.class_code, student_id: currentUser.id, reason });
-		    if (res.ok) alert('✅ ' + res.message);
-		    else alert('❌ ' + res.error);
+
+		  // --- Dropdown toggle ---
+		  dropdown.querySelector('.more-btn').onclick = (e) => {
+			e.stopPropagation();
+			dropdown.classList.toggle('show');
 		  };
-		
-		  container.appendChild(el);
+
+		  document.addEventListener('click', () => dropdown.classList.remove('show'));
 		}
 	  }
 
