@@ -511,6 +511,26 @@
 		  if (!config.ok || new Date() > new Date(config.adjustEnd)) {
 			btnCredit.style.display = 'none';
 		  }
+		  
+		  const attCheck = await api('get_attendance', {
+			class_code: cls.class_code,
+			date: isoDate(new Date()),
+			student_id: currentUser.id
+		  });
+
+		  let att = null;
+		  if (attCheck.ok) att = attCheck.record;
+
+		  // Hide or disable buttons based on status
+		  if (att && att.status === 'CREDITED') {
+			btnCredit.disabled = true;
+		    btnExcuse.style.display = 'none'; // hide Excuse
+			statusSpan.textContent = '✅ Credited';
+		  } else if (att && att.status === 'EXCUSED') {
+			btnExcuse.disabled = true;
+			btnCredit.style.display = 'none'; // hide Credit
+			statusSpan.textContent = '🟡 Excused';
+		  }
 		
 		  // ✅ Credit Button
 		  btnCredit.onclick = async () => {
