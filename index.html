@@ -267,6 +267,7 @@
 	  };
 
       let currentUser = null; // {id, name, role}
+	  let isSignup = false;
 
       // login area only submit on enter
       document.getElementById("auth").addEventListener("keydown", (event) => {
@@ -286,8 +287,6 @@
         const submitBtn = document.getElementById("submitBtn");
 		const formTitle = document.getElementById("formTitle");
 		const switchText = document.getElementById("switchText");
-
-		let isSignup = false;
 
         // Toggle password visibility
         togglePassword.addEventListener("click", () => {
@@ -356,6 +355,7 @@
 		      submitBtn.textContent = "Sign In";
 			  submitBtn.disabled = false; // ✅ make clickable again
 			  passwordInput.value = "";
+			  document.getElementById('authMsg').textContent = "";
 			  return;
 	      	}
 			
@@ -370,7 +370,7 @@
             // Just for UI message cleanup
 			setTimeout(() => {
 			  document.getElementById('authMsg').textContent = "";
-			}, 6000);
+			}, 1000);
           }
         });
       });
@@ -379,7 +379,29 @@
 
       // Sign out
       document.getElementById('signoutBtn').onclick = ()=> {
-        currentUser=null;localStorage.removeItem('currentUser');document.getElementById('app').style.display='none';document.getElementById('auth').style.display='block';document.getElementById('authMsg').textContent='';
+		// Clear stored session
+        currentUser=null;
+		localStorage.removeItem('currentUser');
+		
+		// Hide app and show login
+		document.getElementById('app').style.display='none';
+		document.getElementById('auth').style.display='block';
+		document.getElementById('authMsg').textContent='';
+		
+		// ✅ Reset form completely
+		document.getElementById("authForm").reset();
+		document.getElementById("errorMsg").textContent = "";
+		document.getElementById('authMsg').textContent = "";
+		document.getElementById("submitBtn").disabled = false;   // <-- make sure it's clickable again
+		document.getElementById("submitBtn").textContent = "Sign In";
+		errorMsg.style.color = "red";
+
+		// ✅ Reset to sign-in mode
+		isSignup = false;
+		document.getElementById("formTitle").textContent = "Sign In";
+
+		// Optional UX: auto-focus ID field
+		document.getElementById("userId").focus();
       }
 
        // On load, restore
