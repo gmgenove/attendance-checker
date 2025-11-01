@@ -3,6 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1, shrink-to-fit=no, maximum-scale=1, minimum-scale=1" />
+	<meta name="robots" content="nofollow, noindex, noarchive"/>
+    <meta name="googlebot" content="nosnippet"/>
     <meta name="author" content="gmgenove"/>
     <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
 	<link rel="icon" href="data:;base64,iVBORw0KGgo=">
@@ -626,7 +628,7 @@
 			}
 
 			update();
-			iv = setInterval(update, 1000);
+			iv = setInterval(update, 10000);
 
 			btnCheckin.onclick = async () => {
 			  btnCheckin.disabled = true;
