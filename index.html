@@ -386,7 +386,6 @@
 		// Hide app and show login
 		document.getElementById('app').style.display='none';
 		document.getElementById('auth').style.display='block';
-		document.getElementById('authMsg').textContent='';
 		
 		// ✅ Reset form completely
 		document.getElementById("authForm").reset();
@@ -650,10 +649,10 @@
 			  btnCredit.style.display = 'none';
 			  btnCheckin.disabled = true;
 			  statusSpan.textContent = '🟡 Excuse';
-			} else if (att.status === 'HOLIDAY' && (tzNow >= enableFrom && tzNow < absentAfter)) {
-		      btnExcuse.style.display = 'none';
+			} else if (att.status === 'HOLIDAY') {
+			  if (tzNow >= enableFrom && tzNow < absentAfter) btnCheckin.disabled = false;
 			  if (!adjustEnd || now > adjustEnd) btnCredit.style.display = 'none';
-			  btnCheckin.disabled = false;
+		      btnExcuse.style.display = 'none';
 			  statusSpan.textContent = 'HOLIDAY';
 			} else if (att.status && att.status !== 'not_recorded') {
 			  btnCheckin.disabled = true;
