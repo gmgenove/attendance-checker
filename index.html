@@ -681,6 +681,8 @@
 			  statusSpan.textContent = `Status: ${att.status} (${att.time_in || '—'})`;
 			  if (att.status === 'ABSENT') {
 				statusSpan.style.color = '#6b7280';
+			  } else if (att.status === 'LATE') {
+				statusSpan.style.color = '#FFD700';
 			  } else {
 				statusSpan.style.color = '#059669';
 			  }
