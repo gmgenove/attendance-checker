@@ -651,7 +651,9 @@
 			  btnCheckin.disabled = true;
 			  statusSpan.textContent = '🟡 Excuse';
 			} else if (att.status === 'HOLIDAY') {
+			console.log(tzNow+" >= "+enableFrom+" && "+tzNow+" < "+absentAfter+ " = " + tzNow >= enableFrom && tzNow < absentAfter);
 			  if (tzNow >= enableFrom && tzNow < absentAfter) btnCheckin.disabled = false;
+			console.log("!"+adjustEnd+" || "+now+" > "+adjustEnd+" = "+ !adjustEnd || now > adjustEnd);
 			  if (!adjustEnd || now > adjustEnd) btnCredit.style.display = 'none';
 		      btnExcuse.style.display = 'none';
 			  statusSpan.textContent = 'HOLIDAY';
