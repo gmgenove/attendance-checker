@@ -36,9 +36,6 @@
         display: flex;
         align-items: center;
       }
-      .password-wrapper input {
-        /*flex: 1;*/
-      }
       .field-icon {
 		float: right;
         margin-left: -25px;
@@ -54,6 +51,7 @@
         margin-top: 10px;
         font-size: 0.9em;
       }
+
 	  .class-card {
 		display: flex;
 		justify-content: space-between;
@@ -64,17 +62,14 @@
 		padding: 12px 16px;
 		margin-bottom: 10px;
 	  }
-
 	  .class-content {
 		flex: 1;
 	  }
-
 	  .class-actions {
 		display: flex;
 		flex-direction: column;
 		gap: 6px;
 	  }
-
 	  .class-actions button {
 		padding: 6px 10px;
 		border-radius: 6px;
@@ -82,7 +77,6 @@
 		cursor: pointer;
 		font-size: 0.85rem;
 	  }
-
 	  .credit-btn {
 		background: #3b82f6;
 		color: white;
@@ -95,12 +89,10 @@
 		background: #10b981;
 		color: white;
 	  }
-
 	  .class-actions button:disabled {
 		opacity: 0.6;
 		cursor: not-allowed;
 	  }
-
 	  .status-label {
 		margin-top: 6px;
 		font-weight: 500;
@@ -631,7 +623,7 @@
 			  statusSpan.textContent = '🟡 Excuse';
 			} else if (att.status === 'HOLIDAY' && (tzNow >= enableFrom && tzNow < absentAfter)) {
 		      btnExcuse.style.display = 'none';
-			  btnCredit.style.display = 'none';
+			  if (!adjustEnd || now > adjustEnd) btnCredit.style.display = 'none';
 			  btnCheckin.disabled = false;
 			  statusSpan.textContent = 'HOLIDAY';
 			} else if (att.status && att.status !== 'not_recorded') {
