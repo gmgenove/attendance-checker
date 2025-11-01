@@ -621,7 +621,7 @@
 		  })(cls, btnCheckin, statusSpan);
 
 		  // Fetch adjustment period once for all
-		  const adjustEnd = new Date(appConfig.adjustment_end) : null;
+		  const adjustEnd = new Date(appConfig.adjustment_end);
 		  const now = new Date();
 		  
 		  // Hide Credit button if outside adjustment period
@@ -650,7 +650,6 @@
 			  statusSpan.textContent = '🟡 Excuse';
 			} else if (att.status === 'HOLIDAY') {
 			  if (tzNow >= enableFrom && tzNow < absentAfter) btnCheckin.disabled = false;
-			console.log("!"+adjustEnd+" || "+now+" > "+adjustEnd+" = "+ !adjustEnd || now > adjustEnd);
 			  if (!adjustEnd || now > adjustEnd) btnCredit.style.display = 'none';
 		      btnExcuse.style.display = 'none';
 			  statusSpan.textContent = 'HOLIDAY';
