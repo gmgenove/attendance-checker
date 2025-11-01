@@ -323,11 +323,13 @@
           if (!idInput.value.trim()||!passwordInput.value.trim()) {
 			document.getElementById('errorMsg').textContent='Enter id and password';
 			document.getElementById('authMsg').textContent='';
+			submitBtn.disabled = false; // ✅ re-enable before returning
 			return;
           }
 		  if (!roleSelect.value) {
 			document.getElementById('errorMsg').textContent='Select role';
 			document.getElementById('authMsg').textContent='';
+			submitBtn.disabled = false; // ✅ re-enable before returning
 			return;
           }
 		  document.getElementById('authMsg').textContent = isSignup ? "Signing up..." : "Signing in...";
@@ -342,7 +344,7 @@
             if (!data.ok) {
               errorMsg.textContent = data.error ? data.error : isSignup ? "Signup failed" : "Login failed";
 			  document.getElementById('authMsg').textContent='';
-              submitBtn.disabled = false;
+              submitBtn.disabled = false; // ✅ ensure button re-enabled on logical error
               return;
             }
 
@@ -359,8 +361,9 @@
 		    }
           } catch (err) {
             errorMsg.textContent = "Network error: " + err.message;
+			submitBtn.disabled = false; // ✅ ensure re-enable even on exceptions
           } finally {
-            submitBtn.disabled = false;
+            // Just for UI message cleanup
 			setTimeout(() => {
 			  document.getElementById('authMsg').textContent = "";
 			}, 6000);
