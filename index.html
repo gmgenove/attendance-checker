@@ -344,7 +344,7 @@
             if (!data.ok) {
               errorMsg.textContent = data.error ? data.error : isSignup ? "Signup failed" : "Login failed";
 			  document.getElementById('authMsg').textContent='';
-              submitBtn.disabled = false; // ✅ ensure button re-enabled on logical error
+              submitBtn.disabled = false; // ✅ allow retry
               return;
             }
 
@@ -354,11 +354,15 @@
 		      isSignup = false;
 		      formTitle.textContent = "Sign In";
 		      submitBtn.textContent = "Sign In";
-	      	} else { // ✅ Save session
-			  currentUser = data.user;
-	          localStorage.setItem("currentUser", JSON.stringify(currentUser));
-			  showApp();
-		    }
+			  submitBtn.disabled = false; // ✅ make clickable again
+			  passwordInput.value = "";
+			  return;
+	      	}
+			
+			// ✅ Signin flow
+			currentUser = data.user;
+	        localStorage.setItem("currentUser", JSON.stringify(currentUser));
+			showApp();
           } catch (err) {
             errorMsg.textContent = "Network error: " + err.message;
 			submitBtn.disabled = false; // ✅ ensure re-enable even on exceptions
