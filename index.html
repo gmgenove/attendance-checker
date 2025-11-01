@@ -2,7 +2,9 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1," />
+    <meta name="viewport" content="width=device-width,initial-scale=1, shrink-to-fit=no, maximum-scale=1, minimum-scale=1" />
+	<meta name="robots" content="nofollow, noindex, noarchive"/>
+    <meta name="googlebot" content="nosnippet"/>
     <meta name="author" content="gmgenove"/>
     <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
 	<link rel="icon" href="data:;base64,iVBORw0KGgo=">
@@ -508,6 +510,7 @@
         loadTodaySchedule();
       }
 	  
+	  let isHoliday = null;
 	  async function checkHolidayAndDisplay() {
 		const res = await api('check_holiday', {});
 		const el = document.getElementById('holidayNotice');
@@ -515,6 +518,7 @@
 		if (res.ok && res.isHoliday) {
 		  el.textContent = `🎉 ${res.holidayName}! (${res.holidayType})`;
 		  el.style.color = 'red';
+		  isHoliday = res.isHoliday;
 		} else {
 		  el.textContent = '';
 		}
