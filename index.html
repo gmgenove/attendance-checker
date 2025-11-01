@@ -568,16 +568,6 @@
 		  const btnExcuse = card.querySelector('.excuse-btn');
 		  const statusSpan = card.querySelector('.status-label');
 		  
-		  // 🟥 If holiday, mark immediately and disable actions
-		  if (isHoliday) {
-			btnCheckin.disabled = true;
-			btnCredit.style.display = 'none';
-			btnExcuse.style.display = 'none';
-			statusSpan.textContent = '🌴 HOLIDAY';
-			statusSpan.style.color = '#dc2626';
-			continue; // Skip other logic for this class
-		  }
-		  
 		  function parseTime(t) {
 			const [hh, mm] = t.split(':').map(Number);
 			const d = new Date(tzNow);
@@ -680,7 +670,7 @@
 			  statusSpan.style.color = '#2563eb';
 			} else if (att.status === 'HOLIDAY') {
 			  btnExcuse.style.display = 'none';
-			  statusSpan.textContent = 'HOLIDAY';
+			  statusSpan.textContent = '🌴 HOLIDAY';
 			  statusSpan.style.color = '#dc2626';
 			  if (tzNow >= enableFrom && tzNow < absentAfter) btnCheckin.disabled = false;
 			  if (!adjustEnd || now > adjustEnd) btnCredit.style.display = 'none';
