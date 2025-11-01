@@ -259,7 +259,6 @@
 		} catch (err) {
 		  console.error("Error fetching config:", err);
 		}
-		console.log(appConfig);
 	  }
 
 	  // Run when page loads
@@ -622,8 +621,7 @@
 		  })(cls, btnCheckin, statusSpan);
 
 		  // Fetch adjustment period once for all
-		  const configRes = await api('get_adjustment_period', {});
-		  const adjustEnd = configRes.ok ? new Date(configRes.adjustEnd) : null;
+		  const adjustEnd = new Date(appConfig.adjustment_end) : null;
 		  const now = new Date();
 		  
 		  // Hide Credit button if outside adjustment period
@@ -640,7 +638,6 @@
 
 		  // Update button visibility based on status
 		  if (att) {
-		  console.log(att.status);
 			if (att.status === 'CREDITED') {
 			  btnCredit.style.display = 'none';
 			  btnExcuse.style.display = 'none';
@@ -652,7 +649,6 @@
 			  btnCheckin.disabled = true;
 			  statusSpan.textContent = '🟡 Excuse';
 			} else if (att.status === 'HOLIDAY') {
-			console.log(tzNow+" >= "+enableFrom+" && "+tzNow+" < "+absentAfter+ " = " + tzNow >= enableFrom && tzNow < absentAfter);
 			  if (tzNow >= enableFrom && tzNow < absentAfter) btnCheckin.disabled = false;
 			console.log("!"+adjustEnd+" || "+now+" > "+adjustEnd+" = "+ !adjustEnd || now > adjustEnd);
 			  if (!adjustEnd || now > adjustEnd) btnCredit.style.display = 'none';
