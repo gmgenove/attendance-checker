@@ -761,7 +761,7 @@
       document.getElementById('generateReport').onclick = async ()=> {
         const t = document.getElementById('reportType').value;const out = document.getElementById('reportOutput');out.innerHTML='Generating...';
         let payload={};
-		if (t==='class_date') {payload={class_code:document.getElementById('r_class').value}}
+		if (t==='class') {payload={class_code:document.getElementById('r_class').value}}
         else if (t==='person') {payload={student_id:document.getElementById('r_person').value}}
         /*if (t==='class_date') {payload={class_code:document.getElementById('r_class').value,date:document.getElementById('r_date').value}}
         else if (t==='person') {payload={student_id:document.getElementById('r_person').value, from:document.getElementById('r_from').value, to:document.getElementById('r_to').value}}
