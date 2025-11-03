@@ -742,7 +742,12 @@
       const reportParams = document.getElementById('reportParams');
       document.getElementById('reportType').onchange = ()=> {
         const v = document.getElementById('reportType').value;reportParams.innerHTML='';
-        if (v==='class_date') {
+		if (v==='class') {
+          reportParams.innerHTML = `<input id='r_class' placeholder='class code' />`;
+        } else if (v==='person') {
+          reportParams.innerHTML = `<input id='r_person' placeholder='student id' />`;
+        }
+        /*if (v==='class') {
           reportParams.innerHTML = `<input id='r_class' placeholder='class code' /> <input id='r_date' type='date' />`;
         } else if (v==='person') {
           reportParams.innerHTML = `<input id='r_person' placeholder='student id' /> <input id='r_from' type='date' /> <input id='r_to' type='date' />`;
@@ -750,16 +755,18 @@
           reportParams.innerHTML = `<input id='r_week_start' type='date' />`;
         } else if (v==='semester') {
           reportParams.innerHTML = `<input id='r_sem_start' type='date' /> <input id='r_sem_end' type='date' />`;
-        }
+        }*/
       }
 
       document.getElementById('generateReport').onclick = async ()=> {
         const t = document.getElementById('reportType').value;const out = document.getElementById('reportOutput');out.innerHTML='Generating...';
         let payload={};
-        if (t==='class_date') {payload={class_code:document.getElementById('r_class').value,date:document.getElementById('r_date').value}}
+		if (t==='class_date') {payload={class_code:document.getElementById('r_class').value}}
+        else if (t==='person') {payload={student_id:document.getElementById('r_person').value}}
+        /*if (t==='class_date') {payload={class_code:document.getElementById('r_class').value,date:document.getElementById('r_date').value}}
         else if (t==='person') {payload={student_id:document.getElementById('r_person').value, from:document.getElementById('r_from').value, to:document.getElementById('r_to').value}}
         else if (t==='week') {payload={week_start:document.getElementById('r_week_start').value}}
-        else if (t==='semester') {payload={from:document.getElementById('r_sem_start').value,to:document.getElementById('r_sem_end').value}}
+        else if (t==='semester') {payload={from:document.getElementById('r_sem_start').value,to:document.getElementById('r_sem_end').value}}*/
         const r = await api('report',{type:t, ...payload});
         if (r.ok && r.csv) {
           out.innerHTML = `<a href='#' id='dl'>Download CSV</a>`;
