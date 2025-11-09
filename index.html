@@ -108,15 +108,16 @@
 		font-weight: 500;
 	  }
 	  .footer {
-		position: fixed;
+		/*position: fixed;
 		left: 0;
-		bottom: 0;
+		bottom: 0;*/
 		width: 100%;
 		margin-top: 15px;
 		text-align: center;
 		font-size: 13px;
 		color: #aaa;
-		margin-bottom: 0;
+		margin-bottom: -20px;
+		/*margin-bottom: 0;*/
 	  }
     </style>
   </head>
@@ -729,7 +730,13 @@
       function downloadCSV(csv, filename) {
         const blob = new Blob([csv], {type:'text/csv'});
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+        const a = document.createElement('a');
+		a.href=url;
+		a.download=filename;
+		document.body.appendChild(a);
+		a.click();
+		a.remove();
+		URL.revokeObjectURL(url);
       }
 
       // Officer reports UI
@@ -744,15 +751,41 @@
       }
 
       document.getElementById('generateReport').onclick = async ()=> {
-        const t = document.getElementById('reportType').value;const out = document.getElementById('reportOutput');out.innerHTML='Generating...';
-        let payload={};
+        const t = document.getElementById('reportType').value;
+		const out = document.getElementById('reportOutput');
+		out.innerHTML='Generating...';
+        
+		let payload={};
 		if (t==='class') {payload={class_code:document.getElementById('r_class').value}}
         else if (t==='person') {payload={student_id:document.getElementById('r_person').value}}
-        const r = await api('report',{type:t, ...payload});
-        if (r.ok && r.csv) {
-          out.innerHTML = `<a href='#' id='dl'>Download CSV</a>`;
-          document.getElementById('dl').onclick = ()=>{downloadCSV(r.csv,'report.csv')}
-        } else out.innerHTML = 'No results or error: '+(r.error||'')
+		
+		try {
+		  const res = await api('report',{type:t, ...payload});
+
+		  if (res.ok) {
+			out.textContent = ''; // clear "Generating..."
+			  
+			// Create and show a download link dynamically
+			const pdfBlobUrl = 'data:application/pdf;base64,' + res.pdf;
+		    const link = document.createElement('a');
+			link.href = pdfBlobUrl;
+			link.download = res.filename;
+			link.textContent = '📄 Download Attendance PDF';
+			link.style.display = 'inline-block';
+			link.style.marginTop = '10px';
+			link.style.color = '#007bff';
+			link.style.textDecoration = 'underline';
+			link.style.cursor = 'pointer';
+			out.innerHTML = '';
+			out.appendChild(link);
+		  } else {
+			out.textContent = 'No data: ' + res.error;
+			alert('❌ ' + res.error);
+		  }
+		} catch (err) {
+			out.textContent = 'Error fetching attendance.';
+			alert('⚠️ ' + err.message);
+		}
       }
 
       // Student view my attendance
