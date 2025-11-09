@@ -760,13 +760,6 @@
           document.getElementById("generateReport").click();
         }
       });
-	  
-	  document.querySelector('#r_class').addEventListener('input', function() {
-			document.getElementById('reportOutput').innerHTML='';
-	  });
-	  document.querySelector('#r_person').addEventListener('input', function() {
-			document.getElementById('reportOutput').innerHTML='';
-	  });
 
       document.getElementById('generateReport').onclick = async ()=> {
         const t = document.getElementById('reportType').value;
