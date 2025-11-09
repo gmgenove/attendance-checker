@@ -648,36 +648,38 @@
 
 		  // Update button visibility based on status
 		  if (att) {
-			if (att.status === 'CREDITED') {
-			  btnCredit.style.display = 'none';
-			  btnExcuse.style.display = 'none';
-			  btnCheckin.style.display = 'none';
-			  statusSpan.textContent = '✅ Credited';
-			  statusSpan.style.color = '#16a34a';
-			} else if (att.status === 'EXCUSE') {
-		      btnExcuse.style.display = 'none';
-			  btnCredit.style.display = 'none';
-			  btnCheckin.disabled = true;
-			  statusSpan.textContent = '🟡 Excuse';
-			  statusSpan.style.color = '#2563eb';
-			} else if (att.status === 'HOLIDAY') {
-			  btnExcuse.style.display = 'none';
-			  statusSpan.textContent = '🌴 HOLIDAY';
-			  statusSpan.style.color = '#dc2626';
-			  if (tzNow >= enableFrom && tzNow < absentAfter) btnCheckin.disabled = false;
-			  if (!adjustEnd || now > adjustEnd) btnCredit.style.display = 'none';
-			} else if (att.status && att.status !== 'not_recorded') {
-			  btnCheckin.disabled = true;
-			  btnExcuse.style.display = 'none'
-			  btnCredit.style.display = 'none';
-			  statusSpan.textContent = `Status: ${att.status} (${att.time_in || '—'})`;
-			  if (att.status === 'ABSENT') {
-				statusSpan.style.color = '#6b7280';
-			  } else if (att.status === 'LATE') {
-				statusSpan.style.color = '#FBBC05';
-			  } else {
-				statusSpan.style.color = '#059669';
-			  }
+			if (att.status && att.status !== 'not_recorded') {
+				if (att.status === 'CREDITED') {
+				  btnCredit.style.display = 'none';
+				  btnExcuse.style.display = 'none';
+				  btnCheckin.style.display = 'none';
+				  statusSpan.textContent = '✅ Credited';
+				  statusSpan.style.color = '#16a34a';
+				} else if (att.status === 'EXCUSE') {
+				  btnExcuse.style.display = 'none';
+				  btnCredit.style.display = 'none';
+				  btnCheckin.disabled = true;
+				  statusSpan.textContent = '🟡 Excuse';
+				  statusSpan.style.color = '#2563eb';
+				} else if (att.status === 'HOLIDAY') {
+				  btnExcuse.style.display = 'none';
+				  statusSpan.textContent = '🌴 HOLIDAY';
+				  statusSpan.style.color = '#dc2626';
+				  if (tzNow >= enableFrom && tzNow < absentAfter) btnCheckin.disabled = false;
+				  if (!adjustEnd || now > adjustEnd) btnCredit.style.display = 'none';
+				} else {
+				  btnCheckin.disabled = true;
+				  btnExcuse.style.display = 'none'
+				  btnCredit.style.display = 'none';
+				  statusSpan.textContent = `Status: ${att.status} (${att.time_in || '—'})`;
+				  if (att.status === 'ABSENT') {
+					statusSpan.style.color = '#6b7280';
+				  } else if (att.status === 'LATE') {
+					statusSpan.style.color = '#FBBC05';
+				  } else {
+					statusSpan.style.color = '#059669';
+				  }
+				}
 			}
 		  }
 		  
