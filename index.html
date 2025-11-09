@@ -278,11 +278,12 @@
 	  // Run when page loads
 	  window.onload = () => {
 		loadConfig();
-		document.getElementById("reporType").value = "";
 	  };
 
       let currentUser = null; // {id, name, role}
 	  let isSignup = false;
+	  
+	  document.getElementById("reporType").value = "";
 
       // login area only submit on enter
       document.getElementById("auth").addEventListener("keydown", (event) => {
