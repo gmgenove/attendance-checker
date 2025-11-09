@@ -580,7 +580,7 @@
 			  const localKey = `checkedin_${currentUser.id}_${cls.class_code}_${isoDate(tzNow)}`;
 			  if (localStorage.getItem(localKey)) {
 			    btnCheckin.disabled = true;
-				statusSpan.textContent = 'Already checked in (saved successfully)';
+				//statusSpan.textContent = 'Already checked in (saved successfully)';
 				clearInterval(iv);
 				return;
 			  }
