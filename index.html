@@ -195,12 +195,10 @@
 				<option value="person">Person</option>
 			</select>
             <div id="classSelector" style="display:none;">
-			  <label>Class Code:</label>
 			  <select id="classDropdown"></select>
 			</div>
 
 			<div id="studentSelector" style="display:none;">
-			  <label>Student:</label>
 			  <select id="studentDropdown"></select>
 			</div>
 			<div id="reportParams" style="margin-top:8px"></div>
@@ -395,32 +393,6 @@
 			}, 1000);
           }
         });
-		
-		const res = await api('get_dropdowns', {});
-		if (res.ok) {
-			const classDropdown = document.getElementById('classDropdown');
-			const studentDropdown = document.getElementById('studentDropdown');
-
-			// Populate Class Codes
-			if (classDropdown) {
-				res.classes.forEach(code => {
-				  const opt = document.createElement('option');
-				  opt.value = code;
-				  opt.textContent = code + ": " + name;
-				  classDropdown.appendChild(opt);
-				});
-			}
-
-			// Populate Students
-			if (studentDropdown) {
-				res.students.forEach(s => {
-				  const opt = document.createElement('option');
-				  opt.value = s.id;
-				  opt.textContent = `(${s.id}: ${s.name} )`;
-				  studentDropdown.appendChild(opt);
-				});
-			}
-		}
       });
 
 	  // Show/hide based on report type
@@ -816,7 +788,6 @@
 			if (v === 'class') {
 				// Show class dropdown only
 				params.innerHTML = `
-				  <label for="r_class_select" class="small">Class</label><br>
 				  ${mkSelectHTML('r_class_select', 'Select class')}
 				`;
 				const sel = document.getElementById('r_class_select');
@@ -824,7 +795,6 @@
 			} else if (v === 'person') {
 				// Show student dropdown only
 				params.innerHTML = `
-				  <label for="r_student_select" class="small">Student</label><br>
 				  ${mkSelectHTML('r_student_select', 'Select student')}
 				`;
 				const sel2 = document.getElementById('r_student_select');
