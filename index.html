@@ -401,10 +401,10 @@
 			const studentDropdown = document.getElementById('studentDropdown');
 
 			// Populate Class Codes
-			res.classCodes.forEach(code => {
+			res.classes.forEach(code => {
 			  const opt = document.createElement('option');
 			  opt.value = code;
-			  opt.textContent = code;
+			  opt.textContent = code + ": " + name;
 			  classDropdown.appendChild(opt);
 			});
 
@@ -412,7 +412,7 @@
 			res.students.forEach(s => {
 			  const opt = document.createElement('option');
 			  opt.value = s.id;
-			  opt.textContent = `${s.name} (${s.id})`;
+			  opt.textContent = `(${s.id}: ${s.name} )`;
 			  studentDropdown.appendChild(opt);
 			});
 		}
