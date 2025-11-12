@@ -287,7 +287,7 @@
 	  async function loadDropdownsData() {
 		if (DROPDOWNS_LOADED) return DROPDOWNS;
 		try {
-			const res = await api('getDropdownData', {});
+			const res = await api('get_dropdowns', {});
 			if (res.ok) {
 			  DROPDOWNS = {
 				classList: res.classList || [],
