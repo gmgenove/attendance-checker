@@ -278,6 +278,59 @@
 	  window.onload = () => {
 		loadConfig();
 	  };
+	  
+	  // -- cached lists (loaded once) --
+	  let DROPDOWNS = { classList: [], studentList: [] };
+	  let DROPDOWNS_LOADED = false;
+	  
+	  // call backend to get class & student lists
+	  async function loadDropdownsData() {
+		if (DROPDOWNS_LOADED) return DROPDOWNS;
+		try {
+			const res = await api('getDropdownData', {});
+			if (res.ok) {
+			  DROPDOWNS = {
+				classList: res.classList || [],
+				studentList: res.studentList || []
+			  };
+			  DROPDOWNS_LOADED = true;
+			} else {
+			  console.warn('Failed to load dropdowns:', res.error);
+			}
+		} catch (err) {
+			console.warn('Error loading dropdowns:', err);
+		}
+		  return DROPDOWNS;
+	  }
+
+	  // helper to build <select> markup
+	  function mkSelectHTML(id, placeholder) {
+		return `<select id="${id}" style="min-width:220px;padding:8px;border-radius:6px;">
+					<option value="">-- ${placeholder} --</option>
+				  </select>`;
+	  }
+
+	  // populate an existing select element with class list
+	  function populateClassSelect(selectEl) {
+		selectEl.innerHTML = '<option value="">-- Select class --</option>';
+		  (DROPDOWNS.classList || []).forEach(c => {
+			const opt = document.createElement('option');
+			opt.value = c.code;
+			opt.textContent = c.name ? `${c.code} — ${c.name}` : String(c.code);
+			selectEl.appendChild(opt);
+		});
+	  }
+
+	  // populate an existing select element with students
+	  function populateStudentSelect(selectEl) {
+		  selectEl.innerHTML = '<option value="">-- Select student --</option>';
+		  (DROPDOWNS.studentList || []).forEach(s => {
+			const opt = document.createElement('option');
+			opt.value = s.id;
+			opt.textContent = s.name ? `${s.id} — ${s.name}` : String(s.id);
+			selectEl.appendChild(opt);
+		  });
+	  }
 
       let currentUser = null; // {id, name, role}
 	  let isSignup = false;
@@ -562,10 +615,32 @@
 		  const statusSpan = card.querySelector('.status-label');
 		  
 		  function parseTime(t) {
-			const [hh, mm] = t.split(':').map(Number);
+			if (!t) return null;
+
+			// handle AM/PM or HH:mm:ss
 			const d = new Date(tzNow);
-			d.setHours(hh, mm, 0, 0);
-			return d;
+
+			// try direct parse first
+			let parsed = Date.parse(`1970-01-01T${t}`);
+			if (!isNaN(parsed)) {
+				d.setHours(new Date(parsed).getHours(), new Date(parsed).getMinutes(), 0, 0);
+				return d;
+			}
+
+			// handle "9:00 AM" format
+			const m = t.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+			if (m) {
+				let hh = parseInt(m[1], 10);
+				const mm = parseInt(m[2], 10);
+				const ampm = m[3] ? m[3].toUpperCase() : null;
+				if (ampm === 'PM' && hh < 12) hh += 12;
+				if (ampm === 'AM' && hh === 12) hh = 0;
+				d.setHours(hh, mm, 0, 0);
+				return d;
+			}
+
+			console.warn("Invalid time format:", t);
+			return null;
 		  }
 		  
 		  const tzNow = new Date();
@@ -740,18 +815,35 @@
       }
 
       // Officer reports UI
-      const reportParams = document.getElementById('reportParams');
-      document.getElementById('reportType').onchange = ()=> {
-        const v = document.getElementById('reportType').value;
-		if (v==='class') {
-          reportParams.innerHTML = `<input id='r_class' placeholder='class code' />`;
-        } else if (v==='person') {
-          reportParams.innerHTML = `<input id='r_person' placeholder='student id' />`; 
-        } else {
-		  reportParams.innerHTML='';
+	  document.getElementById('reportType').onchange = async () => {
+		const v = document.getElementById('reportType').value;
+		const params = document.getElementById('reportParams');
+		params.innerHTML = ''; // clear
+
+		// Make sure dropdown lists are loaded
+		await loadDropdownsData();
+
+		if (v === 'class') {
+			// show class dropdown only
+			params.innerHTML = `<label for="r_class_select" class="small">Class</label><br>` + mkSelectHTML('r_class_select', 'Select class');
+			const sel = document.getElementById('r_class_select');
+			populateClassSelect(sel);
+			// optional: add date filter (if you want)
+			// params.innerHTML += '<input id="r_date" type="date" style="margin-left:8px" />';
+		} else if (v === 'person') {
+			// show student dropdown only
+			params.innerHTML = `<label for="r_student_select" class="small">Student</label><br>` + mkSelectHTML('r_student_select', 'Select student');
+			const sel2 = document.getElementById('r_student_select');
+			populateStudentSelect(sel2);
+			// optional: add from/to dates later if needed
+		} else {
+			// default -> plain input fallback (no selection)
+			params.innerHTML = '';
 		}
-		document.getElementById('reportOutput').innerHTML='';
-      }
+
+		// clear previous output
+		document.getElementById('reportOutput').innerHTML = '';
+	  };
 	  
 	  // controls area only submit on enter
 	  document.getElementById("controls").addEventListener("keydown", (event) => {
@@ -798,6 +890,68 @@
 			alert('⚠️ ' + err.message);
 		}
       }
+	  
+	  document.getElementById('generateReport').onclick = async () => {
+		const t = document.getElementById('reportType').value;
+		const out = document.getElementById('reportOutput');
+		out.innerHTML = 'Generating...';
+
+		let payload = {};
+
+		if (t === 'class') {
+			const sel = document.getElementById('r_class_select');
+			const class_code = sel ? sel.value : (document.getElementById('r_class') ? document.getElementById('r_class').value.trim() : '');
+			if (!class_code) { out.innerHTML = ''; return alert('Please select a class'); }
+			payload = { class_code };
+		} else if (t === 'person') {
+			const sel = document.getElementById('r_student_select');
+			const student_id = sel ? sel.value : (document.getElementById('r_person') ? document.getElementById('r_person').value.trim() : '');
+			if (!student_id) { out.innerHTML = ''; return alert('Please select a student'); }
+			payload = { student_id };
+		} else {
+			out.innerHTML = '';
+			return alert('Please choose a report type');
+		}
+
+		try {
+			const res = await api('report', { type: t, ...payload });
+			if (!res.ok) {
+			  out.innerHTML = `No data: ${res.error || 'unknown'}`;
+			  return;
+			}
+
+			// if backend returns PDF (as base64 + filename) use that, else if CSV fallback to CSV download
+			if (res.pdf && res.filename) {
+			  out.innerHTML = '';
+			  const pdfBlobUrl = 'data:application/pdf;base64,' + res.pdf;
+			  const link = document.createElement('a');
+			  link.href = pdfBlobUrl;
+			  link.download = res.filename;
+			  link.textContent = '📄 Download Officer Report (PDF)';
+			  link.style.color = '#007bff';
+			  link.style.textDecoration = 'underline';
+			  out.appendChild(link);
+			} else if (res.csv) {
+			  // download csv
+			  out.innerHTML = '';
+			  const blob = new Blob([res.csv], { type: 'text/csv' });
+			  const url = URL.createObjectURL(blob);
+			  const a = document.createElement('a');
+			  a.href = url;
+			  a.download = `report_${t}_${new Date().toISOString().slice(0,10)}.csv`;
+			  a.textContent = '📄 Download Officer Report (CSV)';
+			  out.appendChild(a);
+			  a.click();
+			  URL.revokeObjectURL(url);
+			} else {
+			  out.innerHTML = 'No downloadable data returned.';
+			}
+		} catch (err) {
+			console.error(err);
+			out.innerHTML = 'Error generating report';
+			alert('Error: ' + err.message);
+		}
+	  };
 
       // Student view my attendance
       document.getElementById('viewMyAttendance').onclick = async () => {
