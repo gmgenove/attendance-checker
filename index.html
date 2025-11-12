@@ -852,11 +852,16 @@
 		return `<select id="${id}" style="min-width:200px"><option value="">${placeholder}</option></select>`;
 	  }
 
-	  function populateClassSelect(sel, classes) {
-		classes.forEach(c => {
+	  function populateClassSelect(sel, classCodes) {
+		classCodes.forEach(c => {
 			const opt = document.createElement('option');
-			opt.value = c.code;
-			opt.textContent = `${c.code}: ${c.name}`;
+			if (typeof c === 'object') {
+			  opt.value = c.class_code || c.code || '';
+			  opt.textContent = `${c.class_code || c.code}: ${c.class_name || c.name || ''}`;
+			} else {
+			  opt.value = c;
+			  opt.textContent = c;
+			}
 			sel.appendChild(opt);
 		});
 	  }
