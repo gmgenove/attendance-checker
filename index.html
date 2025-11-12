@@ -853,10 +853,10 @@
 	  }
 
 	  function populateClassSelect(sel, classes) {
-		classes.forEach(code => {
+		classes.forEach(c => {
 			const opt = document.createElement('option');
-			opt.value = code;
-			opt.textContent = `${s.code}: ${s.name}`;
+			opt.value = c.code;
+			opt.textContent = `${c.code}: ${c.name}`;
 			sel.appendChild(opt);
 		});
 	  }
