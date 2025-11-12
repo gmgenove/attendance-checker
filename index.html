@@ -856,7 +856,7 @@
 		classCodes.forEach(code => {
 			const opt = document.createElement('option');
 			opt.value = code;
-			opt.textContent = code;
+			opt.textContent = `${s.code}: ${s.name}`;
 			sel.appendChild(opt);
 		});
 	  }
@@ -865,7 +865,7 @@
 		students.forEach(s => {
 			const opt = document.createElement('option');
 			opt.value = s.id;
-			opt.textContent = `${s.name} (${s.id})`;
+			opt.textContent = `${s.id}: ${s.name}`;
 			sel.appendChild(opt);
 		});
 	  }
