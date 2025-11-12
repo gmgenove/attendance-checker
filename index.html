@@ -401,20 +401,24 @@
 			const studentDropdown = document.getElementById('studentDropdown');
 
 			// Populate Class Codes
-			res.classes.forEach(code => {
-			  const opt = document.createElement('option');
-			  opt.value = code;
-			  opt.textContent = code + ": " + name;
-			  classDropdown.appendChild(opt);
-			});
+			if (classDropdown) {
+				res.classes.forEach(code => {
+				  const opt = document.createElement('option');
+				  opt.value = code;
+				  opt.textContent = code + ": " + name;
+				  classDropdown.appendChild(opt);
+				});
+			}
 
 			// Populate Students
-			res.students.forEach(s => {
-			  const opt = document.createElement('option');
-			  opt.value = s.id;
-			  opt.textContent = `(${s.id}: ${s.name} )`;
-			  studentDropdown.appendChild(opt);
-			});
+			if (studentDropdown) {
+				res.students.forEach(s => {
+				  const opt = document.createElement('option');
+				  opt.value = s.id;
+				  opt.textContent = `(${s.id}: ${s.name} )`;
+				  studentDropdown.appendChild(opt);
+				});
+			}
 		}
       });
 
