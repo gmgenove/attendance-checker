@@ -395,20 +395,13 @@
           }
         });
 		
-		const res = await fetch('', {
-			method: 'POST',
-			body: JSON.stringify({ action: 'get_dropdowns' }),
-			headers: { 'Content-Type': 'application/json' }
-		});
-		  
-		const data = await res.json();
-
-		if (data.ok) {
+		const res = await api('get_dropdowns', {});
+		if (res.ok) {
 			const classDropdown = document.getElementById('classDropdown');
 			const studentDropdown = document.getElementById('studentDropdown');
 
 			// Populate Class Codes
-			data.classCodes.forEach(code => {
+			res.classCodes.forEach(code => {
 			  const opt = document.createElement('option');
 			  opt.value = code;
 			  opt.textContent = code;
@@ -416,7 +409,7 @@
 			});
 
 			// Populate Students
-			data.students.forEach(s => {
+			res.students.forEach(s => {
 			  const opt = document.createElement('option');
 			  opt.value = s.id;
 			  opt.textContent = `${s.name} (${s.id})`;
