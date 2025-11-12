@@ -388,12 +388,6 @@
         });
       });
 
-	  // Show/hide based on report type
-	  document.getElementById('reportType').addEventListener('change', e => {
-		  document.getElementById('classSelector').style.display = e.target.value === 'class' ? 'block' : 'none';
-		  document.getElementById('studentSelector').style.display = e.target.value === 'student' ? 'block' : 'none';
-	  });
-
       document.getElementById("hdr").innerHTML=new Date().toLocaleString("en-US", { dateStyle: 'full' });
 
       // Sign out
