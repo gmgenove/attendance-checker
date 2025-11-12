@@ -290,8 +290,8 @@
 			const res = await api('get_dropdowns', {});
 			if (res.ok) {
 			  DROPDOWNS = {
-				classList: res.classList || [],
-				studentList: res.studentList || []
+				classList: res.classes || [],
+				studentList: res.students || []
 			  };
 			  DROPDOWNS_LOADED = true;
 			} else {
