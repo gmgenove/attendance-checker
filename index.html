@@ -811,12 +811,29 @@
 		  // fetch dropdown data once
 		let dropdownData;
 		try {
-			const res = await fetch('', {
-			  method: 'POST',
-			  body: JSON.stringify({ action: 'get_dropdowns' }),
-			  headers: { 'Content-Type': 'application/json' }
-			});
-			dropdownData = await res.json();
+			const dropdownData = await api('get_dropdowns', {});
+			
+			if (v === 'class') {
+				// Show class dropdown only
+				params.innerHTML = `
+				  <label for="r_class_select" class="small">Class</label><br>
+				  ${mkSelectHTML('r_class_select', 'Select class')}
+				`;
+				const sel = document.getElementById('r_class_select');
+				populateClassSelect(sel, dropdownData.classCodes);
+			} else if (v === 'person') {
+				// Show student dropdown only
+				params.innerHTML = `
+				  <label for="r_student_select" class="small">Student</label><br>
+				  ${mkSelectHTML('r_student_select', 'Select student')}
+				`;
+				const sel2 = document.getElementById('r_student_select');
+				populateStudentSelect(sel2, dropdownData.students);
+
+			} else {
+				// default -> plain input fallback (no selection)
+				params.innerHTML = '';
+			}
 		} catch (err) {
 			console.error('Error fetching dropdowns:', err);
 			dropdownData = { ok: false };
@@ -825,29 +842,6 @@
 		if (!dropdownData.ok) {
 			params.innerHTML = `<p style="color:red">⚠️ Failed to load dropdown data</p>`;
 			return;
-		}
-
-		if (v === 'class') {
-			// Show class dropdown only
-			params.innerHTML = `
-			  <label for="r_class_select" class="small">Class</label><br>
-			  ${mkSelectHTML('r_class_select', 'Select class')}
-			`;
-			const sel = document.getElementById('r_class_select');
-			populateClassSelect(sel, dropdownData.classCodes);
-
-		} else if (v === 'person') {
-			// Show student dropdown only
-			params.innerHTML = `
-			  <label for="r_student_select" class="small">Student</label><br>
-			  ${mkSelectHTML('r_student_select', 'Select student')}
-			`;
-			const sel2 = document.getElementById('r_student_select');
-			populateStudentSelect(sel2, dropdownData.students);
-
-		} else {
-			// default -> plain input fallback (no selection)
-			params.innerHTML = '';
 		}
 
 		// clear previous output
