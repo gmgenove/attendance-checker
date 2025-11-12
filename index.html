@@ -820,7 +820,7 @@
 				  ${mkSelectHTML('r_class_select', 'Select class')}
 				`;
 				const sel = document.getElementById('r_class_select');
-				populateClassSelect(sel, dropdownData.classCodes);
+				populateClassSelect(sel, dropdownData.classes);
 			} else if (v === 'person') {
 				// Show student dropdown only
 				params.innerHTML = `
@@ -852,8 +852,8 @@
 		return `<select id="${id}" style="min-width:200px"><option value="">${placeholder}</option></select>`;
 	  }
 
-	  function populateClassSelect(sel, classCodes) {
-		classCodes.forEach(code => {
+	  function populateClassSelect(sel, classes) {
+		classes.forEach(code => {
 			const opt = document.createElement('option');
 			opt.value = code;
 			opt.textContent = `${s.code}: ${s.name}`;
