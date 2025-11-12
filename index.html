@@ -811,7 +811,7 @@
 		  // fetch dropdown data once
 		let dropdownData;
 		try {
-			const dropdownData = await api('get_dropdowns', {});
+			dropdownData = await api('get_dropdowns', {});
 			
 			if (v === 'class') {
 				// Show class dropdown only
