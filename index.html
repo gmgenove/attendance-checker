@@ -909,32 +909,30 @@
 		}
 	  };
 	  
-	  async function mergePdfFrontend(base64Main, base64Excuse) {
+	  async function mergePDFs(base64Main, base64Excuse) {
 		const mainBytes = Uint8Array.from(atob(base64Main), c => c.charCodeAt(0));
 		const excuseBytes = Uint8Array.from(atob(base64Excuse), c => c.charCodeAt(0));
 
+		const mainPdf = await PDFLib.PDFDocument.load(mainBytes);
+		const excusePdf = await PDFLib.PDFDocument.load(excuseBytes);
+
 		const mergedPdf = await PDFLib.PDFDocument.create();
-		const pdfMain = await PDFLib.PDFDocument.load(mainBytes);
-		const pdfExcuse = await PDFLib.PDFDocument.load(excuseBytes);
+		const mainPages = await mergedPdf.copyPages(mainPdf, mainPdf.getPageIndices());
+		const excusePages = await mergedPdf.copyPages(excusePdf, excusePdf.getPageIndices());
 
-		const mainPages = await mergedPdf.copyPages(pdfMain, pdfMain.getPageIndices());
 		mainPages.forEach(p => mergedPdf.addPage(p));
-
-		const excusePages = await mergedPdf.copyPages(pdfExcuse, pdfExcuse.getPageIndices());
 		excusePages.forEach(p => mergedPdf.addPage(p));
 
 		const mergedBytes = await mergedPdf.save();
 		return btoa(String.fromCharCode(...mergedBytes));
 	  }
 	  
-	  function base64ToBlob(b64, mime) {
-		const byteChars = atob(b64);
-		const byteNumbers = new Array(byteChars.length);
-		for (let i = 0; i < byteChars.length; i++) {
-			byteNumbers[i] = byteChars.charCodeAt(i);
-		}
-		const bytes = new Uint8Array(byteNumbers);
-		return new Blob([bytes], { type: mime });
+	  function base64ToBlob(base64, type = 'application/pdf') {
+		const bytes = atob(base64);
+		const len = bytes.length;
+		const out = new Uint8Array(len);
+		for (let i = 0; i < len; i++) out[i] = bytes.charCodeAt(i);
+		return new Blob([out], { type });
 	  }
 	  
 	  document.getElementById('generateReport').onclick = async () => {
@@ -966,32 +964,25 @@
 			  return;
 			}
 
-			// if backend returns PDF (as base64 + filename) use that, else if CSV fallback to CSV download
-			if (res.pdf && res.filename) {
-			  out.innerHTML = '';
-			  const pdfBlobUrl = 'data:application/pdf;base64,' + res.pdf;
-			  const link = document.createElement('a');
-			  link.href = pdfBlobUrl;
-			  link.download = res.filename;
-			  link.textContent = '📄 Download Officer Report (PDF)';
-			  link.style.color = '#007bff';
-			  link.style.textDecoration = 'underline';
-			  out.appendChild(link);
-			} else if (res.csv) {
-			  // download csv
-			  out.innerHTML = '';
-			  const blob = new Blob([res.csv], { type: 'text/csv' });
-			  const url = URL.createObjectURL(blob);
-			  const a = document.createElement('a');
-			  a.href = url;
-			  a.download = `report_${t}_${new Date().toISOString().slice(0,10)}.csv`;
-			  a.textContent = '📄 Download Officer Report (CSV)';
-			  out.appendChild(a);
-			  a.click();
-			  URL.revokeObjectURL(url);
-			} else {
-			  out.innerHTML = 'No downloadable data returned.';
-			}
+			// --- Merge PDFs using pdf-lib ---
+			const mergedBase64 = await mergePDFs(res.pdfMain, res.pdfExcuse);
+
+			// Create merged PDF link
+			const blob = base64ToBlob(mergedBase64, 'application/pdf');
+			const url = URL.createObjectURL(blob);
+
+			const link = document.createElement('a');
+			link.href = url;
+			link.download = res.filename;
+			link.textContent = '📄 Download Merged Attendance Report (PDF)';
+			link.style.display = 'inline-block';
+			link.style.marginTop = '10px';
+			link.style.color = '#007bff';
+			link.style.textDecoration = 'underline';
+			link.style.cursor = 'pointer';
+
+			out.innerHTML = '';
+			out.appendChild(link);
 		} catch (err) {
 			console.error(err);
 			out.innerHTML = 'Error generating report';
