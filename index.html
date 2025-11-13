@@ -14,6 +14,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
 	<link rel="icon" href="data:;base64,iVBORw0KGgo=">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+	<script src="https://cdn.jsdelivr.net/npm/pdf-lib/dist/pdf-lib.min.js"></script>
     <title>BPAOUMN 1-B Attendance Checker</title>
     <style>
       /* Minimal clean styling */
@@ -876,18 +877,26 @@
 
 			if (res.ok) {
 			  out.textContent = ''; // clear "Generating..."
+			  
+			  // Merging happens here
+			  const mergedBase64 = await mergePdfFrontend(res.pdfMain, res.pdfExcuse);
 
-			  // Create and show a download link dynamically
-			  const pdfBlobUrl = 'data:application/pdf;base64,' + res.pdf;
+			  // Make downloadable
+			  const blob = base64ToBlob(mergedBase64, 'application/pdf');
+			  const url = URL.createObjectURL(blob);
+
 			  const link = document.createElement('a');
-			  link.href = pdfBlobUrl;
+			  link.href = url;
 			  link.download = res.filename;
-			  link.textContent = '📄 Download Attendance PDF';
-			  link.style.display = 'inline-block';
-			  link.style.marginTop = '10px';
-			  link.style.color = '#007bff';
-			  link.style.textDecoration = 'underline';
+			  link.textContent = "📄 Download Attendance Report";
+			  link.style.fontSize = "16px";
+			  link.style.display = "block";
+			  link.style.marginTop = "10px";
 			  link.style.cursor = 'pointer';
+			  //link.style.color = '#007bff';
+			  //link.style.textDecoration = 'underline';
+			  //link.style.display = 'inline-block';
+
 			  out.innerHTML = '';
 			  out.appendChild(link);
 			} else {
@@ -895,10 +904,38 @@
 			  alert('❌ ' + res.error);
 			}
 		} catch (err) {
-			out.textContent = 'Error fetching attendance.';
+			out.textContent = 'Error generating report.';
 			alert('⚠️ ' + err.message);
 		}
 	  };
+	  
+	  async function mergePdfFrontend(base64Main, base64Excuse) {
+		const mainBytes = Uint8Array.from(atob(base64Main), c => c.charCodeAt(0));
+		const excuseBytes = Uint8Array.from(atob(base64Excuse), c => c.charCodeAt(0));
+
+		const mergedPdf = await PDFLib.PDFDocument.create();
+		const pdfMain = await PDFLib.PDFDocument.load(mainBytes);
+		const pdfExcuse = await PDFLib.PDFDocument.load(excuseBytes);
+
+		const mainPages = await mergedPdf.copyPages(pdfMain, pdfMain.getPageIndices());
+		mainPages.forEach(p => mergedPdf.addPage(p));
+
+		const excusePages = await mergedPdf.copyPages(pdfExcuse, pdfExcuse.getPageIndices());
+		excusePages.forEach(p => mergedPdf.addPage(p));
+
+		const mergedBytes = await mergedPdf.save();
+		return btoa(String.fromCharCode(...mergedBytes));
+	  }
+	  
+	  function base64ToBlob(b64, mime) {
+		const byteChars = atob(b64);
+		const byteNumbers = new Array(byteChars.length);
+		for (let i = 0; i < byteChars.length; i++) {
+			byteNumbers[i] = byteChars.charCodeAt(i);
+		}
+		const bytes = new Uint8Array(byteNumbers);
+		return new Blob([bytes], { type: mime });
+	  }
 	  
 	  document.getElementById('generateReport').onclick = async () => {
 		const t = document.getElementById('reportType').value;
