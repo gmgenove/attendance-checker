@@ -220,45 +220,30 @@
     
     <script>
       // CONFIG: set this to your deployed Apps Script WebApp URL
-      const API_BASE = 'https://attendance-proxy.onrender.com/api';
+      const API_BASE = '/api';
 
       // Utility: call backend safely
-	  async function api(action, payload = {}) {
+	async function api(action, payload = {}) {
+	    // We now send the action as part of the URL path OR keep it in the body.
+	    // To match the server.js I gave you, keep it in the body:
 	    const body = { action, ...payload };
 	    try {
-	      const res = await fetch(API_BASE, {
-	        method: "POST",
-	        headers: { "Content-Type": "application/json" },
-	        body: JSON.stringify(body),
-	      });
+	        const res = await fetch(`${API_BASE}`, { // Points to /api
+	            method: "POST",
+	            headers: { "Content-Type": "application/json" },
+	            body: JSON.stringify(body),
+	        });
 	
-	      const text = await res.text();
+	        if (!res.ok) {
+	            const errorData = await res.json();
+	            return { ok: false, error: errorData.error || "Server Error" };
+	        }
 	
-	      // Empty or non-JSON response → return structured error
-	      if (!text.trim()) {
-	        console.error("Empty response from backend for", action);
-	        return { ok: false, error: "Empty response from server" };
-	      }
-	
-	      try {
-	        return JSON.parse(text);
-	      } catch (err) {
-	        console.error("Invalid JSON:", text);
-	        // Try to extract readable error if HTML
-	        const match = text.match(/<title>(.*?)<\/title>/i);
-	        return {
-	          ok: false,
-	          error:
-	            "Invalid JSON from server" +
-	            (match ? ` (${match[1]})` : ""),
-	          raw: text,
-	        };
-	      }
+	        return await res.json();
 	    } catch (err) {
-	      console.error("Network error", err);
-	      return { ok: false, error: "Network error: " + err.message };
+	        return { ok: false, error: "Network error: " + err.message };
 	    }
-	  }
+	}
 	  
 	  let appConfig = null;
 
@@ -562,34 +547,13 @@
 		  const btnExcuse = card.querySelector('.excuse-btn');
 		  const statusSpan = card.querySelector('.status-label');
 		  
-		  function parseTime(t) {
-			if (!t) return null;
-
-			// handle AM/PM or HH:mm:ss
-			const d = new Date(tzNow);
-
-			// try direct parse first
-			let parsed = Date.parse(`1970-01-01T${t}`);
-			if (!isNaN(parsed)) {
-				d.setHours(new Date(parsed).getHours(), new Date(parsed).getMinutes(), 0, 0);
-				return d;
-			}
-
-			// handle "9:00 AM" format
-			const m = t.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
-			if (m) {
-				let hh = parseInt(m[1], 10);
-				const mm = parseInt(m[2], 10);
-				const ampm = m[3] ? m[3].toUpperCase() : null;
-				if (ampm === 'PM' && hh < 12) hh += 12;
-				if (ampm === 'AM' && hh === 12) hh = 0;
-				d.setHours(hh, mm, 0, 0);
-				return d;
-			}
-
-			console.warn("Invalid time format:", t);
-			return null;
-		  }
+		function parseTime(t) {
+		    if (!t) return null;
+		    const d = new Date();
+		    const [hours, minutes] = t.split(':');
+		    d.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+		    return d;
+		}
 		  
 		  const tzNow = new Date();
 		  const start = parseTime(cls.start_time);
