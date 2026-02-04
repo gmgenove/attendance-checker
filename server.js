@@ -60,7 +60,7 @@ app.post('/api/checkin', async (req, res) => {
   try {
     // A. Check for existing attendance (Duplicate Prevention)
     const existing = await pool.query(
-      'SELECT status FROM attendance WHERE date = $1 AND class_code = $2 AND student_id = $3',
+      'SELECT attendance_status FROM attendance WHERE class_date = $1 AND class_code = $2 AND student_id = $3',
       [dateStr, class_code, student_id]
     );
 
@@ -149,7 +149,7 @@ app.post('/api', async (req, res) => {
         if (check.rows[0].password_hash) return res.json({ ok: false, error: 'Account already exists' });
 
         const hash = await bcrypt.hash(password, 10);
-        await pool.query('UPDATE users SET password_hash = $1 WHERE user_id = $2', [hash, id]);
+        await pool.query('UPDATE sys_users SET password_hash = $1 WHERE user_id = $2', [hash, id]);
         return res.json({ ok: true, message: 'Signup successful' });
       }
 
@@ -195,7 +195,7 @@ app.post('/api', async (req, res) => {
 		    const res = await pool.query(
 		      `SELECT a.class_date, a.student_id, u.user_name, a.attendance_status, a.time_in 
 		       FROM attendance a 
-		       JOIN sys_users u ON a.student_id = u.id 
+		       JOIN sys_users u ON a.student_id = u.user_id 
 		       WHERE a.class_code = $1 ORDER BY a.class_date DESC, u.user_name ASC`,
 		      [class_code]
 		    );
