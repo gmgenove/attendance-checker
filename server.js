@@ -89,9 +89,9 @@ app.post('/api', async (req, res) => {
 			  end_time: row.end_time.slice(0, 5)
 			}));
 		
-			res.json({ ok: true, schedule });
+			return res.json({ ok: true, schedule });
 		  } catch (err) {
-			res.json({ ok: false, error: err.message });
+			return res.json({ ok: false, error: err.message });
 		  }
 	  }
 		
@@ -139,10 +139,9 @@ app.post('/api', async (req, res) => {
 			  [dateStr, class_code, student_id, status, now.toFormat('HH:mm:ss')]
 			);
 		
-			res.json({ ok: true, status, timestamp: now.toFormat('HH:mm:ss') });
-		
+			return res.json({ ok: true, status, timestamp: now.toFormat('HH:mm:ss') });
 		  } catch (err) {
-			res.json({ ok: false, error: err.message });
+			return res.json({ ok: false, error: err.message });
 		  }
 	  }
 
