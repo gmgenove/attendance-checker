@@ -111,7 +111,7 @@ app.post('/api', async (req, res) => {
       // --- SIGN IN (Hybrid SHA256/Bcrypt) ---
       case 'signin': {
         const { id, password, role } = payload;
-        const result = await pool.query('SELECT * FROM sys_users WHERE user_id = $1 AND user_id = $2', [id, role]);
+        const result = await pool.query('SELECT * FROM sys_users WHERE user_id = $1 AND user_role = $2', [id, role]);
         
         if (result.rows.length === 0) return res.status(404).json({ ok: false, error: 'User not found' });
         const user = result.rows[0];
