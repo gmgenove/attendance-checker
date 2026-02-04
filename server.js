@@ -31,9 +31,9 @@ app.post('/api/today_schedule', async (req, res) => {
     const dayName = now.toFormat('ccc'); // Mon, Tue, etc.
 
     const query = `
-      SELECT s.*, u.name as professor_name 
+      SELECT s.*, u.user_name as professor_name 
       FROM schedules s
-      LEFT JOIN sys_users u ON s.professor_id = u.id
+      LEFT JOIN sys_users u ON s.professor_id = u.user_id
       WHERE $1 = ANY(s.days)
     `;
     const result = await pool.query(query, [dayName]);
@@ -389,9 +389,9 @@ const autoTagAbsentees = async () => {
       if (diffMins > 10) {
         await pool.query(`
           INSERT INTO attendance (class_date, class_code, student_id, attendance_status, time_in)
-          SELECT $1, $2, u.id, 'ABSENT', '00:00:00'
+          SELECT $1, $2, u.user_id, 'ABSENT', '00:00:00'
           FROM sys_users u
-          WHERE u.role = 'student'
+          WHERE u.user_role = 'student'
           AND NOT EXISTS (
             SELECT 1 FROM attendance a 
             WHERE a.class_date = $1 AND a.class_code = $2 AND a.student_id = u.user_id
