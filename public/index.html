@@ -333,7 +333,7 @@
             const res = await api('get_attendance', { class_code: cls.class_code, student_id: currentUser.id });
             
             if (res.record && res.record.status !== 'not_recorded') {
-                statusSpan.textContent = `Status: ${res.record.status}`;
+                statusSpan.textContent = `Status: ${res.record.attendance_status}`;
                 btn.style.display = 'none';
                 return; // Stop here if already recorded
             }
