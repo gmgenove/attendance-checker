@@ -65,7 +65,7 @@ app.post('/api/checkin', async (req, res) => {
     );
 
     if (existing.rows.length > 0) {
-      return res.json({ ok: true, status: existing.rows[0].status, message: 'Already checked in' });
+      return res.json({ ok: true, status: existing.rows[0].attendance_status, message: 'Already checked in' });
     }
 
     // B. Get Class Start Time
@@ -250,6 +250,21 @@ app.post('/api', async (req, res) => {
 		  return res.json({ ok: true, pdfMain: pdfBase64, filename });
 	  }
 
+	  case 'check_holiday': {
+	    const today = getManilaNow().toISODate();
+	    const result = await pool.query('SELECT holiday_name, holiday_type FROM holidays WHERE holiday_date = $1', [today]);
+	    
+	    if (result.rows.length > 0) {
+	        return res.json({ 
+	            ok: true, 
+	            isHoliday: true, 
+	            holidayName: result.rows[0].holiday_name, 
+	            holidayType: result.rows[0].holiday_type 
+	        });
+	    }
+	    return res.json({ ok: true, isHoliday: false });
+	  }
+
       default:
         return res.status(400).json({ ok: false, error: `Action ${action} not implemented` });
     }
@@ -305,10 +320,9 @@ const initDb = async () => {
     );
         
     CREATE TABLE IF NOT EXISTS holidays (
-      holiday_date DATE,
+      holiday_date DATE PRIMARY KEY,
       holiday_name TEXT,
-      holiday_type TEXT,
-      constraint pk_attendance_data primary key (holiday_date, holiday_name, holiday_type)
+      holiday_type TEXT
     );
     
     INSERT INTO config (config_key, config_value, description) VALUES ('sem1_start', '2025-09-01', 'Start date of 1st semester') ON CONFLICT DO NOTHING;
