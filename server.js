@@ -104,12 +104,6 @@ app.post('/api/checkin', async (req, res) => {
 
 // 3. Simple Router for all other actions
 app.post('/api', async (req, res) => {
-    const { action } = req.body;
-    // Map other actions (signup, signin, etc.) here
-    // Example: if (action === 'getConfig') return res.json(...)
-});
-
-app.post('/api', async (req, res) => {
   const { action, ...payload } = req.body;
 
   try {
