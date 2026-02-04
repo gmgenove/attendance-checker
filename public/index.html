@@ -209,6 +209,53 @@
                     if (authMsg) setTimeout(() => authMsg.textContent = "", 1000);
                 }
             });
+
+            // --- Initialize Today's Date Header ---
+            const updateHeaderDate = () => {
+                const hdr = document.getElementById("hdr");
+                if (hdr) {
+                    hdr.textContent = new Date().toLocaleString("en-US", { dateStyle: 'full' });
+                }
+            };
+            
+            // --- Check for Holiday (Restored Behavior) ---
+            async function checkHolidayAndDisplay() {
+                const el = document.getElementById('holidayNotice');
+                if (!el) return;
+            
+                try {
+                    const res = await api('check_holiday', {});
+                    if (res.ok && res.isHoliday) {
+                        el.innerHTML = `<div class="pill danger" style="margin-bottom:15px; display:block; text-align:center;">
+                            🎉 ${res.holidayName}! (${res.holidayType})
+                        </div>`;
+                    } else {
+                        el.innerHTML = '';
+                    }
+                } catch (err) {
+                    console.error("Holiday check failed", err);
+                }
+            }
+            
+            // --- Automatic Session Restore ---
+            const restoreSession = () => {
+                const raw = localStorage.getItem('currentUser');
+                if (raw) {
+                    try {
+                        currentUser = JSON.parse(raw);
+                        showApp();
+                    } catch (e) {
+                        localStorage.removeItem('currentUser');
+                        document.getElementById('auth').style.display = 'block';
+                    }
+                } else {
+                    document.getElementById('auth').style.display = 'block';
+                }
+            };
+            
+            // Run these on load
+            updateHeaderDate();
+            restoreSession();
         });
 
         // Auth Logic
@@ -343,7 +390,20 @@
 
         function signout() {
             localStorage.removeItem('currentUser');
-            location.reload();
+            currentUser = null;
+            
+            // Reset UI
+            document.getElementById('app').style.display = 'none';
+            document.getElementById('auth').style.display = 'block';
+            document.getElementById("authForm").reset();
+            document.getElementById("errorMsg").textContent = "";
+            
+            // Reset to Sign-In mode
+            isSignup = false;
+            document.getElementById("formTitle").textContent = "Sign In";
+            document.getElementById("submitBtn").textContent = "Sign In";
+            document.getElementById("submitBtn").disabled = false;
+            //location.reload();
         }
         document.getElementById('signoutBtn').onclick = signout;
 
