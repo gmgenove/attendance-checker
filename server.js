@@ -3,7 +3,9 @@ const { Pool } = require('pg');
 const bcrypt = require('bcrypt');
 const cors = require('cors');
 const path = require('path');
+const crypto = require('crypto');
 const { DateTime } = require('luxon'); // Better timezone handling
+const { PDFDocument, rgb, StandardFonts } = require('pdf-lib');
 
 const app = express();
 app.use(express.json());
@@ -107,11 +109,167 @@ app.post('/api', async (req, res) => {
     // Example: if (action === 'getConfig') return res.json(...)
 });
 
+app.post('/api', async (req, res) => {
+  const { action, ...payload } = req.body;
+
+  try {
+    switch (action) {
+      // --- SIGN IN (Hybrid SHA256/Bcrypt) ---
+      case 'signin': {
+        const { id, password, role } = payload;
+        const result = await pool.query('SELECT * FROM users WHERE id = $1 AND role = $2', [id, role]);
+        
+        if (result.rows.length === 0) return res.status(404).json({ ok: false, error: 'User not found' });
+        const user = result.rows[0];
+
+        let isValid = false;
+        // Check if hash is bcrypt ($2b$...) or old SHA-256
+        if (user.password_hash.startsWith('$2b$')) {
+          isValid = await bcrypt.compare(password, user.password_hash);
+        } else {
+          const sha256Hash = crypto.createHash('sha256').update(password).digest('hex');
+          if (sha256Hash === user.password_hash) {
+            isValid = true;
+            // Upgrade to bcrypt on the fly
+            const newHash = await bcrypt.hash(password, 10);
+            await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [newHash, id]);
+          }
+        }
+
+        if (!isValid) return res.status(401).json({ ok: false, error: 'Invalid credentials' });
+        return res.json({ ok: true, user: { id: user.id, name: user.name, role: user.role } });
+      }
+
+      // --- SIGN UP ---
+      case 'signup': {
+        const { id, password, role } = payload;
+        // Verify user exists in roster first (same as your GAS logic)
+        const check = await pool.query('SELECT * FROM users WHERE id = $1 AND role = $2', [id, role]);
+        if (check.rows.length === 0) return res.json({ ok: false, error: 'ID not found in roster' });
+        if (check.rows[0].password_hash) return res.json({ ok: false, error: 'Account already exists' });
+
+        const hash = await bcrypt.hash(password, 10);
+        await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, id]);
+        return res.json({ ok: true, message: 'Signup successful' });
+      }
+
+      // --- GET ATTENDANCE (For UI status check) ---
+      case 'get_attendance': {
+        const { class_code, student_id } = payload;
+        const date = DateTime.now().setZone(TIMEZONE).toISODate();
+        const result = await pool.query(
+          'SELECT status, time_in FROM attendance WHERE date = $1 AND class_code = $2 AND student_id = $3',
+          [date, class_code, student_id]
+        );
+        return res.json({ ok: true, record: result.rows[0] || { status: 'not_recorded' } });
+      }
+
+      // --- DROPDOWNS (For Officer Reports) ---
+      case 'get_dropdowns': {
+        const classes = await pool.query('SELECT class_code as code, class_name as name FROM schedules');
+        const students = await pool.query('SELECT id, name FROM users WHERE role = \'student\'');
+        return res.json({ ok: true, classes: classes.rows, students: students.rows });
+      }
+
+      // --- CONFIG ---
+      case 'getConfig': {
+        // You can store these in a 'config' table, but hardcoding here matches your GAS setup
+        return res.json({
+          ok: true,
+          config: {
+            checkin_window_minutes: 10,
+            late_window_minutes: 5,
+            absent_window_minutes: 10,
+            adjustment_end: '2026-12-31' 
+          }
+        });
+      }
+
+	  case 'report': {
+		  const { type, class_code, student_id } = payload;
+		  let rows = [];
+		  let title = "";
+		  let filename = "";
+		
+		  if (type === 'class') {
+		    const res = await pool.query(
+		      `SELECT a.date, a.student_id, u.name, a.status, a.time_in 
+		       FROM attendance a 
+		       JOIN users u ON a.student_id = u.id 
+		       WHERE a.class_code = $1 ORDER BY a.date DESC, u.name ASC`,
+		      [class_code]
+		    );
+		    rows = res.rows;
+		    title = `Class Attendance Report: ${class_code}`;
+		    filename = `Report_Class_${class_code}.pdf`;
+		  } else {
+		    const res = await pool.query(
+		      `SELECT a.date, a.class_code, s.class_name, a.status, a.time_in 
+		       FROM attendance a 
+		       JOIN schedules s ON a.class_code = s.class_code 
+		       WHERE a.student_id = $1 ORDER BY a.date DESC`,
+		      [student_id]
+		    );
+		    rows = res.rows;
+		    const userRes = await pool.query('SELECT name FROM users WHERE id = $1', [student_id]);
+		    title = `Student Attendance Report: ${userRes.rows[0]?.name || student_id}`;
+		    filename = `Report_Student_${student_id}.pdf`;
+		  }
+		
+		  // --- Generate PDF using pdf-lib ---
+		  const pdfDoc = await PDFDocument.create();
+		  let page = pdfDoc.addPage([600, 800]);
+		  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+		  const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+		
+		  page.drawText(title, { x: 50, y: 750, size: 18, font: boldFont });
+		  page.drawText(`Generated on: ${getManilaNow().toFormat('f')}`, { x: 50, y: 730, size: 10, font });
+		
+		  let y = 700;
+		  // Header Row
+		  page.drawText('Date', { x: 50, y, size: 10, font: boldFont });
+		  page.drawText(type === 'class' ? 'Student' : 'Class', { x: 150, y, size: 10, font: boldFont });
+		  page.drawText('Status', { x: 400, y, size: 10, font: boldFont });
+		  page.drawText('Time', { x: 500, y, size: 10, font: boldFont });
+		
+		  y -= 20;
+		
+		  // Data Rows
+		  rows.forEach((row) => {
+		    if (y < 50) { // Add new page if space is low
+		      page = pdfDoc.addPage([600, 800]);
+		      y = 750;
+		    }
+		    const dateStr = DateTime.fromJSDate(row.date).toISODate();
+		    const secondCol = type === 'class' ? row.name : row.class_name;
+		    
+		    page.drawText(dateStr, { x: 50, y, size: 9, font });
+		    page.drawText(String(secondCol).substring(0, 30), { x: 150, y, size: 9, font });
+		    page.drawText(row.status, { x: 400, y, size: 9, font });
+		    page.drawText(row.time_in || '--', { x: 500, y, size: 9, font });
+		    y -= 15;
+		  });
+		
+		  const pdfBytes = await pdfDoc.save();
+		  const pdfBase64 = Buffer.from(pdfBytes).toString('base64');
+		
+		  return res.json({ ok: true, pdfMain: pdfBase64, filename });
+	  }
+
+      default:
+        return res.status(400).json({ ok: false, error: `Action ${action} not implemented` });
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ ok: false, error: 'Server error: ' + err.message });
+  }
+});
+
 const initDb = async () => {
   const queryText = `
-    CREATE TABLE IF NOT EXISTS users (
-      id TEXT PRIMARY KEY, 
-      name TEXT, 
+    CREATE TABLE IF NOT EXISTS sys_users (
+      user_id TEXT PRIMARY KEY, 
+      user_name TEXT, 
       user_role TEXT, 
       password_hash TEXT
     );
@@ -126,70 +284,70 @@ const initDb = async () => {
     );
     
     CREATE TABLE IF NOT EXISTS attendance (
-      date DATE, 
+      class_date DATE, 
       class_code TEXT REFERENCES schedules(class_code), 
-      student_id TEXT REFERENCES users(id), 
-      status TEXT, 
+      student_id TEXT REFERENCES sys_users(user_id), 
+      attendance_status TEXT, 
       time_in TIME, 
-	  professor_id TEXT,
-	  reason TEXT
-      PRIMARY KEY (date, class_code, student_id)
+      professor_id TEXT REFERENCES professors(professor_id),
+      reason TEXT,
+      constraint pk_attendance_data primary key (class_date, class_code, student_id)
     );
-	
-	CREATE TABLE IF NOT EXISTS roster (
+        
+    CREATE TABLE IF NOT EXISTS roster (
       student_id TEXT PRIMARY KEY, 
-      name TEXT
+      student_name TEXT
     );
-	
-	CREATE TABLE IF NOT EXISTS professors (
+        
+    CREATE TABLE IF NOT EXISTS professors (
       professor_id TEXT PRIMARY KEY, 
-      name TEXT
+      professor_name TEXT
     );
-	
-	CREATE TABLE IF NOT EXISTS config (
+        
+    CREATE TABLE IF NOT EXISTS config (
       config_key TEXT PRIMARY KEY, 
       config_value TEXT,
-	  description TEXT
+      description TEXT
     );
-	
-	INSERT INTO config (key, value, description) VALUES ('sem1_start', '2025-09-01', 'Start date of 1st semester');
-	INSERT INTO config (key, value, description) VALUES ('sem1_end', '2026-01-17', 'End date of 1st semester');
-	INSERT INTO config (key, value, description) VALUES ('sem1_adjustment_start', '2025-09-01', 'Adjustment period start (Sem 1)');
-	INSERT INTO config (key, value, description) VALUES ('sem1_adjustment_end', '2025-11-30', 'Adjustment period end (Sem 1)');
-	INSERT INTO config (key, value, description) VALUES ('sem2_start', '2026-02-09', 'Start date of 2nd semester');
-	INSERT INTO config (key, value, description) VALUES ('sem2_end', '2026-06-21', 'End date of 2nd semester');
-	INSERT INTO config (key, value, description) VALUES ('sem2_adjustment_start', '2026-02-09', 'Adjustment period start (Sem 2)');
-	INSERT INTO config (key, value, description) VALUES ('sem2_adjustment_end', '2026-03-06', 'Adjustment period end (Sem 2)');
-	INSERT INTO config (key, value, description) VALUES ('checkin_window_minutes', '10', 'Minutes before class check-in opens');
-	INSERT INTO config (key, value, description) VALUES ('late_window_minutes', '5', 'Minutes after class start considered “late”');
-	INSERT INTO config (key, value, description) VALUES ('absent_window_minutes', '20', 'Minutes after class start considered “absent”');
-	INSERT INTO config (key, value, description) VALUES ('current_sem', 'auto', 'Use “auto” for automatic semester detection');
-	INSERT INTO config (key, value, description) VALUES ('checkout_window_minutes', '10', 'Minutes before end of class, check-out opens');
-	
-	CREATE TABLE IF NOT EXISTS holidays (
+        
+    CREATE TABLE IF NOT EXISTS holidays (
       holiday_date DATE,
       holiday_name TEXT,
-	  holiday_type TEXT
+      holiday_type TEXT
     );
-	
-	INSERT INTO config (holiday_date, holiday_name, holiday_type) VALUES ('2026-01-01', 'New Year's Day', 'Regular Holiday');
-	INSERT INTO config (holiday_date, holiday_name, holiday_type) VALUES ('2026-04-02', 'Maundy Thursday', 'Regular Holiday');
-	INSERT INTO config (holiday_date, holiday_name, holiday_type) VALUES ('2026-04-03', 'Good Friday', 'Regular Holiday');
-	INSERT INTO config (holiday_date, holiday_name, holiday_type) VALUES ('2026-04-09', 'Araw ng Kagitingan', 'Regular Holiday');
-	INSERT INTO config (holiday_date, holiday_name, holiday_type) VALUES ('2026-05-01', 'Labor Day', 'Regular Holiday');
-	INSERT INTO config (holiday_date, holiday_name, holiday_type) VALUES ('2026-06-12', 'Independence Day', 'Regular Holiday');
-	INSERT INTO config (holiday_date, holiday_name, holiday_type) VALUES ('2026-08-31', 'National Heroes Day', 'Regular Holiday');
-	INSERT INTO config (holiday_date, holiday_name, holiday_type) VALUES ('2026-11-30', 'Bonifacio Day', 'Regular Holiday');
-	INSERT INTO config (holiday_date, holiday_name, holiday_type) VALUES ('2026-12-25', 'Christmas Day', 'Regular Holiday');
-	INSERT INTO config (holiday_date, holiday_name, holiday_type) VALUES ('2026-12-30', 'Rizal Day', 'Regular Holiday');
-	INSERT INTO config (holiday_date, holiday_name, holiday_type) VALUES ('2026-08-21', 'Ninoy Aquino Day', 'Special Non-Working Holiday');
-	INSERT INTO config (holiday_date, holiday_name, holiday_type) VALUES ('2026-11-01', 'All Saints' Day', 'Special Non-Working Holiday');
-	INSERT INTO config (holiday_date, holiday_name, holiday_type) VALUES ('2026-12-08', 'Feast of the Immaculate Conception of Mary', 'Special Non-Working Holiday');
-	INSERT INTO config (holiday_date, holiday_name, holiday_type) VALUES ('2026-12-31', 'Last Day of the Year', 'Special Non-Working Holiday');
-	INSERT INTO config (holiday_date, holiday_name, holiday_type) VALUES ('2026-02-17', 'Chinese New Year', 'Special Non-Working Holiday');
-	INSERT INTO config (holiday_date, holiday_name, holiday_type) VALUES ('2026-04-04', 'Black Saturday', 'Special Non-Working Holiday');
-	INSERT INTO config (holiday_date, holiday_name, holiday_type) VALUES ('2026-11-02', 'All Souls' Day', 'Special Non-Working Holiday');
-	INSERT INTO config (holiday_date, holiday_name, holiday_type) VALUES ('2026-12-24', 'Christmas Eve', 'Special Non-Working Holiday');
+    
+    INSERT INTO config (config_key, config_value, description) VALUES ('sem1_start', '2025-09-01', 'Start date of 1st semester') ON CONFLICT DO NOTHING;
+    INSERT INTO config (config_key, config_value, description) VALUES ('sem1_end', '2026-01-17', 'End date of 1st semester') ON CONFLICT DO NOTHING;
+    INSERT INTO config (config_key, config_value, description) VALUES ('sem1_adjustment_start', '2025-09-01', 'Adjustment period start (Sem 1)') ON CONFLICT DO NOTHING;
+    INSERT INTO config (config_key, config_value, description) VALUES ('sem1_adjustment_end', '2025-11-30', 'Adjustment period end (Sem 1)') ON CONFLICT DO NOTHING;
+    INSERT INTO config (config_key, config_value, description) VALUES ('sem2_start', '2026-02-09', 'Start date of 2nd semester') ON CONFLICT DO NOTHING;
+    INSERT INTO config (config_key, config_value, description) VALUES ('sem2_end', '2026-06-21', 'End date of 2nd semester') ON CONFLICT DO NOTHING;
+    INSERT INTO config (config_key, config_value, description) VALUES ('sem2_adjustment_start', '2026-02-09', 'Adjustment period start (Sem 2)') ON CONFLICT DO NOTHING;
+    INSERT INTO config (config_key, config_value, description) VALUES ('sem2_adjustment_end', '2026-03-06', 'Adjustment period end (Sem 2)') ON CONFLICT DO NOTHING;
+    INSERT INTO config (config_key, config_value, description) VALUES ('checkin_window_minutes', '10', 'Minutes before class check-in opens') ON CONFLICT DO NOTHING;
+    INSERT INTO config (config_key, config_value, description) VALUES ('late_window_minutes', '5', 'Minutes after class start considered “late”') ON CONFLICT DO NOTHING;
+    INSERT INTO config (config_key, config_value, description) VALUES ('absent_window_minutes', '20', 'Minutes after class start considered “absent”') ON CONFLICT DO NOTHING;
+    INSERT INTO config (config_key, config_value, description) VALUES ('current_sem', 'auto', 'Use “auto” for automatic semester detection') ON CONFLICT DO NOTHING;
+    INSERT INTO config (config_key, config_value, description) VALUES ('checkout_window_minutes', '10', 'Minutes before end of class, check-out opens') ON CONFLICT DO NOTHING;
+        
+    INSERT INTO holidays (holiday_date, holiday_name, holiday_type) VALUES ('2026-01-01', 'New Years Day', 'Regular Holiday') ON CONFLICT DO NOTHING;
+    INSERT INTO holidays (holiday_date, holiday_name, holiday_type) VALUES ('2026-04-02', 'Maundy Thursday', 'Regular Holiday') ON CONFLICT DO NOTHING;
+    INSERT INTO holidays (holiday_date, holiday_name, holiday_type) VALUES ('2026-04-03', 'Good Friday', 'Regular Holiday') ON CONFLICT DO NOTHING;
+    INSERT INTO holidays (holiday_date, holiday_name, holiday_type) VALUES ('2026-04-09', 'Araw ng Kagitingan', 'Regular Holiday') ON CONFLICT DO NOTHING;
+    INSERT INTO holidays (holiday_date, holiday_name, holiday_type) VALUES ('2026-05-01', 'Labor Day', 'Regular Holiday') ON CONFLICT DO NOTHING;
+    INSERT INTO holidays (holiday_date, holiday_name, holiday_type) VALUES ('2026-06-12', 'Independence Day', 'Regular Holiday') ON CONFLICT DO NOTHING;
+    INSERT INTO holidays (holiday_date, holiday_name, holiday_type) VALUES ('2026-08-31', 'National Heroes Day', 'Regular Holiday') ON CONFLICT DO NOTHING;
+    INSERT INTO holidays (holiday_date, holiday_name, holiday_type) VALUES ('2026-11-30', 'Bonifacio Day', 'Regular Holiday') ON CONFLICT DO NOTHING;
+    INSERT INTO holidays (holiday_date, holiday_name, holiday_type) VALUES ('2026-12-25', 'Christmas Day', 'Regular Holiday') ON CONFLICT DO NOTHING;
+    INSERT INTO holidays (holiday_date, holiday_name, holiday_type) VALUES ('2026-12-30', 'Rizal Day', 'Regular Holiday') ON CONFLICT DO NOTHING;
+    INSERT INTO holidays (holiday_date, holiday_name, holiday_type) VALUES ('2026-08-21', 'Ninoy Aquino Day', 'Special Non-Working Holiday') ON CONFLICT DO NOTHING;
+    INSERT INTO holidays (holiday_date, holiday_name, holiday_type) VALUES ('2026-11-01', 'All Saints Day', 'Special Non-Working Holiday') ON CONFLICT DO NOTHING;
+    INSERT INTO holidays (holiday_date, holiday_name, holiday_type) VALUES ('2026-12-08', 'Feast of the Immaculate Conception of Mary', 'Special Non-Working Holiday') ON CONFLICT DO NOTHING;
+    INSERT INTO holidays (holiday_date, holiday_name, holiday_type) VALUES ('2026-12-31', 'Last Day of the Year', 'Special Non-Working Holiday') ON CONFLICT DO NOTHING;
+    INSERT INTO holidays (holiday_date, holiday_name, holiday_type) VALUES ('2026-02-17', 'Chinese New Year', 'Special Non-Working Holiday') ON CONFLICT DO NOTHING;
+    INSERT INTO holidays (holiday_date, holiday_name, holiday_type) VALUES ('2026-04-04', 'Black Saturday', 'Special Non-Working Holiday') ON CONFLICT DO NOTHING;
+    INSERT INTO holidays (holiday_date, holiday_name, holiday_type) VALUES ('2026-11-02', 'All Souls Day', 'Special Non-Working Holiday') ON CONFLICT DO NOTHING;
+    INSERT INTO holidays (holiday_date, holiday_name, holiday_type) VALUES ('2026-12-24', 'Christmas Eve', 'Special Non-Working Holiday') ON CONFLICT DO NOTHING;
   `;
   try {
     await pool.query(queryText);
@@ -198,9 +356,47 @@ const initDb = async () => {
     console.error("❌ Error initializing database:", err);
   }
 };
+initDb();	// Call the migration script
 
-// Call the migration script
-initDb();
+const autoTagAbsentees = async () => {
+  console.log("Running auto-tag absentee check...");
+  try {
+    const now = getManilaNow();
+    const dayName = now.toFormat('ccc');
+    const dateStr = now.toISODate();
+
+    // 1. Find classes that ended more than 10 mins ago today
+    const schedules = await pool.query(
+      "SELECT * FROM schedules WHERE $1 = ANY(days)", 
+      [dayName]
+    );
+
+    for (const sched of schedules.rows) {
+      const [hh, mm] = sched.start_time.split(':');
+      const classStart = now.set({ hour: hh, minute: mm, second: 0 });
+      const diffMins = now.diff(classStart, 'minutes').minutes;
+
+      // If it's 11+ minutes past start time, mark missing students as ABSENT
+      if (diffMins > 10) {
+        await pool.query(`
+          INSERT INTO attendance (date, class_code, student_id, status, time_in)
+          SELECT $1, $2, u.id, 'ABSENT', '00:00:00'
+          FROM users u
+          WHERE u.role = 'student'
+          AND NOT EXISTS (
+            SELECT 1 FROM attendance a 
+            WHERE a.date = $1 AND a.class_code = $2 AND a.student_id = u.id
+          )
+        `, [dateStr, sched.class_code]);
+      }
+    }
+  } catch (err) {
+    console.error("Auto-tag error:", err);
+  }
+};
+
+// Run check every 30 minutes
+setInterval(autoTagAbsentees, 30 * 60 * 1000);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Backend running on port ${PORT}`));
