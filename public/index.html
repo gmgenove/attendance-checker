@@ -1,993 +1,276 @@
 <!doctype html>
 <html lang="en">
-  <head>
+<head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1, shrink-to-fit=no, maximum-scale=1, minimum-scale=1" />
-	<meta name="robots" content="nofollow, noindex, noarchive"/>
-    <meta name="googlebot" content="nosnippet"/>
-	<meta http-equiv="cache-control" content="max-age=0" />
-	<meta http-equiv="cache-control" content="no-cache" />
-	<meta http-equiv="expires" content="0" />
-	<meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT" />
-	<meta http-equiv="pragma" content="no-cache" />
+    <meta name="robots" content="nofollow, noindex, noarchive"/>
     <meta name="author" content="gmgenove"/>
     <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
-	<link rel="icon" href="data:;base64,iVBORw0KGgo=">
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-	<script src="https://cdn.jsdelivr.net/npm/pdf-lib/dist/pdf-lib.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pdf-lib/dist/pdf-lib.min.js"></script>
     <title>BPAOUMN 1-B Attendance Checker</title>
     <style>
-      /* Minimal clean styling */
-      body{font-family:Inter,system-ui,Segoe UI,Roboto,Arial;margin:0;padding:16px;background:#f7fafc;color:#0f172a}
-      .container{max-width:900px;margin:0 auto}
-      header{display:flex;align-items:center;justify-content:space-between}
-      .card{background:white;border-radius:12px;padding:16px;margin:12px 0;box-shadow:0 6px 18px rgba(15,23,42,0.06)}
-      input,select,button{padding:10px;border-radius:8px;border:1px solid #e2e8f0}
-      button{cursor:pointer}
-      .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-      table{width:100%;border-collapse:collapse}
-      th,td{padding:8px;border-bottom:1px solid #edf2f7;text-align:left}
-      .small{font-size:0.9rem;color:#475569}
-      .pill{display:inline-block;padding:6px 10px;border-radius:999px;background:#e6f4ea;color:#064e3b}
-      .danger{background:#fff1f2;color:#7f1d1d}
-      .muted{color:#94a3b8}
-
-      .login-card {
-        max-width: 300px;
-        margin: 40px auto;
-        padding: 20px;
-        border-radius: 12px;
-        background: #f9f9f9;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      }
-      .form-group {
-        margin-bottom: 15px;
-      }
-      .password-wrapper {
-        display: flex;
-        align-items: center;
-      }
-      .field-icon {
-		float: right;
-        margin-left: -25px;
-		position: relative;
-		z-index: 2;
-        background: none;
-        border: none;
-        cursor: pointer;
-        font-size: 1.1em;
-      }
-      .error-message {
-        color: #d93025; /* Google-style red */
-        margin-top: 10px;
-        font-size: 0.9em;
-      }
-
-	  .class-card {
-		display: flex;
-		justify-content: space-between;
-		align-items: flex-start;
-		background: #f9fafb;
-		border: 1px solid #e5e7eb;
-		border-radius: 12px;
-		padding: 12px 16px;
-		margin-bottom: 10px;
-	  }
-	  .class-content {
-		flex: 1;
-	  }
-	  .class-actions {
-		display: flex;
-		flex-direction: column;
-		gap: 6px;
-	  }
-	  .class-actions button {
-		padding: 6px 10px;
-		border-radius: 6px;
-		border: none;
-		cursor: pointer;
-		font-size: 0.85rem;
-	  }
-	  .credit-btn {
-		background: #3b82f6;
-		color: white;
-	  }
-	  .excuse-btn {
-		background: #facc15;
-		color: #111827;
-	  }
-	  .checkin-btn {
-		background: #10b981;
-		color: white;
-	  }
-	  .class-actions button:disabled {
-		opacity: 0.6;
-		cursor: not-allowed;
-	  }
-	  .status-label {
-		margin-top: 6px;
-		font-weight: 500;
-	  }
-	  .footer {
-		/*position: fixed;
-		left: 0;
-		bottom: 0;*/
-		width: 100%;
-		margin-top: 15px;
-		text-align: center;
-		font-size: 13px;
-		color: #aaa;
-		margin-bottom: -20px;
-		/*margin-bottom: 0;*/
-	  }
+        body{font-family:Inter,system-ui,Segoe UI,Roboto,Arial;margin:0;padding:16px;background:#f7fafc;color:#0f172a}
+        .container{max-width:900px;margin:0 auto}
+        header{display:flex;align-items:center;justify-content:space-between}
+        .card{background:white;border-radius:12px;padding:16px;margin:12px 0;box-shadow:0 6px 18px rgba(15,23,42,0.06)}
+        input,select,button{padding:10px;border-radius:8px;border:1px solid #e2e8f0}
+        button{cursor:pointer; transition: opacity 0.2s}
+        button:disabled{opacity: 0.5; cursor: not-allowed}
+        .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+        .small{font-size:0.9rem;color:#475569}
+        .muted{color:#94a3b8}
+        .error-message {color: #d93025; margin-top: 10px; font-size: 0.9em;}
+        .class-card {display: flex; justify-content: space-between; align-items: flex-start; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px 16px; margin-bottom: 10px;}
+        .class-actions {display: flex; flex-direction: column; gap: 6px;}
+        .checkin-btn {background: #10b981; color: white; border:none}
+        .footer {width: 100%; margin-top: 15px; text-align: center; font-size: 13px; color: #aaa;}
+        #loading-bar { height: 3px; width: 0%; background: #3b82f6; position: fixed; top: 0; left: 0; transition: width 0.3s;}
     </style>
-  </head>
-  <body>
+</head>
+<body>
+    <div id="loading-bar"></div>
     <div class="container">
-      <header>
-        <h1>BPAOUMN 1-B Attendance Checker</h1>
-        <div id="hdr" class="small muted"></div>
-      </header>
+        <header>
+            <h1>BPAOUMN 1-B Attendance</h1>
+            <div id="hdr" class="small muted"></div>
+        </header>
 
-      <div id="auth" class="card">
-        <h3 id="formTitle">Sign In</h3>
-        <form id="authForm">
-			<div class="grid">
-			  <div>
-				<label for="userId">Student ID / Officer / Professor ID</label><br>
-				<input id="userId" placeholder="e.g. 2025-XXXXXX-MN-X" required />
-			  </div>
-			  <div class="form-group">
-				<label for="passwordInput">Password</label><br>
-				<div class="password-wrapper">
-				  <input id="passwordInput" type="password" placeholder="Enter your password" required><span id="togglePassword" class="fa fa-fw fa-eye field-icon"></span></input>
-				</div>
-			  </div>
-			</div>
-			<div style="margin-top:12px">
-			  <label for="roleSelect">Role</label>
-			  <select id="roleSelect">
-				<option value="">Select Role</option>
-				<option value="student">Student</option>
-				<option value="officer">Officer</option>
-			  </select>
-			  <button type="submit" id="submitBtn">Sign In</button>
-			  <p id="switchText" class="small">Don’t have an account? <a href="#">Sign up</a></p>
-			</div>
-			<div id="authMsg" class="small muted"></div>
-			<div id="errorMsg" class="error-message"></div>
-        </form>
-      </div>
-      
-      <div id="app" style="display:none">
-        <div class="card">
-          <div style="display:flex;align-items:center;justify-content:space-between">
-            <div>
-              <strong id="welcome"></strong>
-              <div class="small muted" id="roleBadge"></div>
+        <div id="auth" class="card">
+            <h3 id="formTitle">Sign In</h3>
+            <form id="authForm">
+                <div class="grid">
+                    <div>
+                        <label>ID Number</label><br>
+                        <input id="userId" placeholder="2025-XXXXXX-MN-X" required />
+                    </div>
+                    <div>
+                        <label>Password</label><br>
+                        <input id="passwordInput" type="password" required />
+                    </div>
+                </div>
+                <div style="margin-top:12px">
+                    <select id="roleSelect" required>
+                        <option value="">Select Role</option>
+                        <option value="student">Student</option>
+                        <option value="officer">Officer</option>
+                    </select>
+                    <button type="submit" id="submitBtn">Sign In</button>
+                    <p id="switchText" class="small">Don't have an account? <a href="#">Sign up</a></p>
+                </div>
+                <div id="errorMsg" class="error-message"></div>
+            </form>
+        </div>
+
+        <div id="app" style="display:none">
+            <div class="card" style="display:flex; justify-content:space-between; align-items:center">
+                <div>
+                    <strong id="welcome"></strong>
+                    <div class="small muted" id="roleBadge"></div>
+                </div>
+                <button id="signoutBtn">Sign out</button>
             </div>
-            <div>
-              <button id="signoutBtn">Sign out</button>
+
+            <div class="card">
+                <h3>Today's Schedule</h3>
+                <div id="holidayNotice"></div>
+                <div id="scheduleList"></div>
             </div>
-          </div>
-        </div>
 
-        <div class="card" id="todayScheduleCard">
-          <h3>Today's Schedule</h3>
-		  <div id="holidayNotice" class="small muted" style="margin-bottom: 20px;"></div>
-          <div id="todayMsg" class="small muted">Loading schedule...</div>
-          <div id="scheduleList"></div>
-        </div>
-  
-        <div class="card" id="controls" style="display:none">
-          <h3>Controls</h3>
-          <div id="profControls" style="display:none">
-            <label>Professor: download attendance</label><br>
-            <input id="profClassCode" placeholder="class code" />
-            <input id="profDate" type="date" />
-            <button id="profDownload">Download CSV</button>
-          </div>
-			
-          <div id="officerControls" style="display:none">
-            <label>Officer Reports</label><br>
-            <select id="reportType">
-				<option value="" selected="selected">Select Report</option>
-				<option value="class">Class</option>
-				<option value="person">Person</option>
-			</select>
-			<div id="reportParams" style="margin-top:8px"></div>
-            <button id="generateReport" style="margin-top: 8px;">Generate</button>
-            <div id="reportOutput" style="margin-top:8px"></div>
+            <div id="controls" class="card" style="display:none">
+                <div id="officerControls" style="display:none">
+                    <h3>Officer Reports</h3>
+                    <select id="reportType">
+                        <option value="">Select Report Type</option>
+                        <option value="class">Class Report</option>
+                        <option value="person">Student Report</option>
+                    </select>
+                    <div id="reportParams" style="margin: 10px 0"></div>
+                    <button id="generateReport">Generate PDF Report</button>
+                    <div id="reportOutput"></div>
+                </div>
 
-			<hr style="margin:12px 0" />
-			<button id="runAutoTag" style="margin-top:10px;background:#0f766e;color:white">
-				Run Auto-Tag Absentees Now
-			</button>
-			<div id="autoTagMsg" class="small muted" style="margin-top:8px"></div>
-          </div>
-    
-          <div id="studentControls" style="display:none">
-            <button id="viewMyAttendance">View My Attendance</button>
-            <div id="myAttendanceOutput" style="margin-top:8px"></div>
-          </div>
+                <div id="studentControls" style="display:none">
+                    <button id="viewMyAttendance">Download My Attendance PDF</button>
+                    <div id="myAttendanceOutput"></div>
+                </div>
+            </div>
         </div>
-  
-        <div class="card small muted">
-			<strong>Notes:</strong> Check-in opens 10 minutes before class. On-time if checked-in within first 5 minutes; late if checked between 5 and 10 minutes; absent after 10 minutes and button is disabled.
-		</div>
-      </div>
+        <div class="footer"><p>&copy; 2026 /gmgenove</p></div>
     </div>
-    
+
     <script>
-      // CONFIG: set this to your deployed Apps Script WebApp URL
-      const API_BASE = '/api';
+        const API_BASE = '/api'; // Optimized for same-domain Render hosting
+        let currentUser = null;
+        let isSignup = false;
 
-      // Utility: call backend safely
-	async function api(action, payload = {}) {
-	    // We now send the action as part of the URL path OR keep it in the body.
-	    // To match the server.js I gave you, keep it in the body:
-	    const body = { action, ...payload };
-	    try {
-	        const res = await fetch(`${API_BASE}`, { // Points to /api
-	            method: "POST",
-	            headers: { "Content-Type": "application/json" },
-	            body: JSON.stringify(body),
-	        });
-	
-	        if (!res.ok) {
-	            const errorData = await res.json();
-	            return { ok: false, error: errorData.error || "Server Error" };
-	        }
-	
-	        return await res.json();
-	    } catch (err) {
-	        return { ok: false, error: "Network error: " + err.message };
-	    }
-	}
-	  
-	  let appConfig = null;
-
-	  async function loadConfig() {
-		try {
-		  const res = await api('getConfig', {});
-		  if (!res.ok) {
-			console.error("Failed to load config:", res.error);
-			return;
-		  }
-		  appConfig = res.config;
-		} catch (err) {
-		  console.error("Error fetching config:", err);
-		}
-	  }
-
-	  // Run when page loads
-	  window.onload = () => {
-		loadConfig();
-	  };
-
-      let currentUser = null; // {id, name, role}
-	  let isSignup = false;
-
-      // login area only submit on enter
-      document.getElementById("auth").addEventListener("keydown", (event) => {
-        if (event.key === "Enter") {
-          event.preventDefault();
-          document.getElementById("submitBtn").click();
-        }
-      });
-
-	  document.addEventListener('DOMContentLoaded', async () => {
-        const form = document.getElementById("authForm");
-        const idInput = document.getElementById("userId");
-        const passwordInput = document.getElementById("passwordInput");
-        const roleSelect = document.getElementById("roleSelect");
-        const togglePassword = document.getElementById("togglePassword");
-        const errorMsg = document.getElementById("errorMsg");
-        const submitBtn = document.getElementById("submitBtn");
-		const formTitle = document.getElementById("formTitle");
-		const switchText = document.getElementById("switchText");
-
-        // Toggle password visibility
-        togglePassword.addEventListener("click", () => {
-          const isPassword = passwordInput.type === "password";
-          passwordInput.type = isPassword ? "text" : "password";
-          if (isPassword) {
-			document.getElementById("togglePassword").classList.remove("fa-eye");
-			document.getElementById("togglePassword").classList.add("fa-eye-slash");
-		  } else {
-			document.getElementById("togglePassword").classList.remove("fa-eye-slash");
-			document.getElementById("togglePassword").classList.add("fa-eye");
-		  }
-        });
-
-		// Toggle between Sign In / Sign Up
-		switchText.addEventListener("click", (e) => {
-		  e.preventDefault();
-		  isSignup = !isSignup;
-		  formTitle.textContent = isSignup ? "Sign Up" : "Sign In";
-		  submitBtn.textContent = isSignup ? "Sign Up" : "Sign In";
-		  switchText.innerHTML = isSignup
-			? 'Already have an account? <a href="#">Sign in</a>'
-			: 'Don’t have an account? <a href="#">Sign up</a>';
-		  errorMsg.textContent = "";
-		});
-      
-        // Handle form submit
-        form.addEventListener("submit", async (e) => {
-          e.preventDefault();
-          errorMsg.textContent = "";
-          submitBtn.disabled = true;
-		  
-          if (!idInput.value.trim()||!passwordInput.value.trim()) {
-			document.getElementById('errorMsg').textContent='Enter id and password';
-			document.getElementById('authMsg').textContent='';
-			submitBtn.disabled = false; // ✅ re-enable before returning
-			return;
-          }
-		  if (!roleSelect.value) {
-			document.getElementById('errorMsg').textContent='Select role';
-			document.getElementById('authMsg').textContent='';
-			submitBtn.disabled = false; // ✅ re-enable before returning
-			return;
-          }
-		  document.getElementById('authMsg').textContent = isSignup ? "Signing up..." : "Signing in...";
-      
-          try {
-			const data = await api(isSignup ? "signup" : "signin", {
-			  id: idInput.value.trim(),
-			  password: passwordInput.value.trim(),
-			  role: roleSelect.value
-			});
-      
-            if (!data.ok) {
-              errorMsg.textContent = data.error ? data.error : isSignup ? "Signup failed" : "Login failed";
-			  document.getElementById('authMsg').textContent='';
-              submitBtn.disabled = false; // ✅ allow retry
-              return;
+        // API Helper
+        async function api(action, payload = {}) {
+            const bar = document.getElementById('loading-bar');
+            bar.style.width = '30%';
+            try {
+                const res = await fetch(API_BASE, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action, ...payload })
+                });
+                bar.style.width = '100%';
+                const data = await res.json();
+                if (res.status === 401) signout();
+                return data;
+            } catch (err) {
+                return { ok: false, error: err.message };
+            } finally {
+                setTimeout(() => bar.style.width = '0%', 500);
             }
-
-			if (isSignup) {
-		      errorMsg.style.color = "green";
-		      errorMsg.textContent = data.message || "Signup successful!";
-		      isSignup = false;
-		      formTitle.textContent = "Sign In";
-		      submitBtn.textContent = "Sign In";
-			  submitBtn.disabled = false; // ✅ make clickable again
-			  passwordInput.value = "";
-			  document.getElementById('authMsg').textContent = "";
-			  return;
-	      	}
-			
-			// ✅ Signin flow
-			currentUser = data.user;
-	        localStorage.setItem("currentUser", JSON.stringify(currentUser));
-			showApp();
-          } catch (err) {
-            errorMsg.textContent = "Network error: " + err.message;
-			submitBtn.disabled = false; // ✅ ensure re-enable even on exceptions
-          } finally {
-            // Just for UI message cleanup
-			setTimeout(() => {
-			  document.getElementById('authMsg').textContent = "";
-			}, 1000);
-          }
-        });
-      });
-
-      document.getElementById("hdr").innerHTML=new Date().toLocaleString("en-US", { dateStyle: 'full' });
-
-      // Sign out
-      document.getElementById('signoutBtn').onclick = ()=> {
-		// Clear stored session
-        currentUser=null;
-		localStorage.removeItem('currentUser');
-		
-		// Hide app and show login
-		document.getElementById('app').style.display='none';
-		document.getElementById('auth').style.display='block';
-		
-		// ✅ Reset form completely
-		document.getElementById("authForm").reset();
-		document.getElementById("errorMsg").textContent = "";
-		document.getElementById('authMsg').textContent = "";
-		document.getElementById("submitBtn").disabled = false;   // <-- make sure it's clickable again
-		document.getElementById("submitBtn").textContent = "Sign In";
-		errorMsg.style.color = "red";
-
-		// ✅ Reset to sign-in mode
-		isSignup = false;
-		document.getElementById("formTitle").textContent = "Sign In";
-
-		// Optional UX: auto-focus ID field
-		document.getElementById("userId").focus();
-      }
-
-       // On load, restore
-      window.addEventListener('load', async ()=> {
-        const raw = localStorage.getItem('currentUser');
-        if (raw) {
-		  try {
-			currentUser=JSON.parse(raw);
-			showApp();
-		  } catch (e) {
-			localStorage.removeItem('currentUser');
-		  }
-		} else {
-		  document.getElementById('auth').style.display='block';
-		}
-        // pre-load schedule for today
-      });
-
-	  // Officer: Manually trigger auto-tag absentees and auto-refresh attendance
-	  const runAutoTagBtn = document.getElementById('runAutoTag');
-		if (runAutoTagBtn) {
-		  runAutoTagBtn.addEventListener('click', async () => {
-		  const msg = document.getElementById('autoTagMsg');
-		  msg.textContent = "Running absentee tagging...";
-		  runAutoTagBtn.disabled = true;
-		  
-		  // Disable button and show loading text
-		  runAutoTagBtn.disabled = true;
-		  runAutoTagBtn.textContent = "Tagging absentees...";
-		  msg.textContent = "";
-		  msg.style.color = "";
-
-		  try {
-			const res = await api('auto_tag_absentees', {});
-			if (res.ok) {
-			  msg.textContent = res.message || "Absentees tagged successfully.";
-				
-			  // Optional: give user feedback visually
-			  msg.style.color = "green";
-			  setTimeout(() => msg.style.color = "", 3000);
-
-			  // 🔁 Auto-refresh attendance data if officer is viewing it
-			  if (typeof loadTodaySchedule === "function") {
-			    await loadTodaySchedule(); // refresh schedule list if visible
-			  }
-
-			  // If officer has an attendance view or report open, reload it too
-			  const reportOutput = document.getElementById("reportOutput");
-			  if (reportOutput && reportOutput.innerHTML.trim() !== "") {
-			    // re-generate the current report type automatically
-			    const reportType = document.getElementById("reportType").value;
-			    const genBtn = document.getElementById("generateReport");
-			    if (genBtn) genBtn.click();
-			  }
-
-			} else {
-		      msg.textContent = "Failed: " + (res.error || "Unknown error");
-			  msg.style.color = "red";
-			}
-		  } catch (err) {
-			console.error("Auto tag error:", err);
-			msg.textContent = "Network error: " + err.message;
-			msg.style.color = "red";
-		  } finally {
-			// Re-enable button and reset text
-			runAutoTagBtn.disabled = false;
-			runAutoTagBtn.textContent = "Run Auto-Tag Absentees Now";
-			setTimeout(() => {
-			  msg.textContent = "";
-			}, 6000);
-		  }
-		});
-	  }
-
-      async function showApp() {
-        document.getElementById('auth').style.display='none';
-        document.getElementById('app').style.display='block';
-        document.getElementById('welcome').textContent = (currentUser.name || currentUser.id) ;
-        document.getElementById('roleBadge').textContent = currentUser.role;
-        // role-based controls
-        document.getElementById('controls').style.display='block';
-        document.getElementById('profControls').style.display = currentUser.role==='professor'?'block':'none';
-        document.getElementById('officerControls').style.display = currentUser.role==='officer'?'block':'none';
-        document.getElementById('studentControls').style.display = currentUser.role==='student'?'block':'none';
-		document.getElementById("reportType").value = "";
-        // load today's schedule
-        loadTodaySchedule();
-      }
-	  
-	  let isHoliday = null;
-	  async function checkHolidayAndDisplay() {
-		const res = await api('check_holiday', {});
-		const el = document.getElementById('holidayNotice');
-
-		if (res.ok && res.isHoliday) {
-		  el.textContent = `🎉 ${res.holidayName}! (${res.holidayType})`;
-		  el.style.color = 'red';
-		  isHoliday = res.isHoliday;
-		} else {
-		  el.textContent = '';
-		}
-	  }
-
-      // load today's schedule and draw check-in buttons
-      async function loadTodaySchedule() {
-		document.getElementById('todayMsg').textContent = 'Loading...';
-		await checkHolidayAndDisplay();
-		const r = await api('today_schedule', {});
-		if (!r.ok) {
-		  document.getElementById('todayMsg').textContent = 'Failed to load schedule';
-		  return;
-		}
-
-		const schedule = r.schedule;
-	    const container = document.getElementById('scheduleList');
-		if (!schedule.length) {
-		  document.getElementById('todayMsg').textContent = 'No classes for today';
-		  container.innerHTML = '';
-		  return;
-		}
-
-		document.getElementById('todayMsg').textContent = '';
-		container.innerHTML = '';
-
-		for (const cls of schedule) {
-		  const card = document.createElement('div');
-		  card.className = 'class-card';
-		  card.innerHTML = `
-			  <div class="class-content">
-				<strong>${cls.class_code} — ${cls.class_name}</strong>
-				<div class="small muted">${cls.start_time} – ${cls.end_time} (${cls.day})</div>
-				<div class="small muted">Professor: ${cls.professor_name || cls.professor_id}</div>
-				<div class="status-label"></div>
-			  </div>
-			  <div class="class-actions">
-				<button class="checkin-btn">Check in</button>
-				<button class="credit-btn">Credit</button>
-				<button class="excuse-btn">Excuse</button>
-			  </div>
-			`;
-		  container.appendChild(card);
-
-		  const btnCheckin = card.querySelector('.checkin-btn');
-		  const btnCredit = card.querySelector('.credit-btn');
-		  const btnExcuse = card.querySelector('.excuse-btn');
-		  const statusSpan = card.querySelector('.status-label');
-		  
-		function parseTime(t) {
-		    if (!t) return null;
-		    const d = new Date();
-		    const [hours, minutes] = t.split(':');
-		    d.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-		    return d;
-		}
-		  
-		  const tzNow = new Date();
-		  const start = parseTime(cls.start_time);
-		  const enableFrom = new Date(start.getTime() - appConfig.checkin_window_minutes * 60000);
-		  const lateAfter = new Date(start.getTime() + appConfig.late_window_minutes * 60000);
-		  const absentAfter = new Date(start.getTime() + appConfig.absent_window_minutes * 60000);
-
-		  // --- Check-in logic (time-based) ---
-		  (function (cls, btnCheckin, statusSpan) {
-			let iv;
-			async function update() {
-			  const localKey = `checkedin_${currentUser.id}_${cls.class_code}_${isoDate(tzNow)}`;
-			  if (localStorage.getItem(localKey)) {
-			    btnCheckin.disabled = true;
-				//statusSpan.textContent = 'Already checked in (saved successfully)';
-				clearInterval(iv);
-				return;
-			  }
-
-			  const checkRes = await api('get_attendance', {
-				class_code: cls.class_code,
-				date: isoDate(tzNow),
-				student_id: currentUser.id
-			  });
-			  let att = checkRes.ok ? checkRes.record : null;
-
-			  if (att && att.status !== 'not_recorded') {
-				btnCheckin.disabled = true;
-				statusSpan.textContent = `Status: ${att.status} (${att.timestamp || '—'})`;
-				clearInterval(iv);
-			  } else if (tzNow >= enableFrom && tzNow < absentAfter) {
-				btnCheckin.disabled = false;
-				if (tzNow < lateAfter)
-				  statusSpan.textContent = 'On time window — click to check in';
-				else statusSpan.textContent = 'Late — will be marked late';
-			  } else if (tzNow >= absentAfter) {
-				btnCheckin.disabled = true;
-				statusSpan.textContent = 'Absent — check-in disabled';
-				clearInterval(iv);
-			  } else {
-				btnCheckin.disabled = true;
-				statusSpan.textContent = `Check-in opens at ${timeStr(enableFrom)}`;
-			  }
-			}
-
-			update();
-			iv = setInterval(update, 10000);
-
-			btnCheckin.onclick = async () => {
-			  btnCheckin.disabled = true;
-			  statusSpan.textContent = 'Checking in...';
-			  const res = await api('checkin', { class_code: cls.class_code, student_id: currentUser.id });
-			  if (res.ok) {
-			    const key = `checkedin_${currentUser.id}_${cls.class_code}_${isoDate(new Date())}`;
-			    localStorage.setItem(key, 'true');
-			    statusSpan.textContent = `Checked in: ${res.status} at ${res.timestamp}`;
-			    clearInterval(iv);
-			  } else {
-			    statusSpan.textContent = 'Check-in failed: ' + res.error;
-			    btnCheckin.disabled = false;
-			  }
-		    };
-		  })(cls, btnCheckin, statusSpan);
-
-		  // Fetch adjustment period once for all
-		  const adjustEnd = new Date(appConfig.adjustment_end);
-		  const now = new Date();
-		  
-		  // Hide Credit button if outside adjustment period
-		  if (!adjustEnd || now > adjustEnd) btnCredit.style.display = 'none';
-
-		  // Check existing attendance
-		  const attRes = await api('get_attendance', {
-		    class_code: cls.class_code,
-			date: isoDate(now),
-			student_id: currentUser.id
-		  });
-
-		  let att = attRes.ok ? attRes.record : null;
-
-		  // Update button visibility based on status
-		  if (att) {
-			if (att.status && att.status !== 'not_recorded') {
-				if (att.status === 'CREDITED') {
-				  btnCredit.style.display = 'none';
-				  btnExcuse.style.display = 'none';
-				  btnCheckin.style.display = 'none';
-				  statusSpan.textContent = '✅ Credited';
-				  statusSpan.style.color = '#16a34a';
-				} else if (att.status === 'EXCUSE') {
-				  btnExcuse.style.display = 'none';
-				  btnCredit.style.display = 'none';
-				  btnCheckin.disabled = true;
-				  statusSpan.textContent = '🟡 Excuse';
-				  statusSpan.style.color = '#2563eb';
-				} else if (att.status === 'HOLIDAY') {
-				  btnExcuse.style.display = 'none';
-				  statusSpan.textContent = '🌴 HOLIDAY';
-				  statusSpan.style.color = '#dc2626';
-				  if (tzNow >= enableFrom && tzNow < absentAfter) btnCheckin.disabled = false;
-				  if (!adjustEnd || now > adjustEnd) btnCredit.style.display = 'none';
-				} else {
-				  btnCheckin.disabled = true;
-				  btnExcuse.style.display = 'none'
-				  btnCredit.style.display = 'none';
-				  statusSpan.textContent = `Status: ${att.status} (${att.time_in || '—'})`;
-				  if (att.status === 'ABSENT') {
-					statusSpan.style.color = '#6b7280';
-				  } else if (att.status === 'LATE') {
-					statusSpan.style.color = '#FBBC05';
-				  } else {
-					statusSpan.style.color = '#059669';
-				  }
-				}
-			}
-		  }
-		  
-		  // --- Credit Button ---
-		  btnCredit.onclick = async () => {
-			if (!confirm('Credit attendance for the whole semester?')) return;
-			const res = await api('credit_attendance', { class_code: cls.class_code, student_id: currentUser.id });
-			if (res.ok) {
-			  statusSpan.textContent = '✅ Credited';
-			  btnCredit.disabled = true;
-			  btnExcuse.style.display = 'none';
-			} else alert('❌ ' + res.error);
-		  };
-
-		  // --- Excuse Button ---
-		  btnExcuse.onclick = async () => {
-			const reason = prompt('Enter reason for excuse:');
-			if (!reason) return alert('Reason is required.');
-			const res = await api('excuse_attendance', {
-			  class_code: cls.class_code,
-			  student_id: currentUser.id,
-			  reason
-			});
-			if (res.ok) {
-			  statusSpan.textContent = '🟡 Excuse';
-			  btnExcuse.disabled = true;
-			  btnCredit.style.display = 'none';
-			} else alert('❌ ' + res.error);
-		  };
-		}
-	  }
-
-      function isoDate(d){return d.toISOString().slice(0,10)}
-      function timeStr(d){return d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}
-
-      // Professor download
-      document.getElementById('profDownload').onclick = async ()=> {
-        const class_code = document.getElementById('profClassCode').value.trim();
-        const date = document.getElementById('profDate').value;
-        if (!class_code||!date) return alert('enter class code and date');
-        const r = await api('export_attendance',{class_code,date});
-        if (r.ok && r.csv) {
-          downloadCSV(r.csv, `${class_code}_${date}.csv`);
-        } else alert('failed: '+(r.error||'no data'));
-      }
-
-      function downloadCSV(csv, filename) {
-        const blob = new Blob([csv], {type:'text/csv'});
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-		a.href=url;
-		a.download=filename;
-		document.body.appendChild(a);
-		a.click();
-		a.remove();
-		URL.revokeObjectURL(url);
-      }
-
-      // Officer reports UI
-	  document.getElementById('reportType').onchange = async () => {
-		const v = document.getElementById('reportType').value;
-		const params = document.getElementById('reportParams');
-		params.innerHTML = ''; // clear
-
-		  // fetch dropdown data once
-		let dropdownData;
-		try {
-			dropdownData = await api('get_dropdowns', {});
-			
-			if (v === 'class') {
-				// Show class dropdown only
-				params.innerHTML = `
-				  ${mkSelectHTML('r_class_select', 'Select class')}
-				`;
-				const sel = document.getElementById('r_class_select');
-				populateClassSelect(sel, dropdownData.classes);
-			} else if (v === 'person') {
-				// Show student dropdown only
-				params.innerHTML = `
-				  ${mkSelectHTML('r_student_select', 'Select student')}
-				`;
-				const sel2 = document.getElementById('r_student_select');
-				populateStudentSelect(sel2, dropdownData.students);
-
-			} else {
-				// default -> plain input fallback (no selection)
-				params.innerHTML = '';
-			}
-		} catch (err) {
-			console.error('Error fetching dropdowns:', err);
-			dropdownData = { ok: false };
-		}
-
-		if (!dropdownData.ok) {
-			params.innerHTML = `<p style="color:red">⚠️ Failed to load dropdown data</p>`;
-			return;
-		}
-
-		// clear previous output
-		document.getElementById('reportOutput').innerHTML = '';
-	  };
-	  
-	  function mkSelectHTML(id, placeholder) {
-		return `<select id="${id}" style="min-width:200px"><option value="">${placeholder}</option></select>`;
-	  }
-
-	  function populateClassSelect(sel, classCodes) {
-		classCodes.forEach(c => {
-			const opt = document.createElement('option');
-			if (typeof c === 'object') {
-			  opt.value = c.class_code || c.code || '';
-			  opt.textContent = `${c.class_code || c.code}: ${c.class_name || c.name || ''}`;
-			} else {
-			  opt.value = c;
-			  opt.textContent = c;
-			}
-			sel.appendChild(opt);
-		});
-	  }
-
-	  function populateStudentSelect(sel, students) {
-		students.forEach(s => {
-			const opt = document.createElement('option');
-			opt.value = s.id;
-			opt.textContent = `${s.id}: ${s.name}`;
-			sel.appendChild(opt);
-		});
-	  }
-	  
-	  // controls area only submit on enter
-	  document.getElementById("controls").addEventListener("keydown", (event) => {
-        if (event.key === "Enter") {
-          event.preventDefault();
-          document.getElementById("generateReport").click();
         }
-      });
 
-      document.getElementById('generateReport').onclick = async () => {
-		const t = document.getElementById('reportType').value;
-		const out = document.getElementById('reportOutput');
-		out.innerHTML = 'Generating...';
+        // Auth Logic
+        document.getElementById('authForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+            
+            const payload = {
+                id: document.getElementById('userId').value.trim(),
+                password: document.getElementById('passwordInput').value,
+                role: document.getElementById('roleSelect').value
+            };
 
-		let payload = {};
+            const res = await api(isSignup ? 'signup' : 'signin', payload);
+            if (res.ok) {
+                if (isSignup) {
+                    alert("Signup success! Please sign in.");
+                    location.reload();
+                } else {
+                    currentUser = res.user;
+                    localStorage.setItem('currentUser', JSON.stringify(res.user));
+                    showApp();
+                }
+            } else {
+                document.getElementById('errorMsg').textContent = res.error;
+            }
+            btn.disabled = false;
+        };
 
-		if (t === 'class') {
-			const sel = document.getElementById('r_class_select');
-			if (!sel || !sel.value) {
-			  alert('⚠️ Please select a class.');
-			  out.textContent = '';
-			  return;
-			}
-			payload = { class_code: sel.value };
+        function showApp() {
+            document.getElementById('auth').style.display = 'none';
+            document.getElementById('app').style.display = 'block';
+            document.getElementById('welcome').textContent = currentUser.name;
+            document.getElementById('roleBadge').textContent = currentUser.role.toUpperCase();
+            
+            document.getElementById('controls').style.display = 'block';
+            document.getElementById('officerControls').style.display = currentUser.role === 'officer' ? 'block' : 'none';
+            document.getElementById('studentControls').style.display = currentUser.role === 'student' ? 'block' : 'none';
+            
+            loadTodaySchedule();
+        }
 
-		} else if (t === 'person') {
-			const sel = document.getElementById('r_student_select');
-			if (!sel || !sel.value) {
-			  alert('⚠️ Please select a student.');
-			  out.textContent = '';
-			  return;
-			}
-			payload = { student_id: sel.value };
+        async function loadTodaySchedule() {
+            const list = document.getElementById('scheduleList');
+            list.innerHTML = 'Loading schedule...';
+            const res = await api('today_schedule');
+            
+            if (!res.ok) return list.innerHTML = 'Failed to load.';
+            list.innerHTML = '';
 
-		} else {
-			alert('⚠️ Please select a report type.');
-			out.textContent = '';
-			return;
-		}
+            res.schedule.forEach(cls => {
+                const card = document.createElement('div');
+                card.className = 'class-card';
+                card.innerHTML = `
+                    <div>
+                        <strong>${cls.class_name}</strong><br>
+                        <span class="small muted">${cls.start_time} - ${cls.end_time} | Prof: ${cls.professor_name}</span>
+                        <div id="status-${cls.class_code}" class="small" style="margin-top:5px">Checking status...</div>
+                    </div>
+                    <div class="class-actions">
+                        <button class="checkin-btn" id="btn-${cls.class_code}" disabled>Check In</button>
+                    </div>
+                `;
+                list.appendChild(card);
+                updateCheckinUI(cls);
+            });
+        }
 
-		try {
-			const res = await api('report', { type: t, ...payload });
+        async function updateCheckinUI(cls) {
+            const btn = document.getElementById(`btn-${cls.class_code}`);
+            const status = document.getElementById(`status-${cls.class_code}`);
+            
+            // Check current status from server
+            const res = await api('get_attendance', { class_code: cls.class_code, student_id: currentUser.id });
+            
+            if (res.record && res.record.status !== 'not_recorded') {
+                status.textContent = `Status: ${res.record.status}`;
+                btn.style.display = 'none';
+            } else {
+                btn.disabled = false;
+                btn.onclick = async () => {
+                    btn.disabled = true;
+                    const checkRes = await api('checkin', { class_code: cls.class_code, student_id: currentUser.id });
+                    if (checkRes.ok) {
+                        status.textContent = `Status: ${checkRes.status}`;
+                        btn.style.display = 'none';
+                    } else {
+                        alert(checkRes.error);
+                        btn.disabled = false;
+                    }
+                };
+            }
+        }
 
-			if (res.ok) {
-			  out.textContent = ''; // clear "Generating..."
-			  
-			  // Merging happens here
-			  const mergedBase64 = await mergePdfFrontend(res.pdfMain, res.pdfExcuse);
+        // Optimized Report Handler
+        document.getElementById('reportType').onchange = async (e) => {
+            const container = document.getElementById('reportParams');
+            const type = e.target.value;
+            if (!type) return container.innerHTML = '';
+            
+            container.innerHTML = 'Loading options...';
+            const data = await api('get_dropdowns');
+            
+            if (type === 'class') {
+                container.innerHTML = `<select id="paramId"><option value="">Select Class</option>${data.classes.map(c => `<option value="${c.code}">${c.name}</option>`).join('')}</select>`;
+            } else {
+                container.innerHTML = `<select id="paramId"><option value="">Select Student</option>${data.students.map(s => `<option value="${s.id}">${s.name}</option>`).join('')}</select>`;
+            }
+        };
 
-			  // Make downloadable
-			  const blob = base64ToBlob(mergedBase64, 'application/pdf');
-			  const url = URL.createObjectURL(blob);
+        document.getElementById('generateReport').onclick = async () => {
+            const type = document.getElementById('reportType').value;
+            const param = document.getElementById('paramId')?.value;
+            if (!param) return alert("Please select a target.");
 
-			  const link = document.createElement('a');
-			  link.href = url;
-			  link.download = res.filename;
-			  link.textContent = "📄 Download Attendance Report";
-			  link.style.fontSize = "16px";
-			  link.style.display = "block";
-			  link.style.marginTop = "10px";
-			  link.style.cursor = 'pointer';
-			  //link.style.color = '#007bff';
-			  //link.style.textDecoration = 'underline';
-			  //link.style.display = 'inline-block';
+            const out = document.getElementById('reportOutput');
+            out.textContent = "Generating PDF...";
+            
+            const res = await api('report', { type, [type === 'class' ? 'class_code' : 'student_id']: param });
+            if (res.ok) {
+                const link = document.createElement('a');
+                link.href = `data:application/pdf;base64,${res.pdfMain}`; // You can merge here using pdf-lib if needed
+                link.download = res.filename;
+                link.textContent = "Download Generated Report";
+                out.innerHTML = '';
+                out.appendChild(link);
+            } else {
+                out.textContent = res.error;
+            }
+        };
 
-			  out.innerHTML = '';
-			  out.appendChild(link);
-			} else {
-			  out.textContent = 'No data: ' + res.error;
-			  alert('❌ ' + res.error);
-			}
-		} catch (err) {
-			out.textContent = 'Error generating report.';
-			alert('⚠️ ' + err.message);
-		}
-	  };
-	  
-	  async function mergePDFs(base64Main, base64Excuse) {
-		const mainBytes = Uint8Array.from(atob(base64Main), c => c.charCodeAt(0));
-		const excuseBytes = Uint8Array.from(atob(base64Excuse), c => c.charCodeAt(0));
+        function signout() {
+            localStorage.removeItem('currentUser');
+            location.reload();
+        }
 
-		const mainPdf = await PDFLib.PDFDocument.load(mainBytes);
-		const excusePdf = await PDFLib.PDFDocument.load(excuseBytes);
+        document.getElementById('signoutBtn').onclick = signout;
 
-		const mergedPdf = await PDFLib.PDFDocument.create();
-		const mainPages = await mergedPdf.copyPages(mainPdf, mainPdf.getPageIndices());
-		const excusePages = await mergedPdf.copyPages(excusePdf, excusePdf.getPageIndices());
-
-		mainPages.forEach(p => mergedPdf.addPage(p));
-		excusePages.forEach(p => mergedPdf.addPage(p));
-
-		const mergedBytes = await mergedPdf.save();
-		return btoa(String.fromCharCode(...mergedBytes));
-	  }
-	  
-	  function base64ToBlob(base64, type = 'application/pdf') {
-		const bytes = atob(base64);
-		const len = bytes.length;
-		const out = new Uint8Array(len);
-		for (let i = 0; i < len; i++) out[i] = bytes.charCodeAt(i);
-		return new Blob([out], { type });
-	  }
-	  
-	  document.getElementById('generateReport').onclick = async () => {
-		const t = document.getElementById('reportType').value;
-		const out = document.getElementById('reportOutput');
-		out.innerHTML = 'Generating...';
-
-		let payload = {};
-
-		if (t === 'class') {
-			const sel = document.getElementById('r_class_select');
-			const class_code = sel ? sel.value : (document.getElementById('r_class') ? document.getElementById('r_class').value.trim() : '');
-			if (!class_code) { out.innerHTML = ''; return alert('Please select a class'); }
-			payload = { class_code };
-		} else if (t === 'person') {
-			const sel = document.getElementById('r_student_select');
-			const student_id = sel ? sel.value : (document.getElementById('r_person') ? document.getElementById('r_person').value.trim() : '');
-			if (!student_id) { out.innerHTML = ''; return alert('Please select a student'); }
-			payload = { student_id };
-		} else {
-			out.innerHTML = '';
-			return alert('Please choose a report type');
-		}
-
-		try {
-			const res = await api('report', { type: t, ...payload });
-			if (!res.ok) {
-			  out.innerHTML = `No data: ${res.error || 'unknown'}`;
-			  return;
-			}
-
-			// --- Merge PDFs using pdf-lib ---
-			const mergedBase64 = await mergePDFs(res.pdfMain, res.pdfExcuse);
-
-			// Create merged PDF link
-			const blob = base64ToBlob(mergedBase64, 'application/pdf');
-			const url = URL.createObjectURL(blob);
-
-			const link = document.createElement('a');
-			link.href = url;
-			link.download = res.filename;
-			link.textContent = '📄 Download Attendance Report (PDF)';
-			link.style.display = 'inline-block';
-			link.style.marginTop = '10px';
-			link.style.color = '#007bff';
-			link.style.textDecoration = 'underline';
-			link.style.cursor = 'pointer';
-
-			out.innerHTML = '';
-			out.appendChild(link);
-		} catch (err) {
-			console.error(err);
-			out.innerHTML = 'Error generating report';
-			alert('Error: ' + err.message);
-		}
-	  };
-
-      // Student view my attendance
-      document.getElementById('viewMyAttendance').onclick = async () => {
-		const out = document.getElementById('myAttendanceOutput');
-		out.textContent = 'Loading...';
-
-		try {
-		  const res = await api('my_attendance', { student_id: currentUser.id });
-
-		  if (res.ok) {
-			out.textContent = ''; // clear "Loading..."
-			  
-			// Create and show a download link dynamically
-			const pdfBlobUrl = 'data:application/pdf;base64,' + res.pdf;
-		    const link = document.createElement('a');
-			link.href = pdfBlobUrl;
-			link.download = res.filename;
-			link.textContent = '📄 Download Attendance PDF';
-			link.style.display = 'inline-block';
-			link.style.marginTop = '10px';
-			link.style.color = '#007bff';
-			link.style.textDecoration = 'underline';
-			link.style.cursor = 'pointer';
-			out.innerHTML = '';
-			out.appendChild(link);
-		  } else {
-			out.textContent = 'No data: ' + res.error;
-			alert('❌ ' + res.error);
-		  }
-		} catch (err) {
-			out.textContent = 'Error fetching attendance.';
-			alert('⚠️ ' + err.message);
-		}
-	  };
+        window.onload = () => {
+            const saved = localStorage.getItem('currentUser');
+            if (saved) {
+                currentUser = JSON.parse(saved);
+                showApp();
+            }
+            document.getElementById('hdr').textContent = new Date().toDateString();
+        };
     </script>
-	<div class="footer"><p>/gmgenove</p></div>
-  </body>
+</body>
 </html>
