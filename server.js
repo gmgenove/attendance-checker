@@ -33,7 +33,7 @@ app.post('/api/today_schedule', async (req, res) => {
     const query = `
       SELECT s.*, u.name as professor_name 
       FROM schedules s
-      LEFT JOIN users u ON s.professor_id = u.id
+      LEFT JOIN sys_users u ON s.professor_id = u.id
       WHERE $1 = ANY(s.days)
     `;
     const result = await pool.query(query, [dayName]);
@@ -91,7 +91,7 @@ app.post('/api/checkin', async (req, res) => {
 
     // D. Save to Postgres
     await pool.query(
-      'INSERT INTO attendance (date, class_code, student_id, status, time_in) VALUES ($1, $2, $3, $4, $5)',
+      'INSERT INTO attendance (class_date, class_code, student_id, attendance_status, time_in) VALUES ($1, $2, $3, $4, $5)',
       [dateStr, class_code, student_id, status, now.toFormat('HH:mm:ss')]
     );
 
@@ -117,7 +117,7 @@ app.post('/api', async (req, res) => {
       // --- SIGN IN (Hybrid SHA256/Bcrypt) ---
       case 'signin': {
         const { id, password, role } = payload;
-        const result = await pool.query('SELECT * FROM users WHERE id = $1 AND role = $2', [id, role]);
+        const result = await pool.query('SELECT * FROM sys_users WHERE user_id = $1 AND user_id = $2', [id, role]);
         
         if (result.rows.length === 0) return res.status(404).json({ ok: false, error: 'User not found' });
         const user = result.rows[0];
@@ -132,7 +132,7 @@ app.post('/api', async (req, res) => {
             isValid = true;
             // Upgrade to bcrypt on the fly
             const newHash = await bcrypt.hash(password, 10);
-            await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [newHash, id]);
+            await pool.query('UPDATE sys_users SET password_hash = $1 WHERE user_id = $2', [newHash, id]);
           }
         }
 
@@ -144,12 +144,12 @@ app.post('/api', async (req, res) => {
       case 'signup': {
         const { id, password, role } = payload;
         // Verify user exists in roster first (same as your GAS logic)
-        const check = await pool.query('SELECT * FROM users WHERE id = $1 AND role = $2', [id, role]);
+        const check = await pool.query('SELECT * FROM sys_users WHERE user_id = $1 AND user_role = $2', [id, role]);
         if (check.rows.length === 0) return res.json({ ok: false, error: 'ID not found in roster' });
         if (check.rows[0].password_hash) return res.json({ ok: false, error: 'Account already exists' });
 
         const hash = await bcrypt.hash(password, 10);
-        await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, id]);
+        await pool.query('UPDATE users SET password_hash = $1 WHERE user_id = $2', [hash, id]);
         return res.json({ ok: true, message: 'Signup successful' });
       }
 
@@ -158,7 +158,7 @@ app.post('/api', async (req, res) => {
         const { class_code, student_id } = payload;
         const date = DateTime.now().setZone(TIMEZONE).toISODate();
         const result = await pool.query(
-          'SELECT status, time_in FROM attendance WHERE date = $1 AND class_code = $2 AND student_id = $3',
+          'SELECT attendance_status, time_in FROM attendance WHERE class_date = $1 AND class_code = $2 AND student_id = $3',
           [date, class_code, student_id]
         );
         return res.json({ ok: true, record: result.rows[0] || { status: 'not_recorded' } });
@@ -167,7 +167,7 @@ app.post('/api', async (req, res) => {
       // --- DROPDOWNS (For Officer Reports) ---
       case 'get_dropdowns': {
         const classes = await pool.query('SELECT class_code as code, class_name as name FROM schedules');
-        const students = await pool.query('SELECT id, name FROM users WHERE role = \'student\'');
+        const students = await pool.query('SELECT user_id, user_name FROM sys_users WHERE user_role = \'student\'');
         return res.json({ ok: true, classes: classes.rows, students: students.rows });
       }
 
@@ -193,10 +193,10 @@ app.post('/api', async (req, res) => {
 		
 		  if (type === 'class') {
 		    const res = await pool.query(
-		      `SELECT a.date, a.student_id, u.name, a.status, a.time_in 
+		      `SELECT a.class_date, a.student_id, u.user_name, a.attendance_status, a.time_in 
 		       FROM attendance a 
-		       JOIN users u ON a.student_id = u.id 
-		       WHERE a.class_code = $1 ORDER BY a.date DESC, u.name ASC`,
+		       JOIN sys_users u ON a.student_id = u.id 
+		       WHERE a.class_code = $1 ORDER BY a.class_date DESC, u.user_name ASC`,
 		      [class_code]
 		    );
 		    rows = res.rows;
@@ -204,14 +204,14 @@ app.post('/api', async (req, res) => {
 		    filename = `Report_Class_${class_code}.pdf`;
 		  } else {
 		    const res = await pool.query(
-		      `SELECT a.date, a.class_code, s.class_name, a.status, a.time_in 
+		      `SELECT a.class_date, a.class_code, s.class_name, a.attendance_status, a.time_in 
 		       FROM attendance a 
 		       JOIN schedules s ON a.class_code = s.class_code 
-		       WHERE a.student_id = $1 ORDER BY a.date DESC`,
+		       WHERE a.student_id = $1 ORDER BY a.class_date DESC`,
 		      [student_id]
 		    );
 		    rows = res.rows;
-		    const userRes = await pool.query('SELECT name FROM users WHERE id = $1', [student_id]);
+		    const userRes = await pool.query('SELECT user_name FROM sys_users WHERE user_id = $1', [student_id]);
 		    title = `Student Attendance Report: ${userRes.rows[0]?.name || student_id}`;
 		    filename = `Report_Student_${student_id}.pdf`;
 		  }
@@ -379,13 +379,13 @@ const autoTagAbsentees = async () => {
       // If it's 11+ minutes past start time, mark missing students as ABSENT
       if (diffMins > 10) {
         await pool.query(`
-          INSERT INTO attendance (date, class_code, student_id, status, time_in)
+          INSERT INTO attendance (class_date, class_code, student_id, attendance_status, time_in)
           SELECT $1, $2, u.id, 'ABSENT', '00:00:00'
-          FROM users u
+          FROM sys_users u
           WHERE u.role = 'student'
           AND NOT EXISTS (
             SELECT 1 FROM attendance a 
-            WHERE a.date = $1 AND a.class_code = $2 AND a.student_id = u.id
+            WHERE a.class_date = $1 AND a.class_code = $2 AND a.student_id = u.user_id
           )
         `, [dateStr, sched.class_code]);
       }
