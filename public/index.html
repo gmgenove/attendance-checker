@@ -47,7 +47,7 @@
                     </div>
                     <div>
                         <label>Password</label><br>
-                        <input id="passwordInput" type="password" required />
+                        <input id="passwordInput" type="password" placeholder="Enter your password" required><span id="togglePassword" class="fa fa-fw fa-eye field-icon"></span></input>
                     </div>
                 </div>
                 <div style="margin-top:12px">
@@ -125,6 +125,91 @@
                 setTimeout(() => bar.style.width = '0%', 500);
             }
         }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const form = document.getElementById("authForm");
+            const idInput = document.getElementById("userId");
+            const passwordInput = document.getElementById("passwordInput");
+            const roleSelect = document.getElementById("roleSelect");
+            const errorMsg = document.getElementById("errorMsg");
+            const submitBtn = document.getElementById("submitBtn");
+            const formTitle = document.getElementById("formTitle");
+            const switchText = document.getElementById("switchText");
+        
+            // Re-added Password visibility toggle logic
+            // Ensure you have <span id="togglePassword" class="fa fa-fw fa-eye field-icon"></span> in your HTML
+            const togglePassword = document.getElementById("togglePassword");
+            if (togglePassword) {
+                togglePassword.addEventListener("click", () => {
+                    const isPassword = passwordInput.type === "password";
+                    passwordInput.type = isPassword ? "text" : "password";
+                    togglePassword.classList.toggle("fa-eye");
+                    togglePassword.classList.toggle("fa-eye-slash");
+                });
+            }
+        
+            // Toggle between Sign In / Sign Up
+            switchText.addEventListener("click", (e) => {
+                e.preventDefault();
+                isSignup = !isSignup;
+                formTitle.textContent = isSignup ? "Sign Up" : "Sign In";
+                submitBtn.textContent = isSignup ? "Sign Up" : "Sign In";
+                switchText.innerHTML = isSignup 
+                    ? 'Already have an account? <a href="#">Sign in</a>' 
+                    : 'Don’t have an account? <a href="#">Sign up</a>';
+                errorMsg.textContent = "";
+            });
+        
+            // Handle form submit
+            form.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                errorMsg.textContent = "";
+                errorMsg.style.color = "red";
+                submitBtn.disabled = true;
+                
+                if (!idInput.value.trim() || !passwordInput.value.trim() || !roleSelect.value) {
+                    errorMsg.textContent = 'Please fill in all fields and select a role';
+                    submitBtn.disabled = false;
+                    return;
+                }
+        
+                const authMsg = document.getElementById('authMsg');
+                if (authMsg) authMsg.textContent = isSignup ? "Signing up..." : "Signing in...";
+                
+                try {
+                    const data = await api(isSignup ? "signup" : "signin", {
+                        id: idInput.value.trim(),
+                        password: passwordInput.value.trim(),
+                        role: roleSelect.value
+                    });
+        
+                    if (!data.ok) {
+                        errorMsg.textContent = data.error || (isSignup ? "Signup failed" : "Login failed");
+                        submitBtn.disabled = false;
+                        return;
+                    }
+        
+                    if (isSignup) {
+                        errorMsg.style.color = "green";
+                        errorMsg.textContent = data.message || "Signup successful! Please sign in.";
+                        isSignup = false;
+                        formTitle.textContent = "Sign In";
+                        submitBtn.textContent = "Sign In";
+                        submitBtn.disabled = false;
+                        passwordInput.value = "";
+                    } else {
+                        currentUser = data.user;
+                        localStorage.setItem("currentUser", JSON.stringify(currentUser));
+                        showApp();
+                    }
+                } catch (err) {
+                    errorMsg.textContent = "Network error: " + err.message;
+                    submitBtn.disabled = false;
+                } finally {
+                    if (authMsg) setTimeout(() => authMsg.textContent = "", 1000);
+                }
+            });
+        });
 
         // Auth Logic
         document.getElementById('authForm').onsubmit = async (e) => {
@@ -260,7 +345,6 @@
             localStorage.removeItem('currentUser');
             location.reload();
         }
-
         document.getElementById('signoutBtn').onclick = signout;
 
         window.onload = () => {
@@ -269,7 +353,7 @@
                 currentUser = JSON.parse(saved);
                 showApp();
             }
-            document.getElementById('hdr').textContent = new Date().toDateString();
+            document.getElementById('hdr').textContent = new Date().toLocaleString("en-US", { dateStyle: 'full' });
         };
     </script>
 </body>
