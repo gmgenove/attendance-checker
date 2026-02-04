@@ -289,12 +289,12 @@
         function showApp() {
             document.getElementById('auth').style.display = 'none';
             document.getElementById('app').style.display = 'block';
-            document.getElementById('welcome').textContent = currentUser.name;
-            document.getElementById('roleBadge').textContent = currentUser.role.toUpperCase();
+            document.getElementById('welcome').textContent = currentUser.user_name;
+            document.getElementById('roleBadge').textContent = currentUser.user_role.toUpperCase();
             
             document.getElementById('controls').style.display = 'block';
-            document.getElementById('officerControls').style.display = currentUser.role === 'officer' ? 'block' : 'none';
-            document.getElementById('studentControls').style.display = currentUser.role === 'student' ? 'block' : 'none';
+            document.getElementById('officerControls').style.display = currentUser.user_role === 'officer' ? 'block' : 'none';
+            document.getElementById('studentControls').style.display = currentUser.user_role === 'student' ? 'block' : 'none';
             
             loadTodaySchedule();
         }
@@ -330,7 +330,7 @@
             const status = document.getElementById(`status-${cls.class_code}`);
             
             // Check current status from server
-            const res = await api('get_attendance', { class_code: cls.class_code, student_id: currentUser.id });
+            const res = await api('get_attendance', { class_code: cls.class_code, student_id: currentUser.user_id });
             
             if (res.record && res.record.status !== 'not_recorded') {
                 status.textContent = `Status: ${res.record.status}`;
@@ -339,7 +339,7 @@
                 btn.disabled = false;
                 btn.onclick = async () => {
                     btn.disabled = true;
-                    const checkRes = await api('checkin', { class_code: cls.class_code, student_id: currentUser.id });
+                    const checkRes = await api('checkin', { class_code: cls.class_code, student_id: currentUser.user_id });
                     if (checkRes.ok) {
                         status.textContent = `Status: ${checkRes.status}`;
                         btn.style.display = 'none';
