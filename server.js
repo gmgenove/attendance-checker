@@ -131,7 +131,7 @@ app.post('/api', async (req, res) => {
         }
 
         if (!isValid) return res.status(401).json({ ok: false, error: 'Invalid credentials' });
-        return res.json({ ok: true, user: { id: user.id, name: user.name, role: user.role } });
+        return res.json({ ok: true, user: { id: user.user_id, name: user.user_name, role: user.user_role } });
       }
 
       // --- SIGN UP ---
