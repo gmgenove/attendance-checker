@@ -327,28 +327,67 @@
 
         async function updateCheckinUI(cls) {
             const btn = document.getElementById(`btn-${cls.class_code}`);
-            const status = document.getElementById(`status-${cls.class_code}`);
+            const statusSpan = document.getElementById(`status-${cls.class_code}`);
             
-            // Check current status from server
+            // 1. Initial status check from server
             const res = await api('get_attendance', { class_code: cls.class_code, student_id: currentUser.id });
             
             if (res.record && res.record.status !== 'not_recorded') {
-                status.textContent = `Status: ${res.record.status}`;
+                statusSpan.textContent = `Status: ${res.record.status}`;
                 btn.style.display = 'none';
-            } else {
-                btn.disabled = false;
-                btn.onclick = async () => {
-                    btn.disabled = true;
-                    const checkRes = await api('checkin', { class_code: cls.class_code, student_id: currentUser.id });
-                    if (checkRes.ok) {
-                        status.textContent = `Status: ${checkRes.status}`;
-                        btn.style.display = 'none';
-                    } else {
-                        alert(checkRes.error);
-                        btn.disabled = false;
-                    }
-                };
+                return; // Stop here if already recorded
             }
+        
+            // 2. Countdown Logic for "Not Yet Open" classes
+            const updateCountdown = () => {
+                const tzNow = new Date();
+                const [hh, mm] = cls.start_time.split(':');
+                const start = new Date();
+                start.setHours(parseInt(hh), parseInt(mm), 0, 0);
+        
+                // Your check-in window (matches server: 10 mins before)
+                const enableFrom = new Date(start.getTime() - 10 * 60000); 
+                const minsRemaining = Math.ceil((enableFrom - tzNow) / 60000);
+        
+                if (tzNow >= enableFrom) {
+                    // Window is open!
+                    btn.disabled = false;
+                    statusSpan.textContent = "Check-in window is OPEN";
+                    statusSpan.style.color = "#10b981";
+                    clearInterval(timer); // Stop counting down once open
+                } else if (minsRemaining > 0 && minsRemaining <= 10) {
+                    // Approaching opening time
+                    btn.disabled = true;
+                    statusSpan.textContent = `Check-in opens in ${minsRemaining} min${minsRemaining > 1 ? 's' : ''}`;
+                    statusSpan.style.color = "#f59e0b";
+                } else {
+                    // Far in the future
+                    btn.disabled = true;
+                    statusSpan.textContent = `Check-in opens at ${cls.start_time}`;
+                }
+            };
+        
+            // Run immediately and then every 30 seconds
+            updateCountdown();
+            const timer = setInterval(updateCountdown, 30000);
+        
+            // 3. Handle the Click
+            btn.onclick = async () => {
+                btn.disabled = true;
+                statusSpan.textContent = 'Verifying...';
+                const checkRes = await api('checkin', { class_code: cls.class_code, student_id: currentUser.id });
+                
+                if (checkRes.ok) {
+                    statusSpan.textContent = `Status: ${checkRes.status}`;
+                    statusSpan.style.color = "#10b981";
+                    btn.style.display = 'none';
+                    clearInterval(timer);
+                } else {
+                    alert(checkRes.error);
+                    btn.disabled = false;
+                    updateCountdown(); // Reset UI state
+                }
+            };
         }
 
         // Optimized Report Handler
