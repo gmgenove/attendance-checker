@@ -313,7 +313,8 @@ const initDb = async () => {
     CREATE TABLE IF NOT EXISTS holidays (
       holiday_date DATE,
       holiday_name TEXT,
-      holiday_type TEXT
+      holiday_type TEXT,
+      constraint pk_attendance_data primary key (holiday_date, holiday_name, holiday_type)
     );
     
     INSERT INTO config (config_key, config_value, description) VALUES ('sem1_start', '2025-09-01', 'Start date of 1st semester') ON CONFLICT DO NOTHING;
