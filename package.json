@@ -7,7 +7,8 @@
     "pg": "^8.11.3",
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
-    "luxon": "^3.4.4"
+    "luxon": "^3.4.4",
+    "pdf-lib": "^1.17.1"
   },
   "scripts": {
     "start": "node server.js"
