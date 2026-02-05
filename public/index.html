@@ -301,12 +301,29 @@
 
         async function loadTodaySchedule() {
             const list = document.getElementById('scheduleList');
-            list.innerHTML = 'Loading schedule...';
+            list.innerHTML = '<div class="small muted">Checking for classes...</div>';
+            
             const res = await api('today_schedule');
             
-            if (!res.ok) return list.innerHTML = 'Failed to load.';
+            if (!res.ok) {
+                list.innerHTML = '<div class="error-message">Failed to load schedule.</div>';
+                return;
+            }
+        
+            // Check if the list is empty
+            if (!res.schedule || res.schedule.length === 0) {
+                list.innerHTML = `
+                    <div class="card" style="text-align:center; padding: 40px 20px; border: 1px dashed #cbd5e1; background: #f8fafc;">
+                        <i class="fa fa-calendar-o" style="font-size: 2rem; color: #94a3b8; margin-bottom: 10px;"></i>
+                        <div class="small muted">There are no classes scheduled for today.</div>
+                        <div class="small" style="margin-top:5px; color: #64748b;">Enjoy your break!</div>
+                    </div>
+                `;
+                return;
+            }
+        
+            // Otherwise, clear and loop through classes
             list.innerHTML = '';
-
             res.schedule.forEach(cls => {
                 const card = document.createElement('div');
                 card.className = 'class-card';
