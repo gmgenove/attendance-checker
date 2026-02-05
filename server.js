@@ -202,7 +202,7 @@ app.post('/api', async (req, res) => {
 			        COALESCE(a.attendance_status, 'NOT YET ARRIVED') as status
 			    FROM sys_users u
 			    LEFT JOIN attendance a ON u.user_id = a.student_id AND a.class_code = $1 AND a.class_date = $2
-			    WHERE u.user_role = 'student'
+			    WHERE (u.user_role = 'student' OR u.user_role = 'officer')
 			    ORDER BY 
 			        CASE WHEN a.attendance_status IS NULL THEN 1 ELSE 0 END,
 			        a.time_in DESC, 
@@ -227,7 +227,7 @@ app.post('/api', async (req, res) => {
 		        COUNT(CASE WHEN a.attendance_status = 'INCOMPLETE' THEN 1 END) as incomplete_count
 		    FROM sys_users u
 		    LEFT JOIN attendance a ON u.user_id = a.student_id AND a.class_code = $1
-		    WHERE u.user_role = 'student'
+		    WHERE (u.user_role = 'student' OR u.user_role = 'officer')
 		    GROUP BY u.user_id, u.user_name
 		    ORDER BY u.user_name ASC
 		`, [class_code]);
@@ -240,54 +240,81 @@ app.post('/api', async (req, res) => {
 		  const pdfDoc = await PDFDocument.create();
 		  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
 		  const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-		  let filename = "";
 		
-		  if (type === 'class') {
-		    // 1. Fetch Class Header & Schedule Info
-		    const classInfo = await pool.query(
-		      `SELECT s.*, u.user_name as professor_name 
-		       FROM schedules s 
-		       JOIN sys_users u ON s.professor_id = u.user_id 
-		       WHERE s.class_code = $1`, [class_code]
-		    );
-		    
-		    // 2. Fetch Attendance Records (The "ClassReport" Tab)
-		    const records = await pool.query(
-		      `SELECT a.*, u.user_name 
-		       FROM attendance a 
-		       JOIN sys_users u ON a.student_id = u.user_id 
-		       WHERE a.class_code = $1 ORDER BY a.class_date DESC`, [class_code]
-		    );
-		
-		    // 3. Fetch Excuse Logs (The "ClassExcuseLog" Tab)
-		    const excuses = await pool.query(
-		      `SELECT a.class_date, u.student_id, u.user_name, a.reason 
-		       FROM attendance a 
-		       JOIN sys_users u ON a.student_id = u.user_id 
-		       WHERE a.class_code = $1 AND a.reason IS NOT NULL`, [class_code]
-		    );
-		
-		    filename = `ClassReport_${class_code}.pdf`;
-		    await generateClassPDF(pdfDoc, classInfo.rows[0], records.rows, excuses.rows, font, boldFont);
-		
-		  } else if (type === 'person') {
-		    // 1. Fetch Student Info
-		    const studentInfo = await pool.query('SELECT user_name FROM sys_users WHERE user_id = $1', [student_id]);
-		    
-		    // 2. Fetch Student History (The "StudentReport" Tab)
-		    const history = await pool.query(
-		      `SELECT a.*, s.class_name, a.reason
-		       FROM attendance a 
-		       JOIN schedules s ON a.class_code = s.class_code 
-		       WHERE a.student_id = $1 AND a.reason IS NOT NULL ORDER BY a.class_date DESC`, [student_id]
-		    );
-		
-		    filename = `StudentReport_${student_id}.pdf`;
-		    await generateStudentPDF(pdfDoc, studentInfo.rows[0], history.rows, font, boldFont);
+		  // 1. Fetch Config for Semester Dates
+		  const configRes = await pool.query("SELECT config_key, config_value FROM config");
+		  const config = Object.fromEntries(configRes.rows.map(r => [r.config_key, r.config_value]));
+		  
+		  // Dynamically determine semester dates
+		  const semConfig = await getCurrentSemConfig();  
+		  if (semConfig.sem === "None") {
+		    return res.json({ ok: false, error: "No active semester found for today's date." });
 		  }
+		  const semStart = semConfig.start;
+		  const semEnd = semConfig.end;
+
+		  const roster = {};
+		  attendance.rows.forEach(r => {
+			  if (!roster[r.student_id]) {
+				roster[r.student_id] = { 
+					name: r.user_name, 
+					records: {},
+					counts: { P: 0, L: 0, A: 0, E: 0, C: 0, H: 0 } 
+				};
+			  }
+			  
+			  if (r.class_date) {
+				const dStr = DateTime.fromJSDate(r.class_date).toISODate();
+				const statusChar = r.attendance_status[0].toUpperCase();
+				roster[r.student_id].records[dStr] = statusChar;
+				
+				// Increment the specific count
+				if (roster[r.student_id].counts[statusChar] !== undefined) {
+					roster[r.student_id].counts[statusChar]++;
+				}
+			  }
+		  });
+
+		  if (type === 'class') {
+			// 2. Fetch Class & Schedule
+		    const classInfo = await pool.query(
+		      `SELECT s.*, u.user_name as professor_name FROM schedules s 
+		       JOIN sys_users u ON s.professor_id = u.user_id WHERE s.class_code = $1`, [class_code]
+		    );
+		    const info = classInfo.rows[0];
 		
-		  const pdfBytes = await pdfDoc.save();
-		  return res.json({ ok: true, pdfMain: Buffer.from(pdfBytes).toString('base64'), filename });
+		    // 3. Generate the Date List (The "D1, D2..." Columns)
+		    let classDates = [];
+		    let current = semStart;
+		    while (current <= semEnd) {
+		      if (info.days.includes(current.toFormat('ccc'))) {
+		        classDates.push(current);
+		      }
+		      current = current.plus({ days: 1 });
+		
+		    // 4. Fetch All Attendance for this Class
+		    const attendance = await pool.query(
+		      `SELECT a.*, u.user_name FROM sys_users u 
+		       LEFT JOIN attendance a ON u.user_id = a.student_id AND a.class_code = $1
+		       WHERE (u.user_role = 'student' OR u.user_role = 'officer') ORDER BY u.user_name ASC`, [class_code]
+		    );
+		
+		    // Group by student
+		    const roster = {};
+		    attendance.rows.forEach(r => {
+		      if (!roster[r.student_id]) roster[r.student_id] = { name: r.user_name, records: {} };
+		      if (r.class_date) {
+		        const dStr = DateTime.fromJSDate(r.class_date).toISODate();
+		        roster[r.student_id].records[dStr] = r.attendance_status[0]; // Take first letter: P, L, A, E
+		      }
+		    });
+		
+		    const filename = `ClassReport_Matrix_${class_code}.pdf`;
+		    await generateClassMatrixPDF(pdfDoc, info, classDates, roster, semConfig, font, boldFont);
+		    
+		    const pdfBytes = await pdfDoc.save();
+		    return res.json({ ok: true, pdfMain: Buffer.from(pdfBytes).toString('base64'), filename });
+		  }
 	  }
 
 	  // --- DROPDOWNS (For Officer Reports) ---
@@ -336,7 +363,7 @@ app.post('/api', async (req, res) => {
 	    try {
 	        // Reset all students in the sys_users table
 	        const result = await pool.query(
-	            "UPDATE sys_users SET password_hash = $1 WHERE user_role = 'student'",
+	            "UPDATE sys_users SET password_hash = $1 WHERE (user_role = 'student' OR user_role = 'officer')",
 	            [hashedDefault]
 	        );
 	
@@ -351,16 +378,29 @@ app.post('/api', async (req, res) => {
 
       // --- CONFIG ---
       case 'getConfig': {
-        // You can store these in a 'config' table, but hardcoding here matches your GAS setup
-        return res.json({
-          ok: true,
-          config: {
-            checkin_window_minutes: 10,
-            late_window_minutes: 5,
-            absent_window_minutes: 10,
-            adjustment_end: '2026-12-31' 
-          }
-        });
+        try {
+		    // 1. Fetch all key-value pairs from the config table
+		    const configRes = await pool.query("SELECT config_key, config_value FROM config");
+		    const dbConfig = Object.fromEntries(configRes.rows.map(r => [r.config_key, r.config_value]));
+		
+		    // 2. Determine the active semester's adjustment end date
+		    const semInfo = await getCurrentSemConfig(); // Using the helper we created
+		    
+		    return res.json({
+		      ok: true,
+		      config: {
+		        checkin_window_minutes: parseInt(dbConfig.checkin_window_minutes) || 10,
+		        late_window_minutes: parseInt(dbConfig.late_window_minutes) || 5,
+		        absent_window_minutes: parseInt(dbConfig.absent_window_minutes) || 10,
+		        checkout_window_minutes: parseInt(dbConfig.checkout_window_minutes) || 10,
+		        // Dynamically set based on the current semester detected
+		        adjustment_end: semInfo.adjEnd ? semInfo.adjEnd.toISODate() : '2099-12-31',
+		        current_sem: semInfo.sem
+		      }
+		    });
+		  } catch (err) {
+		    return res.status(500).json({ ok: false, error: err.message });
+		  }
       }
 
 	  case 'check_holiday': {
@@ -379,12 +419,17 @@ app.post('/api', async (req, res) => {
 	  }
 	
 	  case 'credit_attendance': {
-	    const { class_code, student_id } = payload;
+		const { class_code, student_id } = payload;
 	    const now = getManilaNow();
+	    const semConfig = await getCurrentSemConfig();
+	
+	    if (now > semConfig.adjEnd) {
+	        return res.json({ ok: false, error: `Adjustment period for Sem ${semConfig.sem} has ended.` });
+	    }
 
 		const config = await pool.query("SELECT config_value FROM config WHERE config_key = 'sem2_adjustment_end'");
 		// Define your adjustment window (e.g., first 2 weeks of the semester)
-		const adjustmentEnd = DateTime.fromISO(config.rows[0].config_value).setZone(TIMEZONE);
+		const adjustmentEnd = DateTime.fromISO(semConfig.adjEnd).setZone(TIMEZONE);
 	
 	    if (now > adjustmentEnd) {
 	        return res.json({ ok: false, error: "Adjustment period has ended." });
@@ -450,38 +495,95 @@ app.post('/api', async (req, res) => {
   }
 });
 
-async function generateClassPDF(pdfDoc, info, records, excuses, font, bold) {
-  let page = pdfDoc.addPage([600, 800]);
-  let y = 750;
+async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, font, bold) {
+  // Legal Landscape Dimensions
+  const page = pdfDoc.addPage([1008, 612]); 
+  let y = 575;
 
-  // Header Section (mimicking Excel top rows)
-  page.drawText(`Class Code: ${info.class_code}`, { x: 50, y, size: 12, font: bold });
-  page.drawText(`Class Name: ${info.class_name}`, { x: 50, y: y - 15, size: 10, font });
-  page.drawText(`Professor: ${info.professor_name}`, { x: 50, y: y - 30, size: 10, font });
-  y -= 60;
+  // --- TOP INFO BLOCK (Matches Excel Rows 1-6) ---
+  page.drawText(`Class Code:`, { x: 40, y, size: 10, font: bold });
+  page.drawText(`${info.class_code}`, { x: 120, y, size: 10, font });
+  
+  // SYSTEM GENERATED TIMESTAMP (Top Right)
+  const timestamp = getManilaNow().toFormat('yyyy-MM-dd HH:mm:ss');
+  page.drawText(`Generated: ${timestamp}`, { x: 800, y, size: 9, font: bold, color: rgb(0.3, 0.3, 0.3) });
 
-  // Attendance Table
-  page.drawText('Attendance Log', { x: 50, y, size: 12, font: bold });
-  y -= 20;
-  records.forEach(r => {
-    if (y < 50) { page = pdfDoc.addPage([600, 800]); y = 750; }
-    const date = DateTime.fromJSDate(r.class_date).toFormat('yyyy-MM-dd');
-    page.drawText(`${date} | ${r.user_name.substring(0,25)} | ${r.attendance_status}`, { x: 50, y, size: 9, font });
-    y -= 15;
+  y -= 15;
+  page.drawText(`Class Name:`, { x: 40, y, size: 10, font: bold });
+  page.drawText(`${info.class_name}`, { x: 120, y, size: 10, font });
+  
+  // SEMESTER INFO
+  page.drawText(`Semester:`, { x: 400, y, size: 10, font: bold });
+  page.drawText(`${semConfig.name})`, { x: 470, y, size: 10, font });
+	
+  page.drawText(`Academic Year:`, { x: 600, y, size: 10, font: bold });
+  page.drawText(`${semConfig.year}`, { x: 700, y, size: 10, font });
+
+  y -= 15;
+  page.drawText(`Professor:`, { x: 40, y, size: 10, font: bold });
+  page.drawText(`${info.professor_name || 'N/A'}`, { x: 120, y, size: 10, font });
+  
+  y -= 15;
+  page.drawText(`Schedule:`, { x: 40, y, size: 10, font: bold });
+  page.drawText(`${info.days.join('/')} | ${info.start_time}-${info.end_time}`, { x: 120, y, size: 10, font });
+  
+  y -= 15;
+  page.drawText(`Section:`, { x: 40, y, size: 10, font: bold });
+  page.drawText(`BPAOUMN 1-B`, { x: 120, y, size: 10, font });
+
+  y -= 30; // Space before table
+
+  // --- D1, D2, D3 MATRIX HEADERS ---
+  let startX = 280;
+  const colWidth = 18;
+  
+  page.drawText('Student ID', { x: 40, y, size: 8, font: bold });
+  page.drawText('Student Name', { x: 120, y, size: 8, font: bold });
+
+  dates.slice(0, 35).forEach((d, i) => {
+    const xPos = startX + (i * colWidth);
+    page.drawText(`D${i+1}`, { x: xPos, y, size: 7, font: bold });
+    page.drawText(d.toFormat('MM/dd'), { x: xPos, y: y - 8, size: 5, font });
   });
 
-  // Excuse Log Section (New Page)
-  if (excuses.length > 0) {
-    page = pdfDoc.addPage([600, 800]);
-    y = 750;
-    page.drawText('Class Excuse Log', { x: 50, y, size: 14, font: bold });
-    y -= 30;
-    excuses.forEach(e => {
-      const date = DateTime.fromJSDate(e.class_date).toFormat('yyyy-MM-dd');
-      page.drawText(`${date} - ${e.user_name}: ${e.reason}`, { x: 50, y, size: 9, font });
-      y -= 15;
+  // TOTALS HEADER
+  const totalX = startX + (35 * colWidth) + 20;
+  page.drawText('P', { x: totalX, y, size: 8, font: bold });
+  page.drawText('L', { x: totalX + 20, y, size: 8, font: bold });
+  page.drawText('A', { x: totalX + 40, y, size: 8, font: bold });
+  page.drawText('%', { x: totalX + 65, y, size: 8, font: bold });
+
+  y -= 20;
+  page.drawLine({ start: { x: 40, y }, end: { x: 970, y }, thickness: 0.5 });
+  
+  // --- STUDENT ROWS ---
+  Object.keys(roster).forEach((sid) => {
+    y -= 12;
+    if (y < 40) return; // Add page logic if needed for very large classes
+
+    const student = roster[sid];
+    page.drawText(sid, { x: 40, y, size: 7, font });
+    page.drawText(student.name.substring(0, 25), { x: 100, y, size: 7, font });
+
+    // Draw Status Grid
+    dates.slice(0, 35).forEach((d, i) => {
+      const status = student.records[d.toISODate()] || '-';
+      page.drawText(status, { x: startX + (i * colWidth), y, size: 7, font });
     });
-  }
+
+    // Draw Aggregated Totals
+    const c = student.counts;
+    const presentTotal = c.P + c.L + c.C;
+    const perc = dates.length > 0 ? Math.round((presentTotal / dates.length) * 100) : 0;
+
+    page.drawText(`${presentTotal}`, { x: totalX, y, size: 7, font });
+    page.drawText(`${c.L}`, { x: totalX + 20, y, size: 7, font });
+    page.drawText(`${c.A}`, { x: totalX + 40, y, size: 7, font });
+    page.drawText(`${perc}%`, { x: totalX + 65, y, size: 7, font: bold });
+    
+    // Horizontal row line
+    page.drawLine({ start: { x: 40, y: y - 2 }, end: { x: 970, y: y - 2 }, thickness: 0.1, color: rgb(0.8, 0.8, 0.8) });
+  });
 }
 
 async function generateStudentPDF(pdfDoc, studentInfo, history, font, bold) {
@@ -513,6 +615,46 @@ async function generateStudentPDF(pdfDoc, studentInfo, history, font, bold) {
     y -= 15;
   });
 }
+
+const getCurrentSemConfig = async () => {
+  const now = getManilaNow();
+  const res = await pool.query("SELECT config_key, config_value FROM config");
+  const config = Object.fromEntries(res.rows.map(r => [r.config_key, r.config_value]));
+
+  // Convert config dates to Luxon objects
+  const s1Start = DateTime.fromISO(config.sem1_start).setZone(TIMEZONE);
+  const s1End = DateTime.fromISO(config.sem1_end).setZone(TIMEZONE);
+  const s2Start = DateTime.fromISO(config.sem2_start).setZone(TIMEZONE);
+  const s2End = DateTime.fromISO(config.sem2_end).setZone(TIMEZONE);
+
+  // Logic to determine school year (e.g., 2025-2026)
+  const schoolYear = now.month >= 8 
+    ? `${currentYear}-${currentYear + 1}` 
+    : `${currentYear - 1}-${currentYear}`;
+
+  if (now >= s1Start && now <= s1End) {
+    return { 
+      sem: "1", 
+      start: s1Start, 
+      end: s1End, 
+      adjEnd: DateTime.fromISO(config.sem1_adjustment_end).setZone(TIMEZONE),
+	  name: "First Semester", 
+	  year: schoolYear
+    };
+  } else if (now >= s2Start && now <= s2End) {
+    return { 
+      sem: "2", 
+      start: s2Start, 
+      end: s2End, 
+      adjEnd: DateTime.fromISO(config.sem2_adjustment_end).setZone(TIMEZONE),
+	  name: "Second Semester", 
+	  year: schoolYear
+    };
+  } else {
+    // Default to nearest sem or "Out of Semester"
+    return { sem: "None", start: null, end: null, adjEnd: null, name: None, year: None };
+  }
+};
 
 const initDb = async () => {
   const queryText = `
@@ -621,7 +763,7 @@ const autoTagAbsentees = async () => {
           INSERT INTO attendance (class_date, class_code, student_id, attendance_status, time_in)
           SELECT $1, $2, u.user_id, 'ABSENT', '00:00:00'
           FROM sys_users u
-          WHERE u.user_role = 'student'
+          WHERE (u.user_role = 'student' OR u.user_role = 'officer')
           AND NOT EXISTS (
             SELECT 1 FROM attendance a 
             WHERE a.class_date = $1 AND a.class_code = $2 AND a.student_id = u.user_id
