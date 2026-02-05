@@ -22,6 +22,9 @@ const TIMEZONE = "Asia/Manila";
 // --- HELPERS ---
 const getManilaNow = () => DateTime.now().setZone(TIMEZONE);
 
+// Simple GET route for UptimeRobot
+app.get('/ping', (req, res) => res.send('System Awake'));
+
 // 3. Simple Router for all other actions
 app.post('/api', async (req, res) => {
   const { action, ...payload } = req.body;
