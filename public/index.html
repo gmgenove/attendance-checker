@@ -93,6 +93,14 @@
                     <div id="reportParams" style="margin: 10px 0"></div>
                     <button id="generateReport">Generate PDF Report</button>
                     <div id="reportOutput"></div>
+
+                    <div id="adminTools" class="card" style="border-top: 4px solid #ef4444; margin-top: 20px;">
+                        <h4>System Maintenance</h4>
+                        <p class="small muted">Reset all student passwords to the default: <strong>pass123</strong></p>
+                        <button onclick="handleBulkReset()" style="background: #ef4444; color: white; border: none;">
+                            Bulk Reset Student Passwords
+                        </button>
+                    </div>
                 </div>
 
                 <div id="studentControls" style="display:none">
@@ -120,6 +128,28 @@
                     
                     <div id="profSummaryOutput"></div>
                 </div>
+            </div>
+            <div class="card" id="settingsCard" style="display:none;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h3>Account Settings</h3>
+                    <button onclick="toggleSettings()" class="small muted">Close</button>
+                </div>
+                <form id="changePasswordForm">
+                    <div style="margin-bottom:10px;">
+                        <label class="small">Current Password</label><br>
+                        <input type="password" id="currentPw" required style="width:100%">
+                    </div>
+                    <div style="margin-bottom:10px;">
+                        <label class="small">New Password</label><br>
+                        <input type="password" id="newPw" required style="width:100%">
+                    </div>
+                    <div style="margin-bottom:15px;">
+                        <label class="small">Confirm New Password</label><br>
+                        <input type="password" id="confirmNewPw" required style="width:100%">
+                    </div>
+                    <button type="submit" style="background:#3b82f6; color:white; border:none; width:100%">Update Password</button>
+                </form>
+                <div id="settingsMsg" class="small" style="margin-top:10px; text-align:center;"></div>
             </div>
         </div>
         <div class="footer"><p>&copy; 2026 /gmgenove</p></div>
