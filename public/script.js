@@ -463,15 +463,20 @@ async function updateCheckinUI(cls) {
         }
     };
 
+    const configData = await api('getConfig');
+    const config = configData.config;
+
+    // Use the dynamic adjustment end from the database
+    const adjustmentEnd = new Date(config.adjustment_end);
+    const now = new Date();
+
     // Add after the check-in button logic
-    const adjustmentEnd = new Date("2026-02-28");
-    if (new Date() <= adjustmentEnd && (!res.record || res.record.status === 'not_recorded')) {
+    if (new Date() <= adjustmentEnd && (!record || record.attendance_status === 'not_recorded')) {
         const creditBtn = document.createElement('button');
         creditBtn.textContent = "Claim Attendance Credit";
         creditBtn.className = "small muted";
-        creditBtn.style.marginTop = "5px";
         creditBtn.onclick = () => api('credit_attendance', { class_code: cls.class_code, student_id: currentUser.id });
-        btn.parentElement.appendChild(creditBtn);
+        btnContainer.appendChild(creditBtn);
     }
 }
 
