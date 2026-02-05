@@ -213,45 +213,26 @@ function showApp() {
     document.getElementById('app').style.display = 'block';
     document.getElementById('welcome').textContent = currentUser.name;
     document.getElementById('roleBadge').textContent = currentUser.role.toUpperCase();
-    
-    document.getElementById('controls').style.display = 'block';
-    document.getElementById('officerControls').style.display = currentUser.role === 'officer' ? 'block' : 'none';
-    document.getElementById('studentControls').style.display = currentUser.role === 'student' ? 'block' : 'none';
-    
-    loadTodaySchedule();
 
-    // Allow both Professors and Officers to see the Live Dashboard
-    const canSeeLiveStats = currentUser.role === 'professor' || currentUser.role === 'officer';
-    document.getElementById('profControls').style.display = canSeeLiveStats ? 'block' : 'none';
-    
-    if (canSeeLiveStats) {
-        loadProfessorDashboard();
-    }
-}
-
-function showApp() {
-    document.getElementById('auth').style.display = 'none';
-    document.getElementById('app').style.display = 'block';
-    
     // Control section visibility
     const controls = document.getElementById('controls');
     // Allow both Professors and Officers to see the Live Dashboard
-    const canSeeLiveStats = currentUser.role === 'officer' || currentUser.role === 'professor';
+    const isElevated = currentUser.role === 'officer' || currentUser.role === 'professor';
 
     controls.style.display = 'block';
     document.getElementById('officerControls').style.display = (currentUser.role === 'officer') ? 'block' : 'none';
     document.getElementById('studentControls').style.display = (currentUser.role === 'student') ? 'block' : 'none';
-
-    loadTodaySchedule();
     
     // Show both the Live Monitor and Summary to Professors AND Officers
-    document.getElementById('profControls').style.display = canSeeLiveStats ? 'block' : 'none';
+    document.getElementById('profControls').style.display = isElevated ? 'block' : 'none';
     
-    // If you want the "Attendance Overview" card to also be restricted:
-    const summaryCard = document.querySelector('#profSummaryOutput').closest('.card');
-    if (summaryCard) summaryCard.style.display = canSeeLiveStats ? 'block' : 'none';
+    // Handle the "Attendance Overview" card visibility
+    const summaryCard = document.querySelector('#profSummaryOutput').parentElement;
+    if (summaryCard) summaryCard.style.display = isElevated ? 'block' : 'none';
 
-    if (canSeeLiveStats) {
+    loadTodaySchedule();
+
+    if (isElevated) {
         loadProfessorDashboard();
     }
 }
@@ -361,12 +342,13 @@ async function updateCheckinUI(cls) {
         btn.style.display = 'none';
         return; // Stop here if already recorded
     }
-
+    
     // --- RENDER CHECK-OUT BUTTON ---
     if (record && record.status !== 'not_recorded' && !record.time_out) {
+        if (document.querySelector(`.checkout-btn-${cls.class_code}`)) return; 
         const outBtn = document.createElement('button');
+        outBtn.className = `checkout-btn checkout-btn-${cls.class_code}`;    // Add style for this (e.g., orange)
         outBtn.textContent = "Check Out";
-        outBtn.className = "checkout-btn"; // Add style for this (e.g., orange)
         outBtn.disabled = true;
         btnContainer.appendChild(outBtn);
 
