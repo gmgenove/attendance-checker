@@ -211,26 +211,27 @@ document.getElementById('authForm').onsubmit = async (e) => {
 function showApp() {
     document.getElementById('auth').style.display = 'none';
     document.getElementById('app').style.display = 'block';
+    
+    // Set User Info
     document.getElementById('welcome').textContent = currentUser.name;
     document.getElementById('roleBadge').textContent = currentUser.role.toUpperCase();
-
+    
     // Control section visibility
     const controls = document.getElementById('controls');
-    // Allow both Professors and Officers to see the Live Dashboard
     const isElevated = currentUser.role === 'officer' || currentUser.role === 'professor';
 
     controls.style.display = 'block';
     document.getElementById('officerControls').style.display = (currentUser.role === 'officer') ? 'block' : 'none';
     document.getElementById('studentControls').style.display = (currentUser.role === 'student') ? 'block' : 'none';
+
+    loadTodaySchedule();
     
     // Show both the Live Monitor and Summary to Professors AND Officers
     document.getElementById('profControls').style.display = isElevated ? 'block' : 'none';
     
-    // Handle the "Attendance Overview" card visibility
-    const summaryCard = document.querySelector('#profSummaryOutput').parentElement;
+    // Restricted summary card
+    const summaryCard = document.querySelector('#profSummaryOutput').closest('.card');
     if (summaryCard) summaryCard.style.display = isElevated ? 'block' : 'none';
-
-    loadTodaySchedule();
 
     if (isElevated) {
         loadProfessorDashboard();
@@ -349,10 +350,10 @@ async function updateCheckinUI(cls) {
     const res = await api('get_attendance', { class_code: cls.class_code, student_id: currentUser.id });
     const record = res.record;
     
-    if (res.record && res.record.status !== 'not_recorded') {
-        statusSpan.textContent = `Status: ${res.record.attendance_status}`;
+    if (record && record.attendance_status && record.attendance_status !== 'not_recorded') {
+        statusSpan.textContent = `Status: ${record.attendance_status}`;
         btn.style.display = 'none';
-        return; // Stop here if already recorded
+        // Even if already checked in, check if we need to show the Check-out button logic
     }
     
     // --- RENDER CHECK-OUT BUTTON ---
