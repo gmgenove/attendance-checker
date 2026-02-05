@@ -475,7 +475,7 @@ app.post('/api', async (req, res) => {
 	  case 'credit_attendance': {
 		const { class_code, student_id } = payload;
 	    const now = getManilaNow();
-	    const semConfig = 
+	    const semConfig = await getCurrentSemConfig();
 	
 	    if (now > semConfig.adjEnd) {
 	        return res.json({ ok: false, error: `Adjustment period for ${semConfig.name} has ended.` });
