@@ -254,7 +254,7 @@ async function loadProfessorDashboard() {
 
             if (r.status === 'PRESENT') statusColor = "#10b981";
             if (r.status === 'LATE') statusColor = "#f59e0b";
-            if (r.status === 'ABSENT') statusColor = "#ef4444";
+            if (r.status === 'ABSENT' || r.status === 'INCOMPLETE') statusColor = "#ef4444"; // Red for issues
             if (r.status === 'NOT YET ARRIVED') opacity = "0.6";
 
             html += `
@@ -322,15 +322,64 @@ async function loadTodaySchedule() {
 
 async function updateCheckinUI(cls) {
     const btn = document.getElementById(`btn-${cls.class_code}`);
+    const btnContainer = document.getElementById(`btn-${cls.class_code}`).parentElement;
     const statusSpan = document.getElementById(`status-${cls.class_code}`);
     
     // 1. Initial status check from server
     const res = await api('get_attendance', { class_code: cls.class_code, student_id: currentUser.id });
+    const record = res.record;
     
     if (res.record && res.record.status !== 'not_recorded') {
         statusSpan.textContent = `Status: ${res.record.attendance_status}`;
         btn.style.display = 'none';
         return; // Stop here if already recorded
+    }
+
+    // --- RENDER CHECK-OUT BUTTON ---
+    if (record && record.status !== 'not_recorded' && !record.time_out) {
+        const outBtn = document.createElement('button');
+        outBtn.textContent = "Check Out";
+        outBtn.className = "checkout-btn"; // Add style for this (e.g., orange)
+        outBtn.disabled = true;
+        btnContainer.appendChild(outBtn);
+
+        const updateOutTimer = () => {
+            const tzNow = new Date();
+            const [hh, mm] = cls.end_time.split(':');
+            const end = new Date();
+            end.setHours(parseInt(hh), parseInt(mm), 0, 0);
+
+            const enableFrom = new Date(end.getTime() - 10 * 60000); // 10 mins before end
+
+            if (tzNow >= enableFrom) {
+                outBtn.disabled = false;
+                statusSpan.textContent = "Check-out is now OPEN";
+            } else {
+                const minsToOut = Math.ceil((enableFrom - tzNow) / 60000);
+                statusSpan.textContent = `Check-out available in ${minsToOut} mins`;
+            }
+        };
+
+        outBtn.onclick = async () => {
+            outBtn.disabled = true;
+            const outRes = await api('checkout', { class_code: cls.class_code, student_id: currentUser.id });
+            if (outRes.ok) {
+                outBtn.remove();
+                statusSpan.textContent = `Completed (Out: ${outRes.time_out})`;
+            }
+        };
+
+        if (record && !record.time_out) {
+            const reminder = document.createElement('div');
+            reminder.className = 'small';
+            reminder.style.color = '#e11d48'; // A subtle alert red
+            reminder.style.marginTop = '10px';
+            reminder.innerHTML = `<i class="fa fa-exclamation-circle"></i> Don't forget to check out at ${cls.end_time}!`;
+            btnContainer.appendChild(reminder);
+        }
+
+        setInterval(updateOutTimer, 30000);
+        updateOutTimer();
     }
 
     // 2. Countdown Logic for "Not Yet Open" classes
@@ -370,17 +419,25 @@ async function updateCheckinUI(cls) {
     btn.onclick = async () => {
         btn.disabled = true;
         statusSpan.textContent = 'Verifying...';
+        
         const checkRes = await api('checkin', { class_code: cls.class_code, student_id: currentUser.id });
         
         if (checkRes.ok) {
             statusSpan.textContent = `Status: ${checkRes.status}`;
             statusSpan.style.color = "#10b981";
             btn.style.display = 'none';
-            clearInterval(timer);
+            
+            // --- NEW REMINDER POPUP ---
+            alert(`Success! You are marked as ${checkRes.status}.\n\n⚠️ IMPORTANT: Remember to Check Out 10 minutes before the class ends, otherwise your record will be marked as INCOMPLETE.`);
+            
+            // Immediately reload the UI to show the Check-out button (if applicable)
+            updateCheckinUI(cls); 
+            
+            if (typeof timer !== 'undefined') clearInterval(timer);
         } else {
             alert(checkRes.error);
             btn.disabled = false;
-            updateCountdown(); // Reset UI state
+            updateCountdown();
         }
     };
 
@@ -432,6 +489,43 @@ document.getElementById('generateReport').onclick = async () => {
         out.textContent = res.error;
     }
 };
+
+async function loadAttendanceSummary() {
+    const container = document.getElementById('profSummaryOutput');
+    const classCode = "BPAOUMN-1B"; // Dynamic if needed
+    
+    const res = await api('prof_summary', { class_code: classCode });
+    if (res.ok) {
+        let tableHtml = `
+            <table style="width:100%; border-collapse: collapse; font-size: 12px; margin-top: 15px;">
+                <thead>
+                    <tr style="background: #f1f5f9; text-align: left;">
+                        <th style="padding: 8px; border: 1px solid #e2e8f0;">Student Name</th>
+                        <th style="padding: 8px; border: 1px solid #e2e8f0; color: #10b981;">P</th>
+                        <th style="padding: 8px; border: 1px solid #e2e8f0; color: #f59e0b;">L</th>
+                        <th style="padding: 8px; border: 1px solid #e2e8f0; color: #ef4444;">A</th>
+                        <th style="padding: 8px; border: 1px solid #e2e8f0; color: #64748b;">INC</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        res.summary.forEach(row => {
+            tableHtml += `
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #e2e8f0;"><strong>${row.name}</strong></td>
+                    <td style="padding: 8px; border: 1px solid #e2e8f0;">${row.present_count}</td>
+                    <td style="padding: 8px; border: 1px solid #e2e8f0;">${row.late_count}</td>
+                    <td style="padding: 8px; border: 1px solid #e2e8f0;">${row.absent_count}</td>
+                    <td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: ${row.incomplete_count > 0 ? 'bold' : 'normal'}">${row.incomplete_count}</td>
+                </tr>
+            `;
+        });
+
+        tableHtml += `</tbody></table>`;
+        container.innerHTML = tableHtml;
+    }
+}
 
 function signout() {
     localStorage.removeItem('currentUser');
