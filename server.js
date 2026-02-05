@@ -279,7 +279,6 @@ app.post('/api', async (req, res) => {
 		    );
 		
 		    // Group by student
-		    const roster = {};
 			const roster = {};
 			attendance.rows.forEach(r => {
 			  if (!roster[r.student_id]) {
@@ -315,7 +314,7 @@ app.post('/api', async (req, res) => {
 		    await generateClassMatrixPDF(pdfDoc, info, classDates, roster, semConfig, font, boldFont);
 		    await appendExcuseLogPage(pdfDoc, "CLASS EXCUSE LOG", excuses.rows, font, boldFont, "name");
 		} else if (type === 'person') {
-			const semConfig = await getCurrentSemConfig();
+			const semConfig = await ();
 			const semStart = semConfig.start;
 			const semEnd = semConfig.end;
 			
@@ -439,7 +438,7 @@ app.post('/api', async (req, res) => {
 		    const dbConfig = Object.fromEntries(configRes.rows.map(r => [r.config_key, r.config_value]));
 		
 		    // 2. Determine the active semester's adjustment end date
-		    const semInfo = await getCurrentSemConfig(); // Using the helper we created
+		    const semInfo = await (); // Using the helper we created
 		    
 		    return res.json({
 		      ok: true,
@@ -476,18 +475,10 @@ app.post('/api', async (req, res) => {
 	  case 'credit_attendance': {
 		const { class_code, student_id } = payload;
 	    const now = getManilaNow();
-	    const semConfig = await getCurrentSemConfig();
+	    const semConfig = await ();
 	
 	    if (now > semConfig.adjEnd) {
-	        return res.json({ ok: false, error: `Adjustment period for Sem ${semConfig.sem} has ended.` });
-	    }
-
-		const config = await pool.query("SELECT config_value FROM config WHERE config_key = 'sem2_adjustment_end'");
-		// Define your adjustment window (e.g., first 2 weeks of the semester)
-		const adjustmentEnd = semConfig.adjEnd;
-	
-	    if (now > adjustmentEnd) {
-	        return res.json({ ok: false, error: "Adjustment period has ended." });
+	        return res.json({ ok: false, error: `Adjustment period for ${semConfig.name} has ended.` });
 	    }
 	
 	    // Mark as CREDITED for today (or use your logic to loop through semester dates)
@@ -784,7 +775,7 @@ const getCurrentSemConfig = async () => {
     };
   } else {
     // Default to nearest sem or "Out of Semester"
-    return { sem: "None", start: null, end: null, adjEnd: null, name: None, year: None };
+    return { sem: "None", start: null, end: null, adjEnd: null, name: "None", year: "None" };
   }
 };
 
