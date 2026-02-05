@@ -291,6 +291,7 @@ app.post('/api', async (req, res) => {
 		        classDates.push(current);
 		      }
 		      current = current.plus({ days: 1 });
+			}
 		
 		    // 4. Fetch All Attendance for this Class
 		    const attendance = await pool.query(
@@ -321,7 +322,6 @@ app.post('/api', async (req, res) => {
 		    const filename = `ClassReport_Full_${class_code}.pdf`;
 		    await generateClassMatrixPDF(pdfDoc, info, classDates, roster, semConfig, font, boldFont);
 		    await appendExcuseLogPage(pdfDoc, "CLASS EXCUSE LOG", excuses.rows, font, boldFont, "name");
-		  }
 		} else if (type === 'person') {
 			const semConfig = await getCurrentSemConfig();
 			const semStart = semConfig.start;
@@ -757,6 +757,7 @@ async function appendExcuseLogPage(pdfDoc, title, excuses, font, bold, secondary
 
 const getCurrentSemConfig = async () => {
   const now = getManilaNow();
+  const currentYear = now.year;
   const res = await pool.query("SELECT config_key, config_value FROM config");
   const config = Object.fromEntries(res.rows.map(r => [r.config_key, r.config_value]));
 
