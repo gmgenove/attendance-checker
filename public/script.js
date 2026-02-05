@@ -314,13 +314,21 @@ async function loadTodaySchedule() {
         const card = document.createElement('div');
         card.className = 'class-card';
         card.innerHTML = `
-            <div>
+            <div style="flex:1">
                 <strong>${cls.class_name}</strong><br>
-                <span class="small muted">${cls.start_time} - ${cls.end_time} | Prof: ${cls.professor_name}</span>
-                <div id="status-${cls.class_code}" class="small" style="margin-top:5px">Checking status...</div>
+                <span class="small muted">${cls.start_time} - ${cls.end_time}</span>
+                <div id="status-${cls.class_code}" class="small" style="margin:5px 0">Checking status...</div>
+                
+                <div id="excuse-area-${cls.class_code}" style="display:none; margin-top:10px; background:#f1f5f9; padding:8px; border-radius:8px;">
+                    <input type="text" id="reason-${cls.class_code}" placeholder="Reason for excuse..." style="width:100%; font-size:12px; margin-bottom:5px;">
+                    <button onclick="submitExcuse('${cls.class_code}')" style="font-size:11px; padding:5px 10px; background:#64748b; color:white; border:none;">Submit Excuse</button>
+                </div>
             </div>
-            <div class="class-actions">
+            <div class="class-actions" style="text-align:right">
                 <button class="checkin-btn" id="btn-${cls.class_code}" disabled>Check In</button>
+                <div style="margin-top:8px">
+                    <a href="#" onclick="toggleExcuse(event, '${cls.class_code}')" class="small muted" style="text-decoration:none">File Excuse?</a>
+                </div>
             </div>
         `;
         list.appendChild(card);
@@ -555,6 +563,32 @@ function signout() {
     //location.reload();
 }
 document.getElementById('signoutBtn').onclick = signout;
+
+// Toggle the excuse input visibility
+window.toggleExcuse = (e, classCode) => {
+    e.preventDefault();
+    const area = document.getElementById(`excuse-area-${classCode}`);
+    area.style.display = area.style.display === 'none' ? 'block' : 'none';
+};
+
+// Send the excuse to the server
+window.submitExcuse = async (classCode) => {
+    const reasonInput = document.getElementById(`reason-${classCode}`);
+    const reason = reasonInput.value;
+    
+    const res = await api('submit_excuse', { 
+        class_code: classCode, 
+        student_id: currentUser.id, 
+        reason: reason 
+    });
+
+    if (res.ok) {
+        alert("Excuse filed! This will be included in the official Excuse Log.");
+        loadTodaySchedule(); 
+    } else {
+        alert(res.error);
+    }
+};
 
 window.onload = () => {
     const saved = localStorage.getItem('currentUser');
