@@ -149,10 +149,23 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('auth').style.display = 'block';
         }
     };
-    
+
     // Run these on load
     updateHeaderDate();
     restoreSession();
+
+    const checkHealth = async () => {
+        const res = await api('health_check');
+        const footer = document.querySelector('.footer');
+        if (res.ok) {
+            footer.innerHTML += `<div style="color: #10b981; font-size: 10px;">● System Online</div>`;
+        } else {
+            footer.innerHTML += `<div style="color: #ef4444; font-size: 10px;">● System Offline: ${res.error}</div>`;
+        }
+    };
+    
+    // Check health 2 seconds after load (to let Render wake up)
+    setTimeout(checkHealth, 2000);
 });
 
 // Auth Logic
