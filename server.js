@@ -182,38 +182,38 @@ app.post('/api', async (req, res) => {
       }
 
 	  case 'prof_dashboard': {
-			const { class_code } = payload;
-			const date = getManilaNow().toISODate();
-			
-			// 1. Get counts for the header cards
-			const stats = await pool.query(`
-				SELECT attendance_status, COUNT(*) as count 
-				FROM attendance 
-				WHERE class_code = $1 AND class_date = $2
-				GROUP BY attendance_status
-			`, [class_code, date]);
-			
-			// 2. Get the ENTIRE roster with their current status for this class/date
-		    const roster = await pool.query(`
-			    SELECT 
-					u.user_id, 
-			        u.user_name, 
-			        a.time_in, 
-			        COALESCE(a.attendance_status, 'NOT YET ARRIVED') as status
-			    FROM sys_users u
-			    LEFT JOIN attendance a ON u.user_id = a.student_id AND a.class_code = $1 AND a.class_date = $2
-			    WHERE (u.user_role = 'student' OR u.user_role = 'officer')
-			    ORDER BY 
-			        CASE WHEN a.attendance_status IS NULL THEN 1 ELSE 0 END,
-			        a.time_in DESC, 
-			        u.user_name ASC
-			`, [class_code, date]);
-			
-			return res.json({ 
-				ok: true, 
-				stats: stats.rows, 
-				roster: roster.rows 
-			});
+		const { class_code } = payload;
+		const date = getManilaNow().toISODate();
+		
+		// 1. Get counts for the header cards
+		const stats = await pool.query(`
+			SELECT attendance_status, COUNT(*) as count 
+			FROM attendance 
+			WHERE class_code = $1 AND class_date = $2
+			GROUP BY attendance_status
+		`, [class_code, date]);
+		
+		// 2. Get the ENTIRE roster with their current status for this class/date
+		const roster = await pool.query(`
+			SELECT 
+				u.user_id, 
+				u.user_name, 
+				a.time_in, 
+				COALESCE(a.attendance_status, 'NOT YET ARRIVED') as status
+			FROM sys_users u
+			LEFT JOIN attendance a ON u.user_id = a.student_id AND a.class_code = $1 AND a.class_date = $2
+			WHERE (u.user_role = 'student' OR u.user_role = 'officer')
+			ORDER BY 
+				CASE WHEN a.attendance_status IS NULL THEN 1 ELSE 0 END,
+				a.time_in DESC, 
+				u.user_name ASC
+		`, [class_code, date]);
+		
+		return res.json({ 
+			ok: true, 
+			stats: stats.rows, 
+			roster: roster.rows 
+		});
 	  }
 
 	  case 'prof_summary': {
@@ -248,37 +248,37 @@ app.post('/api', async (req, res) => {
 		  // Dynamically determine semester dates
 		  const semConfig = await getCurrentSemConfig();  
 		  if (semConfig.sem === "None") {
-		    return res.json({ ok: false, error: "No active semester found for today's date." });
+			return res.json({ ok: false, error: "No active semester found for today's date." });
 		  }
 		  const semStart = semConfig.start;
 		  const semEnd = semConfig.end;
-
+	
 		  if (type === 'class') {
 			// 2. Fetch Class & Schedule
-		    const classInfo = await pool.query(
-		      `SELECT s.*, u.user_name as professor_name FROM schedules s 
-		       JOIN sys_users u ON s.professor_id = u.user_id WHERE s.class_code = $1`, [class_code]
-		    );
-		    const info = classInfo.rows[0];
+			const classInfo = await pool.query(
+			  `SELECT s.*, u.user_name as professor_name FROM schedules s 
+			   JOIN sys_users u ON s.professor_id = u.user_id WHERE s.class_code = $1`, [class_code]
+			);
+			const info = classInfo.rows[0];
 		
-		    // 3. Generate the Date List (The "D1, D2..." Columns)
-		    let classDates = [];
-		    let current = semStart;
-		    while (current <= semEnd) {
-		      if (info.days.includes(current.toFormat('ccc'))) {
-		        classDates.push(current);
-		      }
-		      current = current.plus({ days: 1 });
+			// 3. Generate the Date List (The "D1, D2..." Columns)
+			let classDates = [];
+			let current = semStart;
+			while (current <= semEnd) {
+			  if (info.days.includes(current.toFormat('ccc'))) {
+				classDates.push(current);
+			  }
+			  current = current.plus({ days: 1 });
 			}
 		
-		    // 4. Fetch All Attendance for this Class
-		    const attendance = await pool.query(
-		      `SELECT a.*, u.user_name FROM sys_users u 
-		       LEFT JOIN attendance a ON u.user_id = a.student_id AND a.class_code = $1
-		       WHERE (u.user_role = 'student' OR u.user_role = 'officer') ORDER BY u.user_name ASC`, [class_code]
-		    );
+			// 4. Fetch All Attendance for this Class
+			const attendance = await pool.query(
+			  `SELECT a.*, u.user_name FROM sys_users u 
+			   LEFT JOIN attendance a ON u.user_id = a.student_id AND a.class_code = $1
+			   WHERE (u.user_role = 'student' OR u.user_role = 'officer') ORDER BY u.user_name ASC`, [class_code]
+			);
 		
-		    // Group by student
+			// Group by student
 			const roster = {};
 			attendance.rows.forEach(r => {
 			  if (!roster[r.student_id]) {
@@ -300,21 +300,21 @@ app.post('/api', async (req, res) => {
 				}
 			  }
 			});
-
+	
 			// Fetch Excuse Logs for this Class (matches ClassExcuseLog tab)
-		    const excuses = await pool.query(
-		      `SELECT a.class_date, u.user_name, a.reason 
-		       FROM attendance a 
-		       JOIN sys_users u ON a.student_id = u.user_id 
-		       WHERE a.class_code = $1 AND a.reason IS NOT NULL 
-		       ORDER BY a.class_date DESC`, [class_code]
-		    );
+			const excuses = await pool.query(
+			  `SELECT a.class_date, u.user_name, a.reason 
+			   FROM attendance a 
+			   JOIN sys_users u ON a.student_id = u.user_id 
+			   WHERE a.class_code = $1 AND a.reason IS NOT NULL 
+			   ORDER BY a.class_date DESC`, [class_code]
+			);
 		
-		    const filename = `ClassReport_Full_${class_code}.pdf`;
-		    await generateClassMatrixPDF(pdfDoc, info, classDates, roster, semConfig, font, boldFont);
-		    await appendExcuseLogPage(pdfDoc, "CLASS EXCUSE LOG", excuses.rows, font, boldFont, "name");
+			const filename = `ClassReport_Full_${class_code}.pdf`;
+			await generateClassMatrixPDF(pdfDoc, info, classDates, roster, semConfig, font, boldFont);
+			await appendExcuseLogPage(pdfDoc, "CLASS EXCUSE LOG", excuses.rows, font, boldFont, "name");
 		} else if (type === 'person') {
-			const semConfig = await ();
+			const semConfig = await getCurrentSemConfig();
 			const semStart = semConfig.start;
 			const semEnd = semConfig.end;
 			
@@ -438,7 +438,7 @@ app.post('/api', async (req, res) => {
 		    const dbConfig = Object.fromEntries(configRes.rows.map(r => [r.config_key, r.config_value]));
 		
 		    // 2. Determine the active semester's adjustment end date
-		    const semInfo = await (); // Using the helper we created
+		    const semInfo = await getCurrentSemConfig(); // Using the helper we created
 		    
 		    return res.json({
 		      ok: true,
@@ -475,7 +475,7 @@ app.post('/api', async (req, res) => {
 	  case 'credit_attendance': {
 		const { class_code, student_id } = payload;
 	    const now = getManilaNow();
-	    const semConfig = await ();
+	    const semConfig = 
 	
 	    if (now > semConfig.adjEnd) {
 	        return res.json({ ok: false, error: `Adjustment period for ${semConfig.name} has ended.` });
@@ -515,25 +515,26 @@ app.post('/api', async (req, res) => {
 
 	  case 'health_check': {
 		  try {
-		    // Perform a simple query to verify DB connection
-		    const result = await pool.query('SELECT NOW() as server_time');
-		    return res.json({
-		      ok: true,
-		      status: "Healthy",
-		      db_time: result.rows[0].server_time,
-		      uptime: process.uptime().toFixed(2) + " seconds"
-		    });
+			// Perform a simple query to verify DB connection
+			const result = await pool.query('SELECT NOW() as server_time');
+			return res.json({
+			  ok: true,
+			  status: "Healthy",
+			  db_time: result.rows[0].server_time,
+			  uptime: process.uptime().toFixed(2) + " seconds"
+			});
 		  } catch (err) {
-		    return res.status(500).json({ 
-		      ok: false, 
-		      status: "Database Connection Error", 
-		      error: err.message 
-		    });
+			return res.status(500).json({ 
+			  ok: false, 
+			  status: "Database Connection Error", 
+			  error: err.message 
+			});
 		  }
 	  }
 
-      default:
+      default: {
         return res.status(400).json({ ok: false, error: `Action ${action} not implemented` });
+	  }
     }
   } catch (err) {
     console.error(err);
