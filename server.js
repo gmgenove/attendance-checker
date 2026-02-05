@@ -194,18 +194,18 @@ app.post('/api', async (req, res) => {
 			`, [class_code, date]);
 			
 			// 2. Get the ENTIRE roster with their current status for this class/date
-			const roster = await pool.query(`
-				SELECT 
-					u.user_name, 
-					a.time_in, 
-					COALESCE(a.attendance_status, 'NOT YET ARRIVED') as status
-				FROM sys_users u
-				LEFT JOIN attendance a ON u.user_id = a.student_id AND a.class_code = $1 AND a.class_date = $2
-				WHERE u.user_role = 'student'
-				ORDER BY 
-					CASE WHEN a.attendance_status IS NULL THEN 1 ELSE 0 END,
-					a.time_in DESC, 
-					u.user_name ASC
+		    const roster = await pool.query(`
+			    SELECT 
+			        u.user_name, 
+			        a.time_in, 
+			        COALESCE(a.attendance_status, 'NOT YET ARRIVED') as status
+			    FROM sys_users u
+			    LEFT JOIN attendance a ON u.user_id = a.student_id AND a.class_code = $1 AND a.class_date = $2
+			    WHERE u.user_role = 'student'
+			    ORDER BY 
+			        CASE WHEN a.attendance_status IS NULL THEN 1 ELSE 0 END,
+			        a.time_in DESC, 
+			        u.user_name ASC
 			`, [class_code, date]);
 			
 			return res.json({ 
@@ -481,6 +481,36 @@ async function generateClassPDF(pdfDoc, info, records, excuses, font, bold) {
       y -= 15;
     });
   }
+}
+
+async function generateStudentPDF(pdfDoc, studentInfo, history, font, bold) {
+  let page = pdfDoc.addPage([600, 800]);
+  let y = 750;
+
+  page.drawText(`Student Name: ${studentInfo.user_name}`, { x: 50, y, size: 14, font: bold });
+  page.drawText(`Generated on: ${getManilaNow().toFormat('yyyy-MM-dd HH:mm')}`, { x: 50, y: y - 20, size: 10, font });
+  y -= 60;
+
+  // Table Headers
+  page.drawText('Date', { x: 50, y, size: 10, font: bold });
+  page.drawText('Class', { x: 150, y, size: 10, font: bold });
+  page.drawText('Status', { x: 400, y, size: 10, font: bold });
+  y -= 20;
+
+  history.forEach(h => {
+    if (y < 50) { page = pdfDoc.addPage([600, 800]); y = 750; }
+    const date = DateTime.fromJSDate(h.class_date).toFormat('yyyy-MM-dd');
+    page.drawText(date, { x: 50, y, size: 9, font });
+    page.drawText(h.class_name.substring(0, 30), { x: 150, y, size: 9, font });
+    page.drawText(h.attendance_status, { x: 400, y, size: 9, font });
+    
+    // If there is an excuse reason, print it on the next line
+    if (h.reason) {
+      y -= 12;
+      page.drawText(`Reason: ${h.reason}`, { x: 160, y, size: 8, font, color: rgb(0.4, 0.4, 0.4) });
+    }
+    y -= 15;
+  });
 }
 
 const initDb = async () => {
