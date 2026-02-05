@@ -570,7 +570,7 @@ function signout() {
 document.getElementById('signoutBtn').onclick = signout;
 
 async function handleBulkReset() {
-    const confirmation = confirm("WARNING: This will reset ALL student passwords to 'pass123'. Are you sure you want to proceed?");
+    const confirmation = confirm("WARNING: This will reset ALL student passwords to 'password1234'. Are you sure you want to proceed?");
     
     if (confirmation) {
         const res = await api('bulk_password_reset');
