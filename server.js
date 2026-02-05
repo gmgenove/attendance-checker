@@ -148,6 +148,31 @@ app.post('/api', async (req, res) => {
 		  }
 	  }
 
+	  case 'checkout': {
+		const { class_code, student_id } = payload;
+		const now = getManilaNow();
+		const dateStr = now.toISODate();
+		const timeStr = now.toFormat('HH:mm:ss');
+		
+		// 1. Verify they checked in first
+		const check = await pool.query(
+			"SELECT attendance_status FROM attendance WHERE date = $1 AND class_code = $2 AND student_id = $3",
+			[dateStr, class_code, student_id]
+		);
+		
+		if (check.rows.length === 0) {
+			return res.json({ ok: false, error: "You must check in before checking out." });
+		}
+		
+		// 2. Record the check-out
+		await pool.query(
+			"UPDATE attendance SET time_out = $1 WHERE date = $2 AND class_code = $3 AND student_id = $4",
+			[timeStr, dateStr, class_code, student_id]
+		);
+		
+		return res.json({ ok: true, time_out: timeStr });
+	  }
+
       // --- GET ATTENDANCE (For UI status check) ---
       case 'get_attendance': {
         const { class_code, student_id } = payload;
@@ -165,25 +190,25 @@ app.post('/api', async (req, res) => {
 			
 			// 1. Get counts for the header cards
 			const stats = await pool.query(`
-				SELECT status, COUNT(*) as count 
+				SELECT attendance_status, COUNT(*) as count 
 				FROM attendance 
-				WHERE class_code = $1 AND date = $2
-				GROUP BY status
+				WHERE class_code = $1 AND class_date = $2
+				GROUP BY attendance_status
 			`, [class_code, date]);
 			
 			// 2. Get the ENTIRE roster with their current status for this class/date
 			const roster = await pool.query(`
 				SELECT 
-					u.name, 
+					u.user_name, 
 					a.time_in, 
-					COALESCE(a.status, 'NOT YET ARRIVED') as status
+					COALESCE(a.attendance_status, 'NOT YET ARRIVED') as status
 				FROM users u
-				LEFT JOIN attendance a ON u.id = a.student_id AND a.class_code = $1 AND a.date = $2
-				WHERE u.role = 'student'
+				LEFT JOIN attendance a ON u.user_id = a.student_id AND a.class_code = $1 AND a.class_date = $2
+				WHERE u.user_role = 'student'
 				ORDER BY 
-					CASE WHEN a.status IS NULL THEN 1 ELSE 0 END, -- Show checked-in students first
+					CASE WHEN a.attendance_status IS NULL THEN 1 ELSE 0 END, -- Show checked-in students first
 					a.time_in DESC, 
-					u.name ASC
+					u.user_name ASC
 			`, [class_code, date]);
 			
 			return res.json({ 
@@ -262,6 +287,26 @@ app.post('/api', async (req, res) => {
 		  const pdfBase64 = Buffer.from(pdfBytes).toString('base64');
 		
 		  return res.json({ ok: true, pdfMain: pdfBase64, filename });
+	  }
+
+	  case 'prof_summary': {
+	    const { class_code } = payload;
+	    
+	    const summary = await pool.query(`
+	        SELECT 
+	            u.user_name,
+	            COUNT(CASE WHEN a.attendance_status = 'PRESENT' THEN 1 END) as present_count,
+	            COUNT(CASE WHEN a.attendance_status = 'LATE' THEN 1 END) as late_count,
+	            COUNT(CASE WHEN a.attendance_status = 'ABSENT' THEN 1 END) as absent_count,
+	            COUNT(CASE WHEN a.attendance_status = 'INCOMPLETE' THEN 1 END) as incomplete_count
+	        FROM users u
+	        LEFT JOIN attendance a ON u.id = a.student_id AND a.class_code = $1
+	        WHERE u.user_role = 'student'
+	        GROUP BY u.user_id, u.user_name
+	        ORDER BY u.user_name ASC
+	    `, [class_code]);
+	
+	    return res.json({ ok: true, summary: summary.rows });
 	  }
 
 	  // --- DROPDOWNS (For Officer Reports) ---
@@ -374,6 +419,7 @@ const initDb = async () => {
       student_id TEXT REFERENCES sys_users(user_id), 
       attendance_status TEXT, 
       time_in TIME, 
+      time_out TIME,
       professor_id TEXT REFERENCES professors(professor_id),
       reason TEXT,
       constraint pk_attendance_data primary key (class_date, class_code, student_id)
@@ -456,13 +502,32 @@ const autoTagAbsentees = async () => {
       [dayName]
     );
 
-    for (const sched of schedules.rows) {
-      const [hh, mm] = sched.start_time.split(':');
-      const classStart = now.set({ hour: hh, minute: mm, second: 0 });
-      const diffMins = now.diff(classStart, 'minutes').minutes;
+    
+  } catch (err) {
+    console.error("Auto-tag error:", err);
+  }
+};
 
-      // If it's 11+ minutes past start time, mark missing students as ABSENT
-      if (diffMins > 10) {
+const autoTagAbsentees = async () => {
+  console.log("Running auto-tag maintenance...");
+  try {
+    const now = getManilaNow();
+    const dayName = now.toFormat('ccc');
+    const dateStr = now.toISODate();
+
+    const schedules = await pool.query(
+      "SELECT * FROM schedules WHERE $1 = ANY(days)", 
+      [dayName]
+    );
+
+    for (const sched of schedules.rows) {
+      const [endHH, endMM] = sched.end_time.split(':');
+      const classEnd = now.set({ hour: endHH, minute: endMM, second: 0 });
+
+      // Only process classes that ended at least 30 minutes ago
+      if (now > classEnd.plus({ minutes: 30 })) {
+        
+        // A. Mark completely missing students as ABSENT
         await pool.query(`
           INSERT INTO attendance (class_date, class_code, student_id, attendance_status, time_in)
           SELECT $1, $2, u.user_id, 'ABSENT', '00:00:00'
@@ -472,6 +537,17 @@ const autoTagAbsentees = async () => {
             SELECT 1 FROM attendance a 
             WHERE a.class_date = $1 AND a.class_code = $2 AND a.student_id = u.user_id
           )
+        `, [dateStr, sched.class_code]);
+
+        // B. Mark "Forgetful" students as INCOMPLETE
+        // (They checked in but never checked out)
+        await pool.query(`
+          UPDATE attendance 
+          SET attendance_status = 'INCOMPLETE'
+          WHERE date = $1 
+          AND class_code = $2 
+          AND time_out IS NULL 
+          AND attendance_status IN ('PRESENT', 'LATE')
         `, [dateStr, sched.class_code]);
       }
     }
