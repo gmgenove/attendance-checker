@@ -274,6 +274,10 @@ async function loadProfessorDashboard() {
                         </span>
                         <span style="font-weight:bold; font-size:10px; color:${statusColor}">${r.status}</span>
                     </div>
+                </li>
+                <li style="padding: 10px 0; border-bottom: 1px solid #f1f5f9;">
+                    <span><strong>${r.name}</strong></span>
+                    <button onclick="resetSinglePassword('${r.user_id}')" class="small" style="float:right; background:none; border:1px solid #ddd;">Reset PW</button>
                 </li>`;
         });
         
@@ -564,6 +568,19 @@ function signout() {
 }
 document.getElementById('signoutBtn').onclick = signout;
 
+async function handleBulkReset() {
+    const confirmation = confirm("WARNING: This will reset ALL student passwords to 'pass123'. Are you sure you want to proceed?");
+    
+    if (confirmation) {
+        const res = await api('bulk_password_reset');
+        if (res.ok) {
+            alert(res.message);
+        } else {
+            alert("Error: " + res.error);
+        }
+    }
+}
+
 // Toggle the excuse input visibility
 window.toggleExcuse = (e, classCode) => {
     e.preventDefault();
@@ -589,6 +606,46 @@ window.submitExcuse = async (classCode) => {
         alert(res.error);
     }
 };
+
+window.toggleSettings = () => {
+    const card = document.getElementById('settingsCard');
+    card.style.display = card.style.display === 'none' ? 'block' : 'none';
+    document.getElementById('settingsMsg').textContent = '';
+};
+
+document.getElementById('changePasswordForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = document.getElementById('settingsMsg');
+    const current = document.getElementById('currentPw').value;
+    const next = document.getElementById('newPw').value;
+    const confirmNext = document.getElementById('confirmNewPw').value;
+
+    if (next !== confirmNext) {
+        msg.style.color = 'red';
+        return msg.textContent = "New passwords do not match.";
+    }
+
+    if (next.length < 12) {
+        msg.style.color = 'red';
+        return msg.textContent = "Password must be at least 12 characters.";
+    }
+
+    const res = await api('change_password', {
+        user_id: currentUser.id,
+        current_password: current,
+        new_password: next
+    });
+
+    if (res.ok) {
+        msg.style.color = 'green';
+        msg.textContent = res.message;
+        e.target.reset();
+        setTimeout(toggleSettings, 2000); // Close settings after success
+    } else {
+        msg.style.color = 'red';
+        msg.textContent = res.error;
+    }
+});
 
 window.onload = () => {
     const saved = localStorage.getItem('currentUser');
