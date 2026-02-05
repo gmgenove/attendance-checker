@@ -150,6 +150,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
+    const searchInput = document.getElementById('studentSearch');
+    searchInput.addEventListener('input', (e) => {
+        const term = e.target.value.toLowerCase();
+        const listItems = document.querySelectorAll('#recentCheckinList li');
+        
+        listItems.forEach(item => {
+            const name = item.textContent.toLowerCase();
+            // Hide items that don't match the search term
+            item.style.display = name.includes(term) ? 'block' : 'none';
+        });
+    });
+
     // Run these on load
     updateHeaderDate();
     restoreSession();
@@ -207,6 +219,62 @@ function showApp() {
     document.getElementById('studentControls').style.display = currentUser.role === 'student' ? 'block' : 'none';
     
     loadTodaySchedule();
+
+    // Allow both Professors and Officers to see the Live Dashboard
+    const canSeeLiveStats = currentUser.role === 'professor' || currentUser.role === 'officer';
+    document.getElementById('profControls').style.display = canSeeLiveStats ? 'block' : 'none';
+    
+    if (canSeeLiveStats) {
+        loadProfessorDashboard();
+    }
+}
+
+async function loadProfessorDashboard() {
+    const container = document.getElementById('profDashboardOutput');
+    const classCode = "BPAOUMN-1B"; 
+    
+    const res = await api('prof_dashboard', { class_code: classCode });
+    if (res.ok) {
+        let html = `
+            <div class="grid">
+                ${res.stats.map(s => `
+                    <div class="card" style="border-left: 4px solid ${s.status === 'PRESENT' ? '#10b981' : '#f59e0b'}; padding: 10px;">
+                        <div class="small muted">${s.status}</div>
+                        <strong>${s.count}</strong>
+                    </div>
+                `).join('')}
+            </div>
+            <h5 style="margin-top:15px;">Live Roster</h5>
+            <ul id="recentCheckinList" class="small" style="list-style: none; padding: 0;">
+        `;
+
+        res.roster.forEach(r => {
+            let statusColor = "#94a3b8"; // Default Grey for NOT YET ARRIVED
+            let opacity = "1";
+
+            if (r.status === 'PRESENT') statusColor = "#10b981";
+            if (r.status === 'LATE') statusColor = "#f59e0b";
+            if (r.status === 'ABSENT') statusColor = "#ef4444";
+            if (r.status === 'NOT YET ARRIVED') opacity = "0.6";
+
+            html += `
+                <li style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; opacity: ${opacity};">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span>
+                            <strong>${r.name}</strong>
+                            <div class="small muted">${r.time_in ? 'In at ' + r.time_in : 'No time recorded'}</div>
+                        </span>
+                        <span style="font-weight:bold; font-size:10px; color:${statusColor}">${r.status}</span>
+                    </div>
+                </li>`;
+        });
+        
+        html += `</ul>`;
+        container.innerHTML = html;
+        
+        // Ensure search filter still works on the new list
+        document.getElementById('studentSearch').dispatchEvent(new Event('input'));
+    }
 }
 
 async function loadTodaySchedule() {
@@ -315,6 +383,17 @@ async function updateCheckinUI(cls) {
             updateCountdown(); // Reset UI state
         }
     };
+
+    // Add after the check-in button logic
+    const adjustmentEnd = new Date("2026-02-28");
+    if (new Date() <= adjustmentEnd && (!res.record || res.record.status === 'not_recorded')) {
+        const creditBtn = document.createElement('button');
+        creditBtn.textContent = "Claim Attendance Credit";
+        creditBtn.className = "small muted";
+        creditBtn.style.marginTop = "5px";
+        creditBtn.onclick = () => api('credit_attendance', { class_code: cls.class_code, student_id: currentUser.id });
+        btn.parentElement.appendChild(creditBtn);
+    }
 }
 
 // Optimized Report Handler
@@ -380,3 +459,10 @@ window.onload = () => {
         showApp();
     }
 };
+
+// Refresh the dashboard every 60 seconds if the user is an Officer/Prof
+setInterval(() => {
+    if (currentUser && (currentUser.role === 'professor' || currentUser.role === 'officer')) {
+        loadProfessorDashboard();
+    }
+}, 60000);
