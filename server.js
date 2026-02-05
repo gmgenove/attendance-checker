@@ -199,11 +199,11 @@ app.post('/api', async (req, res) => {
 					u.user_name, 
 					a.time_in, 
 					COALESCE(a.attendance_status, 'NOT YET ARRIVED') as status
-				FROM users u
+				FROM sys_users u
 				LEFT JOIN attendance a ON u.user_id = a.student_id AND a.class_code = $1 AND a.class_date = $2
 				WHERE u.user_role = 'student'
 				ORDER BY 
-					CASE WHEN a.attendance_status IS NULL THEN 1 ELSE 0 END, -- Show checked-in students first
+					CASE WHEN a.attendance_status IS NULL THEN 1 ELSE 0 END,
 					a.time_in DESC, 
 					u.user_name ASC
 			`, [class_code, date]);
@@ -295,6 +295,58 @@ app.post('/api', async (req, res) => {
         const students = await pool.query('SELECT user_id, user_name FROM sys_users WHERE user_role = \'student\'');
         return res.json({ ok: true, classes: classes.rows, students: students.rows });
       }
+
+	  case 'change_password': {
+		    const { user_id, current_password, new_password } = payload;
+		
+		    // 1. Fetch user from DB
+		    const result = await pool.query("SELECT password_hash FROM sys_users WHERE user_id = $1", [user_id]);
+		    if (result.rows.length === 0) return res.json({ ok: false, error: "User not found." });
+		
+		    const user = result.rows[0];
+		
+		    // 2. Verify current password
+		    const isValid = await bcrypt.compare(current_password, user.password_hash);
+		    if (!isValid) return res.json({ ok: false, error: "Current password is incorrect." });
+		
+		    // 3. Hash and save new password
+		    const newHash = await bcrypt.hash(new_password, 10);
+		    await pool.query("UPDATE sys_users SET password_hash = $1 WHERE user_id = $2", [newHash, user_id]);
+		
+		    return res.json({ ok: true, message: "Password updated successfully!" });
+	  }
+
+	  case 'reset_single_password': {
+	    const { target_user_id } = payload;
+	    const hashed = await bcrypt.hash("pass123", 10);
+	    await pool.query("UPDATE sys_users SET password_hash = $1 WHERE user_id = $2", [hashed, target_user_id]);
+	    return res.json({ ok: true, message: "Password reset to pass123" });
+	  }
+
+	  case 'bulk_password_reset': {
+	    // Only allow Officers or Professors to perform this
+	    if (currentUser.role === 'student') {
+	        return res.status(403).json({ ok: false, error: "Unauthorized access." });
+	    }
+	
+	    const defaultPassword = "pass123"; // You can change this default
+	    const hashedDefault = await bcrypt.hash(defaultPassword, 10);
+	
+	    try {
+	        // Reset all students in the sys_users table
+	        const result = await pool.query(
+	            "UPDATE sys_users SET password_hash = $1 WHERE user_role = 'student'",
+	            [hashedDefault]
+	        );
+	
+	        return res.json({ 
+	            ok: true, 
+	            message: `Successfully reset passwords for ${result.rowCount} students to: ${defaultPassword}` 
+	        });
+	    } catch (err) {
+	        return res.json({ ok: false, error: err.message });
+	    }
+	  }
 
       // --- CONFIG ---
       case 'getConfig': {
