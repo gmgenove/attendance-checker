@@ -289,7 +289,7 @@ app.post('/api', async (req, res) => {
 		      page = pdfDoc.addPage([600, 800]);
 		      y = 750;
 		    }
-		    const dateStr = DateTime.fromJSDate(row.date).toISODate();
+		    const dateStr = DateTime.fromJSDate(row.class_date).toISODate();
 		    const secondCol = type === 'class' ? row.user_name : row.class_name;
 		    
 		    page.drawText(dateStr, { x: 50, y, size: 9, font });
@@ -354,12 +354,12 @@ app.post('/api', async (req, res) => {
 	    }
 	
 	    // Mark as CREDITED for today (or use your logic to loop through semester dates)
-	    await pool.query(`
-	        INSERT INTO attendance (date, class_code, student_id, status, time_in)
-	        VALUES ($1, $2, $3, 'CREDITED', $4)
-	        ON CONFLICT (date, class_code, student_id) 
-	        DO UPDATE SET status = 'CREDITED'
-	    `, [now.toISODate(), class_code, student_id, now.toFormat('HH:mm:ss')]);
+		await pool.query(`
+		    INSERT INTO attendance (class_date, class_code, student_id, attendance_status, time_in)
+		    VALUES ($1, $2, $3, 'CREDITED', $4)
+		    ON CONFLICT (class_date, class_code, student_id) 
+		    DO UPDATE SET attendance_status = 'CREDITED'
+		`, [now.toISODate(), class_code, student_id, now.toFormat('HH:mm:ss')]);
 	
 	    return res.json({ ok: true, message: "Attendance credited successfully." });
 	  }
@@ -485,25 +485,6 @@ const initDb = async () => {
   }
 };
 initDb();	// Call the migration script
-
-const autoTagAbsentees = async () => {
-  console.log("Running auto-tag absentee check...");
-  try {
-    const now = getManilaNow();
-    const dayName = now.toFormat('ccc');
-    const dateStr = now.toISODate();
-
-    // 1. Find classes that ended more than 10 mins ago today
-    const schedules = await pool.query(
-      "SELECT * FROM schedules WHERE $1 = ANY(days)", 
-      [dayName]
-    );
-
-    
-  } catch (err) {
-    console.error("Auto-tag error:", err);
-  }
-};
 
 const autoTagAbsentees = async () => {
   console.log("Running auto-tag maintenance...");
