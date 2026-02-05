@@ -196,6 +196,7 @@ app.post('/api', async (req, res) => {
 			// 2. Get the ENTIRE roster with their current status for this class/date
 		    const roster = await pool.query(`
 			    SELECT 
+					u.user_id, 
 			        u.user_name, 
 			        a.time_in, 
 			        COALESCE(a.attendance_status, 'NOT YET ARRIVED') as status
@@ -318,7 +319,7 @@ app.post('/api', async (req, res) => {
 
 	  case 'reset_single_password': {
 	    const { target_user_id } = payload;
-	    const hashed = await bcrypt.hash("pass123", 10);
+	    const hashed = await bcrypt.hash("password1234", 10);
 	    await pool.query("UPDATE sys_users SET password_hash = $1 WHERE user_id = $2", [hashed, target_user_id]);
 	    return res.json({ ok: true, message: "Password reset to pass123" });
 	  }
