@@ -270,14 +270,14 @@ async function loadProfessorDashboard() {
                 <li style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; opacity: ${opacity};">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <span>
-                            <strong>${r.name}</strong>
+                            <strong>${r.user_name}</strong>
                             <div class="small muted">${r.time_in ? 'In at ' + r.time_in : 'No time recorded'}</div>
                         </span>
                         <span style="font-weight:bold; font-size:10px; color:${statusColor}">${r.status}</span>
                     </div>
                 </li>
                 <li style="padding: 10px 0; border-bottom: 1px solid #f1f5f9;">
-                    <span><strong>${r.name}</strong></span>
+                    <span><strong>${r.user_name}</strong></span>
                     <button onclick="resetSinglePassword('${r.user_id}')" class="small" style="float:right; background:none; border:1px solid #ddd;">Reset PW</button>
                 </li>`;
         });
@@ -541,7 +541,7 @@ async function loadAttendanceSummary() {
         res.summary.forEach(row => {
             tableHtml += `
                 <tr>
-                    <td style="padding: 8px; border: 1px solid #e2e8f0;"><strong>${row.name}</strong></td>
+                    <td style="padding: 8px; border: 1px solid #e2e8f0;"><strong>${row.user_name}</strong></td>
                     <td style="padding: 8px; border: 1px solid #e2e8f0;">${row.present_count}</td>
                     <td style="padding: 8px; border: 1px solid #e2e8f0;">${row.late_count}</td>
                     <td style="padding: 8px; border: 1px solid #e2e8f0;">${row.absent_count}</td>
