@@ -229,6 +229,33 @@ function showApp() {
     }
 }
 
+function showApp() {
+    document.getElementById('auth').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    
+    // Control section visibility
+    const controls = document.getElementById('controls');
+    // Allow both Professors and Officers to see the Live Dashboard
+    const canSeeLiveStats = currentUser.role === 'officer' || currentUser.role === 'professor';
+
+    controls.style.display = 'block';
+    document.getElementById('officerControls').style.display = (currentUser.role === 'officer') ? 'block' : 'none';
+    document.getElementById('studentControls').style.display = (currentUser.role === 'student') ? 'block' : 'none';
+
+    loadTodaySchedule();
+    
+    // Show both the Live Monitor and Summary to Professors AND Officers
+    document.getElementById('profControls').style.display = canSeeLiveStats ? 'block' : 'none';
+    
+    // If you want the "Attendance Overview" card to also be restricted:
+    const summaryCard = document.querySelector('#profSummaryOutput').closest('.card');
+    if (summaryCard) summaryCard.style.display = canSeeLiveStats ? 'block' : 'none';
+
+    if (canSeeLiveStats) {
+        loadProfessorDashboard();
+    }
+}
+
 async function loadProfessorDashboard() {
     const container = document.getElementById('profDashboardOutput');
     const classCode = "BPAOUMN-1B"; 
@@ -492,6 +519,7 @@ document.getElementById('generateReport').onclick = async () => {
 
 async function loadAttendanceSummary() {
     const container = document.getElementById('profSummaryOutput');
+    container.innerHTML = '<div class="small muted"><i class="fa fa-spinner fa-spin"></i> Calculating totals...</div>';
     const classCode = "BPAOUMN-1B"; // Dynamic if needed
     
     const res = await api('prof_summary', { class_code: classCode });
