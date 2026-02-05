@@ -236,73 +236,57 @@ app.post('/api', async (req, res) => {
 
 	  case 'report': {
 		  const { type, class_code, student_id } = payload;
-		  let rows = [];
-		  let title = "";
+		  const pdfDoc = await PDFDocument.create();
+		  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+		  const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 		  let filename = "";
 		
 		  if (type === 'class') {
-		    const res = await pool.query(
-		      `SELECT a.class_date, a.student_id, u.user_name, a.attendance_status, a.time_in 
+		    // 1. Fetch Class Header & Schedule Info
+		    const classInfo = await pool.query(
+		      `SELECT s.*, u.user_name as professor_name 
+		       FROM schedules s 
+		       JOIN sys_users u ON s.professor_id = u.user_id 
+		       WHERE s.class_code = $1`, [class_code]
+		    );
+		    
+		    // 2. Fetch Attendance Records (The "ClassReport" Tab)
+		    const records = await pool.query(
+		      `SELECT a.*, u.user_name 
 		       FROM attendance a 
 		       JOIN sys_users u ON a.student_id = u.user_id 
-		       WHERE a.class_code = $1 ORDER BY a.class_date DESC, u.user_name ASC`,
-		      [class_code]
+		       WHERE a.class_code = $1 ORDER BY a.class_date DESC`, [class_code]
 		    );
-		    rows = res.rows;
-		    title = `Class Attendance Report: ${class_code}`;
-		    filename = `Report_Class_${class_code}.pdf`;
-		  } else {
-		    const res = await pool.query(
-		      `SELECT a.class_date, a.class_code, s.class_name, a.attendance_status, a.time_in 
+		
+		    // 3. Fetch Excuse Logs (The "ClassExcuseLog" Tab)
+		    const excuses = await pool.query(
+		      `SELECT a.class_date, u.student_id, u.user_name, a.reason 
+		       FROM attendance a 
+		       JOIN sys_users u ON a.student_id = u.user_id 
+		       WHERE a.class_code = $1 AND a.reason IS NOT NULL`, [class_code]
+		    );
+		
+		    filename = `ClassReport_${class_code}.pdf`;
+		    await generateClassPDF(pdfDoc, classInfo.rows[0], records.rows, excuses.rows, font, boldFont);
+		
+		  } else if (type === 'person') {
+		    // 1. Fetch Student Info
+		    const studentInfo = await pool.query('SELECT user_name FROM sys_users WHERE user_id = $1', [student_id]);
+		    
+		    // 2. Fetch Student History (The "StudentReport" Tab)
+		    const history = await pool.query(
+		      `SELECT a.*, s.class_name, a.reason
 		       FROM attendance a 
 		       JOIN schedules s ON a.class_code = s.class_code 
-		       WHERE a.student_id = $1 ORDER BY a.class_date DESC`,
-		      [student_id]
+		       WHERE a.student_id = $1 AND a.reason IS NOT NULL ORDER BY a.class_date DESC`, [student_id]
 		    );
-		    rows = res.rows;
-		    const userRes = await pool.query('SELECT user_name FROM sys_users WHERE user_id = $1', [student_id]);
-		    title = `Student Attendance Report: ${userRes.rows[0]?.name || student_id}`;
-		    filename = `Report_Student_${student_id}.pdf`;
+		
+		    filename = `StudentReport_${student_id}.pdf`;
+		    await generateStudentPDF(pdfDoc, studentInfo.rows[0], history.rows, font, boldFont);
 		  }
 		
-		  // --- Generate PDF using pdf-lib ---
-		  const pdfDoc = await PDFDocument.create();
-		  let page = pdfDoc.addPage([600, 800]);
-		  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-		  const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-		
-		  page.drawText(title, { x: 50, y: 750, size: 18, font: boldFont });
-		  page.drawText(`Generated on: ${getManilaNow().toFormat('f')}`, { x: 50, y: 730, size: 10, font });
-		
-		  let y = 700;
-		  // Header Row
-		  page.drawText('Date', { x: 50, y, size: 10, font: boldFont });
-		  page.drawText(type === 'class' ? 'Student' : 'Class', { x: 150, y, size: 10, font: boldFont });
-		  page.drawText('Status', { x: 400, y, size: 10, font: boldFont });
-		  page.drawText('Time', { x: 500, y, size: 10, font: boldFont });
-		
-		  y -= 20;
-		
-		  // Data Rows
-		  rows.forEach((row) => {
-		    if (y < 50) { // Add new page if space is low
-		      page = pdfDoc.addPage([600, 800]);
-		      y = 750;
-		    }
-		    const dateStr = DateTime.fromJSDate(row.class_date).toISODate();
-		    const secondCol = type === 'class' ? row.user_name : row.class_name;
-		    
-		    page.drawText(dateStr, { x: 50, y, size: 9, font });
-		    page.drawText(String(secondCol).substring(0, 30), { x: 150, y, size: 9, font });
-		    page.drawText(row.status, { x: 400, y, size: 9, font });
-		    page.drawText(row.time_in || '--', { x: 500, y, size: 9, font });
-		    y -= 15;
-		  });
-		
 		  const pdfBytes = await pdfDoc.save();
-		  const pdfBase64 = Buffer.from(pdfBytes).toString('base64');
-		
-		  return res.json({ ok: true, pdfMain: pdfBase64, filename });
+		  return res.json({ ok: true, pdfMain: Buffer.from(pdfBytes).toString('base64'), filename });
 	  }
 
 	  // --- DROPDOWNS (For Officer Reports) ---
@@ -364,6 +348,27 @@ app.post('/api', async (req, res) => {
 	    return res.json({ ok: true, message: "Attendance credited successfully." });
 	  }
 
+	  case 'submit_excuse': {
+	    const { class_code, student_id, reason } = payload;
+	    const now = getManilaNow();
+	    const dateStr = now.toISODate();
+	
+	    if (!reason || reason.trim().length < 5) {
+	        return res.json({ ok: false, error: "Please provide a valid reason (min 5 characters)." });
+	    }
+	
+	    // This updates an existing record (Late/Absent/Incomplete) 
+	    // or creates a new one marked as 'EXCUSED'
+	    await pool.query(`
+	        INSERT INTO attendance (class_date, class_code, student_id, attendance_status, reason, time_in)
+	        VALUES ($1, $2, $3, 'EXCUSED', $4, $5)
+	        ON CONFLICT (class_date, class_code, student_id) 
+	        DO UPDATE SET reason = $4, attendance_status = 'EXCUSED'
+	    `, [dateStr, class_code, student_id, reason.trim(), now.toFormat('HH:mm:ss')]);
+	
+	    return res.json({ ok: true, message: "Excuse filed successfully." });
+	  }
+
 	  case 'health_check': {
 		  try {
 		    // Perform a simple query to verify DB connection
@@ -392,6 +397,40 @@ app.post('/api', async (req, res) => {
   }
 });
 
+async function generateClassPDF(pdfDoc, info, records, excuses, font, bold) {
+  let page = pdfDoc.addPage([600, 800]);
+  let y = 750;
+
+  // Header Section (mimicking Excel top rows)
+  page.drawText(`Class Code: ${info.class_code}`, { x: 50, y, size: 12, font: bold });
+  page.drawText(`Class Name: ${info.class_name}`, { x: 50, y: y - 15, size: 10, font });
+  page.drawText(`Professor: ${info.professor_name}`, { x: 50, y: y - 30, size: 10, font });
+  y -= 60;
+
+  // Attendance Table
+  page.drawText('Attendance Log', { x: 50, y, size: 12, font: bold });
+  y -= 20;
+  records.forEach(r => {
+    if (y < 50) { page = pdfDoc.addPage([600, 800]); y = 750; }
+    const date = DateTime.fromJSDate(r.class_date).toFormat('yyyy-MM-dd');
+    page.drawText(`${date} | ${r.user_name.substring(0,25)} | ${r.attendance_status}`, { x: 50, y, size: 9, font });
+    y -= 15;
+  });
+
+  // Excuse Log Section (New Page)
+  if (excuses.length > 0) {
+    page = pdfDoc.addPage([600, 800]);
+    y = 750;
+    page.drawText('Class Excuse Log', { x: 50, y, size: 14, font: bold });
+    y -= 30;
+    excuses.forEach(e => {
+      const date = DateTime.fromJSDate(e.class_date).toFormat('yyyy-MM-dd');
+      page.drawText(`${date} - ${e.user_name}: ${e.reason}`, { x: 50, y, size: 9, font });
+      y -= 15;
+    });
+  }
+}
+
 const initDb = async () => {
   const queryText = `
     CREATE TABLE IF NOT EXISTS sys_users (
@@ -409,29 +448,18 @@ const initDb = async () => {
       end_time TIME, 
       professor_id TEXT
     );
-    
-    CREATE TABLE IF NOT EXISTS attendance (
+
+	CREATE TABLE IF NOT EXISTS attendance (
       class_date DATE, 
       class_code TEXT REFERENCES schedules(class_code), 
       student_id TEXT REFERENCES sys_users(user_id), 
       attendance_status TEXT, 
       time_in TIME, 
       time_out TIME,
-      professor_id TEXT REFERENCES professors(professor_id),
       reason TEXT,
-      constraint pk_attendance_data primary key (class_date, class_code, student_id)
+      PRIMARY KEY (class_date, class_code, student_id)
     );
-        
-    CREATE TABLE IF NOT EXISTS roster (
-      student_id TEXT PRIMARY KEY, 
-      student_name TEXT
-    );
-        
-    CREATE TABLE IF NOT EXISTS professors (
-      professor_id TEXT PRIMARY KEY, 
-      professor_name TEXT
-    );
-        
+       
     CREATE TABLE IF NOT EXISTS config (
       config_key TEXT PRIMARY KEY, 
       config_value TEXT,
