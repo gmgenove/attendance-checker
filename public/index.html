@@ -25,8 +25,12 @@
         .class-card {display: flex; justify-content: space-between; align-items: flex-start; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px 16px; margin-bottom: 10px;}
         .class-actions {display: flex; flex-direction: column; gap: 6px;}
         .checkin-btn {background: #10b981; color: white; border:none}
+        .checkout-btn {background: #f59e0b; /* Orange */ color: white; border: none; margin-top: 5px;}
+        .checkout-btn:hover { background: #d97706; }
         .footer {width: 100%; margin-top: 15px; text-align: center; font-size: 13px; color: #aaa;}
         #loading-bar { height: 3px; width: 0%; background: #3b82f6; position: fixed; top: 0; left: 0; transition: width 0.3s;}
+        @keyframes subtle-shake { 0% { transform: translateX(0); } 25% { transform: translateX(2px); } 50% { transform: translateX(-2px); } 75% { transform: translateX(2px); } 100% { transform: translateX(0); } }
+        .reminder-active {animation: subtle-shake 0.5s ease-in-out;}
     </style>
 </head>
 <body>
@@ -106,6 +110,15 @@
                 
                     <div id="profDashboardOutput" class="small muted">Loading Live Stats...</div>
                     <button onclick="loadProfessorDashboard()" style="margin-top:10px">Refresh Live Stats</button>
+                </div>
+
+                <div class="card">
+                    <div style="display:flex; justify-content: space-between; align-items: center;">
+                        <h3>Attendance Overview</h3>
+                        <button onclick="loadAttendanceSummary()" class="small">View Totals</button>
+                    </div>
+                    
+                    <div id="profSummaryOutput"></div>
                 </div>
             </div>
         </div>
