@@ -154,19 +154,16 @@ app.post('/api', async (req, res) => {
 		const dateStr = now.toISODate();
 		const timeStr = now.toFormat('HH:mm:ss');
 		
-		// 1. Verify they checked in first
+		// Updated columns: class_date instead of date, attendance_status instead of status
 		const check = await pool.query(
-			"SELECT attendance_status FROM attendance WHERE date = $1 AND class_code = $2 AND student_id = $3",
+			"SELECT attendance_status FROM attendance WHERE class_date = $1 AND class_code = $2 AND student_id = $3",
 			[dateStr, class_code, student_id]
 		);
 		
-		if (check.rows.length === 0) {
-			return res.json({ ok: false, error: "You must check in before checking out." });
-		}
+		if (check.rows.length === 0) return res.json({ ok: false, error: "You must check in before checking out." });
 		
-		// 2. Record the check-out
 		await pool.query(
-			"UPDATE attendance SET time_out = $1 WHERE date = $2 AND class_code = $3 AND student_id = $4",
+			"UPDATE attendance SET time_out = $1 WHERE class_date = $2 AND class_code = $3 AND student_id = $4",
 			[timeStr, dateStr, class_code, student_id]
 		);
 		
@@ -216,6 +213,25 @@ app.post('/api', async (req, res) => {
 				stats: stats.rows, 
 				roster: roster.rows 
 			});
+	  }
+
+	  case 'prof_summary': {
+	    const { class_code } = payload;
+		const summary = await pool.query(`
+		    SELECT  
+		        u.user_name,
+		        COUNT(CASE WHEN a.attendance_status = 'PRESENT' THEN 1 END) as present_count,
+		        COUNT(CASE WHEN a.attendance_status = 'LATE' THEN 1 END) as late_count,
+		        COUNT(CASE WHEN a.attendance_status = 'ABSENT' THEN 1 END) as absent_count,
+		        COUNT(CASE WHEN a.attendance_status = 'INCOMPLETE' THEN 1 END) as incomplete_count
+		    FROM sys_users u
+		    LEFT JOIN attendance a ON u.user_id = a.student_id AND a.class_code = $1
+		    WHERE u.user_role = 'student'
+		    GROUP BY u.user_id, u.user_name
+		    ORDER BY u.user_name ASC
+		`, [class_code]);
+	
+	    return res.json({ ok: true, summary: summary.rows });
 	  }
 
 	  case 'report': {
@@ -274,7 +290,7 @@ app.post('/api', async (req, res) => {
 		      y = 750;
 		    }
 		    const dateStr = DateTime.fromJSDate(row.date).toISODate();
-		    const secondCol = type === 'class' ? row.name : row.class_name;
+		    const secondCol = type === 'class' ? row.user_name : row.class_name;
 		    
 		    page.drawText(dateStr, { x: 50, y, size: 9, font });
 		    page.drawText(String(secondCol).substring(0, 30), { x: 150, y, size: 9, font });
@@ -287,26 +303,6 @@ app.post('/api', async (req, res) => {
 		  const pdfBase64 = Buffer.from(pdfBytes).toString('base64');
 		
 		  return res.json({ ok: true, pdfMain: pdfBase64, filename });
-	  }
-
-	  case 'prof_summary': {
-	    const { class_code } = payload;
-	    
-	    const summary = await pool.query(`
-	        SELECT 
-	            u.user_name,
-	            COUNT(CASE WHEN a.attendance_status = 'PRESENT' THEN 1 END) as present_count,
-	            COUNT(CASE WHEN a.attendance_status = 'LATE' THEN 1 END) as late_count,
-	            COUNT(CASE WHEN a.attendance_status = 'ABSENT' THEN 1 END) as absent_count,
-	            COUNT(CASE WHEN a.attendance_status = 'INCOMPLETE' THEN 1 END) as incomplete_count
-	        FROM users u
-	        LEFT JOIN attendance a ON u.id = a.student_id AND a.class_code = $1
-	        WHERE u.user_role = 'student'
-	        GROUP BY u.user_id, u.user_name
-	        ORDER BY u.user_name ASC
-	    `, [class_code]);
-	
-	    return res.json({ ok: true, summary: summary.rows });
 	  }
 
 	  // --- DROPDOWNS (For Officer Reports) ---
@@ -331,26 +327,27 @@ app.post('/api', async (req, res) => {
       }
 
 	  case 'check_holiday': {
-		    const today = getManilaNow().toISODate();
-		    const result = await pool.query('SELECT holiday_name, holiday_type FROM holidays WHERE holiday_date = $1', [today]);
-		    
-		    if (result.rows.length > 0) {
-		        return res.json({ 
-		            ok: true, 
-		            isHoliday: true, 
-		            holidayName: result.rows[0].holiday_name, 
-		            holidayType: result.rows[0].holiday_type 
-		        });
-		    }
-		    return res.json({ ok: true, isHoliday: false });
-		  }
+		const today = getManilaNow().toISODate();
+		const result = await pool.query('SELECT holiday_name, holiday_type FROM holidays WHERE holiday_date = $1', [today]);
+		
+		if (result.rows.length > 0) {
+			return res.json({ 
+				ok: true, 
+				isHoliday: true, 
+				holidayName: result.rows[0].holiday_name, 
+				holidayType: result.rows[0].holiday_type 
+			});
+		}
+		return res.json({ ok: true, isHoliday: false });
+	  }
 	
-		  case 'credit_attendance': {
+	  case 'credit_attendance': {
 	    const { class_code, student_id } = payload;
 	    const now = getManilaNow();
-	    
-	    // Define your adjustment window (e.g., first 2 weeks of the semester)
-	    const adjustmentEnd = DateTime.fromISO("2026-02-28").setZone(TIMEZONE);
+
+		const config = await pool.query("SELECT config_value FROM config WHERE config_key = 'sem2_adjustment_end'");
+		// Define your adjustment window (e.g., first 2 weeks of the semester)
+		const adjustmentEnd = DateTime.fromISO(config.rows[0].config_value).setZone(TIMEZONE);
 	
 	    if (now > adjustmentEnd) {
 	        return res.json({ ok: false, error: "Adjustment period has ended." });
@@ -541,14 +538,14 @@ const autoTagAbsentees = async () => {
 
         // B. Mark "Forgetful" students as INCOMPLETE
         // (They checked in but never checked out)
-        await pool.query(`
-          UPDATE attendance 
-          SET attendance_status = 'INCOMPLETE'
-          WHERE date = $1 
-          AND class_code = $2 
-          AND time_out IS NULL 
-          AND attendance_status IN ('PRESENT', 'LATE')
-        `, [dateStr, sched.class_code]);
+		await pool.query(`
+		  UPDATE attendance 
+		  SET attendance_status = 'INCOMPLETE'
+		  WHERE class_date = $1
+		  AND class_code = $2 
+		  AND time_out IS NULL 
+		  AND attendance_status IN ('PRESENT', 'LATE')
+		`, [dateStr, sched.class_code]);
       }
     }
   } catch (err) {
