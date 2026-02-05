@@ -159,26 +159,39 @@ app.post('/api', async (req, res) => {
         return res.json({ ok: true, record: result.rows[0] || { status: 'not_recorded' } });
       }
 
-      // --- DROPDOWNS (For Officer Reports) ---
-      case 'get_dropdowns': {
-        const classes = await pool.query('SELECT class_code as code, class_name as name FROM schedules');
-        const students = await pool.query('SELECT user_id, user_name FROM sys_users WHERE user_role = \'student\'');
-        return res.json({ ok: true, classes: classes.rows, students: students.rows });
-      }
-
-      // --- CONFIG ---
-      case 'getConfig': {
-        // You can store these in a 'config' table, but hardcoding here matches your GAS setup
-        return res.json({
-          ok: true,
-          config: {
-            checkin_window_minutes: 10,
-            late_window_minutes: 5,
-            absent_window_minutes: 10,
-            adjustment_end: '2026-12-31' 
-          }
-        });
-      }
+	  case 'prof_dashboard': {
+			const { class_code } = payload;
+			const date = getManilaNow().toISODate();
+			
+			// 1. Get counts for the header cards
+			const stats = await pool.query(`
+				SELECT status, COUNT(*) as count 
+				FROM attendance 
+				WHERE class_code = $1 AND date = $2
+				GROUP BY status
+			`, [class_code, date]);
+			
+			// 2. Get the ENTIRE roster with their current status for this class/date
+			const roster = await pool.query(`
+				SELECT 
+					u.name, 
+					a.time_in, 
+					COALESCE(a.status, 'NOT YET ARRIVED') as status
+				FROM users u
+				LEFT JOIN attendance a ON u.id = a.student_id AND a.class_code = $1 AND a.date = $2
+				WHERE u.role = 'student'
+				ORDER BY 
+					CASE WHEN a.status IS NULL THEN 1 ELSE 0 END, -- Show checked-in students first
+					a.time_in DESC, 
+					u.name ASC
+			`, [class_code, date]);
+			
+			return res.json({ 
+				ok: true, 
+				stats: stats.rows, 
+				roster: roster.rows 
+			});
+	  }
 
 	  case 'report': {
 		  const { type, class_code, student_id } = payload;
@@ -251,19 +264,62 @@ app.post('/api', async (req, res) => {
 		  return res.json({ ok: true, pdfMain: pdfBase64, filename });
 	  }
 
+	  // --- DROPDOWNS (For Officer Reports) ---
+      case 'get_dropdowns': {
+        const classes = await pool.query('SELECT class_code as code, class_name as name FROM schedules');
+        const students = await pool.query('SELECT user_id, user_name FROM sys_users WHERE user_role = \'student\'');
+        return res.json({ ok: true, classes: classes.rows, students: students.rows });
+      }
+
+      // --- CONFIG ---
+      case 'getConfig': {
+        // You can store these in a 'config' table, but hardcoding here matches your GAS setup
+        return res.json({
+          ok: true,
+          config: {
+            checkin_window_minutes: 10,
+            late_window_minutes: 5,
+            absent_window_minutes: 10,
+            adjustment_end: '2026-12-31' 
+          }
+        });
+      }
+
 	  case 'check_holiday': {
-	    const today = getManilaNow().toISODate();
-	    const result = await pool.query('SELECT holiday_name, holiday_type FROM holidays WHERE holiday_date = $1', [today]);
+		    const today = getManilaNow().toISODate();
+		    const result = await pool.query('SELECT holiday_name, holiday_type FROM holidays WHERE holiday_date = $1', [today]);
+		    
+		    if (result.rows.length > 0) {
+		        return res.json({ 
+		            ok: true, 
+		            isHoliday: true, 
+		            holidayName: result.rows[0].holiday_name, 
+		            holidayType: result.rows[0].holiday_type 
+		        });
+		    }
+		    return res.json({ ok: true, isHoliday: false });
+		  }
+	
+		  case 'credit_attendance': {
+	    const { class_code, student_id } = payload;
+	    const now = getManilaNow();
 	    
-	    if (result.rows.length > 0) {
-	        return res.json({ 
-	            ok: true, 
-	            isHoliday: true, 
-	            holidayName: result.rows[0].holiday_name, 
-	            holidayType: result.rows[0].holiday_type 
-	        });
+	    // Define your adjustment window (e.g., first 2 weeks of the semester)
+	    const adjustmentEnd = DateTime.fromISO("2026-02-28").setZone(TIMEZONE);
+	
+	    if (now > adjustmentEnd) {
+	        return res.json({ ok: false, error: "Adjustment period has ended." });
 	    }
-	    return res.json({ ok: true, isHoliday: false });
+	
+	    // Mark as CREDITED for today (or use your logic to loop through semester dates)
+	    await pool.query(`
+	        INSERT INTO attendance (date, class_code, student_id, status, time_in)
+	        VALUES ($1, $2, $3, 'CREDITED', $4)
+	        ON CONFLICT (date, class_code, student_id) 
+	        DO UPDATE SET status = 'CREDITED'
+	    `, [now.toISODate(), class_code, student_id, now.toFormat('HH:mm:ss')]);
+	
+	    return res.json({ ok: true, message: "Attendance credited successfully." });
 	  }
 
 	  case 'health_check': {
