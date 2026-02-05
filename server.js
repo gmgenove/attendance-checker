@@ -253,28 +253,6 @@ app.post('/api', async (req, res) => {
 		  const semStart = semConfig.start;
 		  const semEnd = semConfig.end;
 
-		  const roster = {};
-		  attendance.rows.forEach(r => {
-			  if (!roster[r.student_id]) {
-				roster[r.student_id] = { 
-					name: r.user_name, 
-					records: {},
-					counts: { P: 0, L: 0, A: 0, E: 0, C: 0, H: 0 } 
-				};
-			  }
-			  
-			  if (r.class_date) {
-				const dStr = DateTime.fromJSDate(r.class_date).toISODate();
-				const statusChar = r.attendance_status[0].toUpperCase();
-				roster[r.student_id].records[dStr] = statusChar;
-				
-				// Increment the specific count
-				if (roster[r.student_id].counts[statusChar] !== undefined) {
-					roster[r.student_id].counts[statusChar]++;
-				}
-			  }
-		  });
-
 		  if (type === 'class') {
 			// 2. Fetch Class & Schedule
 		    const classInfo = await pool.query(
@@ -302,13 +280,27 @@ app.post('/api', async (req, res) => {
 		
 		    // Group by student
 		    const roster = {};
-		    attendance.rows.forEach(r => {
-		      if (!roster[r.student_id]) roster[r.student_id] = { name: r.user_name, records: {} };
-		      if (r.class_date) {
-		        const dStr = DateTime.fromJSDate(r.class_date).toISODate();
-		        roster[r.student_id].records[dStr] = r.attendance_status[0]; // Take first letter: P, L, A, E
-		      }
-		    });
+			const roster = {};
+			attendance.rows.forEach(r => {
+			  if (!roster[r.student_id]) {
+				roster[r.student_id] = { 
+					name: r.user_name, 
+					records: {},
+					counts: { P: 0, L: 0, A: 0, E: 0, C: 0, H: 0 } 
+				};
+			  }
+			  
+			  if (r.class_date) {
+				const dStr = DateTime.fromJSDate(r.class_date).toISODate();
+				const statusChar = r.attendance_status[0].toUpperCase();
+				roster[r.student_id].records[dStr] = statusChar;
+				
+				// Increment the specific count
+				if (roster[r.student_id].counts[statusChar] !== undefined) {
+					roster[r.student_id].counts[statusChar]++;
+				}
+			  }
+			});
 
 			// Fetch Excuse Logs for this Class (matches ClassExcuseLog tab)
 		    const excuses = await pool.query(
@@ -492,7 +484,7 @@ app.post('/api', async (req, res) => {
 
 		const config = await pool.query("SELECT config_value FROM config WHERE config_key = 'sem2_adjustment_end'");
 		// Define your adjustment window (e.g., first 2 weeks of the semester)
-		const adjustmentEnd = DateTime.fromISO(semConfig.adjEnd).setZone(TIMEZONE);
+		const adjustmentEnd = semConfig.adjEnd;
 	
 	    if (now > adjustmentEnd) {
 	        return res.json({ ok: false, error: "Adjustment period has ended." });
@@ -577,7 +569,7 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
   
   // SEMESTER INFO
   page.drawText(`Semester:`, { x: 400, y, size: 10, font: bold });
-  page.drawText(`${semConfig.name})`, { x: 470, y, size: 10, font });
+  page.drawText(`${semConfig.name}`, { x: 470, y, size: 10, font });
 	
   page.drawText(`Academic Year:`, { x: 600, y, size: 10, font: bold });
   page.drawText(`${semConfig.year}`, { x: 700, y, size: 10, font });
@@ -668,7 +660,7 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
     page.drawText(`Student Name:`, { x: 40, y, size: 10, font: bold });
     page.drawText(`${student.user_name}`, { x: 130, y, size: 10, font });
     page.drawText(`Academic Year:`, { x: 400, y, size: 10, font: bold });
-    page.drawText(`${sem.start.year}-${sem.start.year + 1}`, { x: 480, y, size: 10, font });
+    page.drawText(`${sem.year}`, { x: 480, y, size: 10, font });
 
     y -= 40;
 
