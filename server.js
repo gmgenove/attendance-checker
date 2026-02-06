@@ -223,7 +223,7 @@ app.post('/api', async (req, res) => {
 				COALESCE(a.attendance_status, 'NOT YET ARRIVED') as status
 			FROM sys_users u
 			LEFT JOIN attendance a ON u.user_id = a.student_id AND a.class_code = $1 AND a.class_date = $2
-			WHERE (u.user_role = 'student' OR u.user_role = 'officer')
+			WHERE u.user_role IN ('student', 'officer')
 			ORDER BY 
 				CASE WHEN a.attendance_status IS NULL THEN 1 ELSE 0 END,
 				a.time_in DESC, 
@@ -248,7 +248,7 @@ app.post('/api', async (req, res) => {
 		        COUNT(CASE WHEN a.attendance_status = 'INCOMPLETE' THEN 1 END) as incomplete_count
 		    FROM sys_users u
 		    LEFT JOIN attendance a ON u.user_id = a.student_id AND a.class_code = $1
-		    WHERE (u.user_role = 'student' OR u.user_role = 'officer')
+		    WHERE u.user_role IN ('student', 'officer')
 		    GROUP BY u.user_id, u.user_name
 		    ORDER BY u.user_name ASC
 		`, [class_code]);
@@ -277,7 +277,7 @@ app.post('/api', async (req, res) => {
 	            curr = curr.plus({ days: 1 });
 	        }
 	
-	        const attendance = await pool.query(`SELECT a.*, u.user_name FROM sys_users u LEFT JOIN attendance a ON u.user_id = a.student_id AND a.class_code = $1 WHERE (u.user_role = 'student' OR u.user_role = 'officer') ORDER BY u.user_name ASC`, [class_code]);
+	        const attendance = await pool.query(`SELECT a.*, u.user_name FROM sys_users u LEFT JOIN attendance a ON u.user_id = a.student_id AND a.class_code = $1 WHERE u.user_role IN ('student', 'officer') ORDER BY u.user_name ASC`, [class_code]);
 	        
 	        const roster = {};
 	        attendance.rows.forEach(r => {
@@ -394,7 +394,7 @@ app.post('/api', async (req, res) => {
 	    try {
 	        // Reset all students in the sys_users table
 	        const result = await pool.query(
-	            "UPDATE sys_users SET password_hash = $1 WHERE (user_role = 'student' OR user_role = 'officer')",
+	            "UPDATE sys_users SET password_hash = $1 WHERE user_role IN ('student', 'officer')",
 	            [hashedDefault]
 	        );
 	
@@ -531,7 +531,7 @@ app.post('/api', async (req, res) => {
 	            INSERT INTO attendance (class_date, class_code, student_id, attendance_status, reason, time_in)
 	            SELECT $1, $2, user_id, 'SUSPENDED', $3, '00:00:00'
 	            FROM sys_users
-	            WHERE (user_role = 'student' OR user_role = 'officer')
+	            WHERE user_role IN ('student', 'officer')
 	            ON CONFLICT (class_date, class_code, student_id) 
 	            DO UPDATE SET attendance_status = 'SUSPENDED', reason = $3
 	        `, [targetDate, class_code, reason.trim()]);
@@ -982,7 +982,7 @@ const autoTagAbsentees = async () => {
           INSERT INTO attendance (class_date, class_code, student_id, attendance_status, reason, time_in)
           SELECT $1, $2, u.user_id, 'HOLIDAY', $3, '00:00:00'
           FROM sys_users u
-          WHERE (u.user_role = 'student' OR u.user_role = 'officer')
+          WHERE u.user_role IN ('student', 'officer')
           AND NOT EXISTS (
             SELECT 1 FROM attendance a 
             WHERE a.class_date = $1 AND a.class_code = $2 AND a.student_id = u.user_id
@@ -999,7 +999,7 @@ const autoTagAbsentees = async () => {
           INSERT INTO attendance (class_date, class_code, student_id, attendance_status, time_in)
           SELECT $1, $2, u.user_id, 'ABSENT', '00:00:00'
           FROM sys_users u
-          WHERE (u.user_role = 'student' OR u.user_role = 'officer')
+          WHERE u.user_role IN ('student', 'officer')
           AND NOT EXISTS (
             SELECT 1 FROM attendance a 
             WHERE a.class_date = $1 AND a.class_code = $2 AND a.student_id = u.user_id
