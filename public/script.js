@@ -340,6 +340,32 @@ async function loadTodaySchedule() {
             </div>
         `;
         list.appendChild(card);
+
+        // Send the excuse to the server
+        window.submitExcuse = async (classCode) => {
+            const reasonInput = document.getElementById(`reason-${classCode.replace(/\s+/g)}`);
+            const reason = reasonInput.value;
+        
+            // Null-check before accessing .value to prevent the crash
+            if (!reasonInput) {
+                console.error(`Input field not found for: reason-${classCode.replace(/\s+/g)}`);
+                return alert("System Error: Could not find the excuse input field.");
+            }
+            
+            const res = await api('submit_excuse', { 
+                class_code: classCode, 
+                student_id: currentUser.id, 
+                reason: reason 
+            });
+        
+            if (res.ok) {
+                alert("Excuse filed! This will be included in the official Excuse Log.");
+                loadTodaySchedule(); 
+            } else {
+                alert(res.error);
+            }
+        };
+        
         updateCheckinUI(cls);
     });
 }
@@ -648,31 +674,6 @@ window.toggleExcuse = (e, classCode) => {
     e.preventDefault();
     const area = document.getElementById(`excuse-area-${classCode.replace(/\s+/g)}`);
     area.style.display = area.style.display === 'none' ? 'block' : 'none';
-};
-
-// Send the excuse to the server
-window.submitExcuse = async (classCode) => {
-    const reasonInput = document.getElementById(`reason-${classCode.replace(/\s+/g)}`);
-    const reason = reasonInput.value;
-
-    // Null-check before accessing .value to prevent the crash
-    if (!reasonInput) {
-        console.error(`Input field not found for: reason-${classCode.replace(/\s+/g)}`);
-        return alert("System Error: Could not find the excuse input field.");
-    }
-    
-    const res = await api('submit_excuse', { 
-        class_code: classCode, 
-        student_id: currentUser.id, 
-        reason: reason 
-    });
-
-    if (res.ok) {
-        alert("Excuse filed! This will be included in the official Excuse Log.");
-        loadTodaySchedule(); 
-    } else {
-        alert(res.error);
-    }
 };
 
 window.bulkStatusUpdate = async (studentId, type) => {
