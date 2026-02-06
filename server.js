@@ -183,12 +183,16 @@ app.post('/api', async (req, res) => {
 		const timeStr = now.toFormat('HH:mm:ss');
 		
 		// Updated columns: class_date instead of date, attendance_status instead of status
-		const check = await pool.query(
+		const current = await pool.query(
 			"SELECT attendance_status FROM attendance WHERE class_date = $1::date AND class_code = $2 AND student_id = $3",
-			[dateStr, class_code, student_id]
+			[getManilaNow().toISODate(), class_code, student_id]
 		);
-		
-		if (check.rows.length === 0) return res.json({ ok: false, error: "You must check in before checking out." });
+
+		if (current.rows.length > 0 && current.rows[0].attendance_status === 'EXCUSED') {
+	        return res.json({ ok: false, error: "Cannot check out: You are currently marked as Excused." });
+	    } else if (current.rows.length === 0) { 
+			return res.json({ ok: false, error: "You must check in before checking out." }); 
+		}
 		
 		await pool.query(
 			"UPDATE attendance SET time_out = $1 WHERE class_date = $2::date AND class_code = $3 AND student_id = $4",
