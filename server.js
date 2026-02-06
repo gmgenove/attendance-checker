@@ -25,7 +25,7 @@ const getManilaNow = () => DateTime.now().setZone(TIMEZONE);
 // Simple GET route for UptimeRobot
 app.get('/ping', (req, res) => res.send('System Awake'));
 
-app.get('/health', async (req, res) => {
+app.get('/health_check', async (req, res) => {
   try {
 	// Perform a simple query to verify DB connection
     const result = await pool.query('SELECT NOW() as server_time');
