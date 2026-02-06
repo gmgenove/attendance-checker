@@ -301,10 +301,15 @@ app.post('/api', async (req, res) => {
 	        
 	        const subjects = {};
 	        attendance.rows.forEach(r => {
-	            if (!subjects[r.class_code]) subjects[r.class_code] = { name: r.class_name, records: {}, counts: { P:0, L:0, A:0, E:0, C:0, H:0, D:0 } };
+	            if (!subjects[r.class_code]) subjects[r.class_code] = { name: r.class_name, records: {}, counts: { P: 0, L: 0, A: 0, E: 0, C: 0, H: 0, S: 0, D: 0 } };
 	            const dStr = DateTime.fromJSDate(r.class_date).toISODate();
-	            const sChar = r.attendance_status[0].toUpperCase();
-	            subjects[r.class_code].records[dStr] = sChar;
+	            // Character Mapping Consistency
+			    let statusChar = r.attendance_status[0].toUpperCase();
+			    if (r.attendance_status === 'HOLIDAY') statusChar = 'H';
+			    if (r.attendance_status === 'SUSPENDED') statusChar = 'S';
+			    if (r.attendance_status === 'DROPPED') statusChar = 'D';
+			
+			    subjects[r.class_code].records[dStr] = statusChar;
 	            if (subjects[r.class_code].counts[sChar] !== undefined) subjects[r.class_code].counts[sChar]++;
 	        });
 	
@@ -726,19 +731,37 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
         page.drawText(sub.name.substring(0, 40), { x: 120, y, size: 7, font });
 
         // Since subjects have different dates, we list the statuses in order of occurrence
-        const sortedDates = Object.keys(sub.records).sort();
-        sortedDates.slice(0, 35).forEach((dStr, i) => {
-            const status = sub.records[dStr];
-            page.drawText(status, { x: startX + (i * colWidth), y, size: 7, font });
-        });
+		const sortedDates = Object.keys(sub.records).sort();
+		sortedDates.slice(0, 35).forEach((dStr, i) => {
+		    const status = sub.records[dStr];
+
+		    let statusColor = rgb(0, 0, 0); // Default Black
+		    if (status === 'P') statusColor = rgb(0, 0.5, 0);     // Green
+		    if (status === 'A') statusColor = rgb(0.8, 0, 0);     // Red
+		    if (status === 'H') statusColor = rgb(0.2, 0.5, 0.8); // Blue (Holiday)
+		    if (status === 'S') statusColor = rgb(0.5, 0.2, 0.7); // Purple (Suspension)
+		    if (status === 'D') statusColor = rgb(0.5, 0.5, 0.5); // Gray (Dropped)
+
+			page.drawText(status, { x: startX + (i * colWidth), y, size: 7, font, color: statusColor });
+		});
 
         // Totals for this specific subject
         const presentTotal = sub.counts.P + sub.counts.L + sub.counts.C;
         const totalSessions = Object.keys(sub.records).length;
         const perc = totalSessions > 0 ? Math.round((presentTotal / totalSessions) * 100) : 0;
 
-        page.drawText(`${presentTotal}`, { x: totalX, y, size: 7, font });
-        page.drawText(`${perc}%`, { x: totalX + 40, y, size: 7, font: bold });
+		const c = sub.counts;
+		const presentTotal = (c.P || 0) + (c.L || 0) + (c.C || 0);
+		const excusedSessions = (c.H || 0) + (c.S || 0) + (c.D || 0);
+		const totalSessions = Object.keys(sub.records).length;
+
+		// Subtracting excused/holiday/dropped days from the denominator
+		const totalPossible = totalSessions - excusedSessions;
+		const perc = totalPossible > 0 ? Math.round((presentTotal / totalPossible) * 100) : 0;
+
+		// Draw Totals for the Subject Row
+		page.drawText(`${presentTotal}`, { x: totalX, y, size: 7, font });
+		page.drawText(`${perc}%`, { x: totalX + 40, y, size: 7, font: bold });
         
         page.drawLine({ start: { x: 40, y: y - 2 }, end: { x: 970, y: y - 2 }, thickness: 0.1, color: rgb(0.8, 0.8, 0.8) });
     });
