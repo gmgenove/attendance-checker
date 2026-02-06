@@ -415,7 +415,7 @@ async function updateCheckinUI(cls) {
             statusSpan.textContent = "Check-in window is OPEN";
             statusSpan.style.color = "#10b981";
             if (timer) clearInterval(timer); // Stop counting down once open
-        } else if (now > absentThreshold) {
+        } else if (tzNow > absentThreshold) {
             btn.disabled = true;
             statusSpan.textContent = "Check-in closed (Absent)";
             statusSpan.style.color = "#ef4444";
