@@ -511,7 +511,18 @@ app.post('/api', async (req, res) => {
 	  case 'submit_excuse': {
 	    const { class_code, student_id, reason } = payload;
 	    const now = getManilaNow();
-	    const dateStr = now.toISODate();
+	    const today = now.toISODate();
+		const timestamp = now.toFormat('hh:mm a'); // e.g., 09:45 AM
+
+		// Existing check for duplicates...
+	    const existing = await pool.query(
+	        'SELECT attendance_status FROM attendance WHERE class_date = $1::date AND class_code = $2 AND student_id = $3',
+	        [today, class_code, student_id]
+	    );
+	
+	    if (existing.rows.length > 0) {
+	        return res.json({ ok: false, error: "Already filed for today." });
+	    }
 	
 	    if (!reason || reason.trim().length < 5) {
 	        return res.json({ ok: false, error: "Please provide a valid reason (min 5 characters)." });
@@ -524,9 +535,9 @@ app.post('/api', async (req, res) => {
 	        VALUES ($1, $2, $3, 'EXCUSED', $4, $5)
 	        ON CONFLICT (class_date, class_code, student_id) 
 	        DO UPDATE SET reason = $4, attendance_status = 'EXCUSED'
-	    `, [dateStr, class_code, student_id, reason.trim(), now.toFormat('HH:mm:ss')]);
+	    `, [today, class_code, student_id, reason.trim(), timestamp]);
 	
-	    return res.json({ ok: true, message: "Excuse filed successfully." });
+	    return res.json({ ok: true, message: "Excuse filed successfully.", filedAt: timestamp });
 	  }
 
 	  case 'suspend_class': {
