@@ -96,20 +96,23 @@ app.post('/api', async (req, res) => {
 
 			// 2. Filter query by Day, Semester, and Academic Year
 			const query = `
-			  SELECT s.*, u.user_name as professor_name 
+			  SELECT s.*, u.user_name as professor_name, a.attendance_status as my_status, a.time_in, a.reason 
 			  FROM schedules s
 			  LEFT JOIN sys_users u ON s.professor_id = u.user_id
-			  WHERE ($1 = ANY(s.days)
-			  AND s.semester = $2 
-              AND s.academic_year = $3) 
-			  OR EXISTS (
-		        SELECT 1 FROM attendance a 
-		        WHERE a.class_code = s.class_code 
-		        AND a.class_date = $4::date 
-		        AND a.attendance_status = 'PENDING'
+			  LEFT JOIN attendance a ON s.class_code = a.class_code 
+                AND a.student_id = $1 
+                AND a.class_date = $2::date
+			  WHERE ($3 = ANY(s.days)
+				  AND s.semester = $4 
+	              AND s.academic_year = $5) 
+				  OR EXISTS (
+			        SELECT 1 FROM attendance ma 
+			        WHERE ma.class_code = s.class_code 
+			        AND ma.class_date = $2::date 
+			        AND ma.attendance_status = 'PENDING'
 		     )
 			`;
-			const result = await pool.query(query, [dayName, semInfo.sem, semInfo.year, dateStr]);
+			const result = await pool.query(query, [student_id, dateStr, dayName, semInfo.sem, semInfo.year]);
 			
 			// Format times for frontend
 			const schedule = result.rows.map(row => ({
