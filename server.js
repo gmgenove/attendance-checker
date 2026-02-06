@@ -350,7 +350,7 @@ app.post('/api', async (req, res) => {
 	  // --- DROPDOWNS (For Officer Reports) ---
       case 'get_dropdowns': {
 		const semInfo = await getCurrentSemConfig();
-        const classes = await pool.query('SELECT class_code as code, class_name as name FROM schedules WHERE semester = $1 AND academic_year = $2', [semInfo.sem, semInfo.year]');
+        const classes = await pool.query('SELECT class_code as code, class_name as name FROM schedules WHERE semester = $1 AND academic_year = $2', [semInfo.sem, semInfo.year]);
         const students = await pool.query('SELECT user_id, user_name FROM sys_users WHERE (user_role = \'student\' OR user_role = \'officer\')');
         return res.json({ ok: true, classes: classes.rows, students: students.rows });
       }
