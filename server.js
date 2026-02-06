@@ -128,24 +128,27 @@ app.post('/api', async (req, res) => {
 			// Hardcoded config (or fetch from a 'config' table)
 			const semConfig = await getCurrentSemConfig();
 		
-		  if (!semConfig.start || semConfig.sem === "None") {
-			const checkinOpen = -semConfig.checkin_window_minutes; // Opens 10 mins before
-			const lateThreshold = semConfig.late_window_minutes; // Late after 5 mins
-			const absentThreshold = semConfig.absent_window_minutes; // Absent after 10 mins
+			if (!semConfig.start || semConfig.sem === "None") {
+				const checkinOpen = -(parseInt(semConfig.checkin_window_minutes); // Opens 10 mins before
+				const lateThreshold = parseInt(semConfig.late_window_minutes); // Late after 5 mins
+				const absentThreshold = parseInt(semConfig.absent_window_minutes); // Absent after 10 mins
 		
-			if (diffMins < checkinOpen) return res.json({ ok: false, error: 'Check-in not open yet' });
-			if (diffMins > absentThreshold) return res.json({ ok: false, error: 'Check-in closed (Absent)' });
-		
-			let status = 'PRESENT';
-			if (diffMins > lateThreshold) status = 'LATE';
-		
-			// D. Save to Postgres
-			await pool.query(
-			  'INSERT INTO attendance (class_date, class_code, student_id, attendance_status, time_in) VALUES ($1, $2, $3, $4, $5)',
-			  [dateStr, class_code, student_id, status, now.toFormat('HH:mm:ss')]
-			);
-		
-			return res.json({ ok: true, status, timestamp: now.toFormat('HH:mm:ss') });
+				if (diffMins < checkinOpen) return res.json({ ok: false, error: 'Check-in not open yet' });
+				if (diffMins > absentThreshold) return res.json({ ok: false, error: 'Check-in closed (Absent)' });
+			
+				let status = 'PRESENT';
+				if (diffMins > lateThreshold) status = 'LATE';
+			
+				// D. Save to Postgres
+				await pool.query(
+				  'INSERT INTO attendance (class_date, class_code, student_id, attendance_status, time_in) VALUES ($1, $2, $3, $4, $5)',
+				  [dateStr, class_code, student_id, status, now.toFormat('HH:mm:ss')]
+				);
+			
+				return res.json({ ok: true, status, timestamp: now.toFormat('HH:mm:ss') });
+			} else {
+				return res.json({ ok: false, error: err.message });
+			}
 		  } catch (err) {
 			return res.json({ ok: false, error: err.message });
 		  }
@@ -239,139 +242,65 @@ app.post('/api', async (req, res) => {
 	  }
 
 	  case 'report': {
-		  const { type, class_code, student_id } = payload;
-		  const pdfDoc = await PDFDocument.create();
-		  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-		  const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-		
-		  // 1. Fetch Config for Semester Dates
-		  const configRes = await pool.query("SELECT config_key, config_value FROM config");
-		  const config = Object.fromEntries(configRes.rows.map(r => [r.config_key, r.config_value]));
-		  
-		  // Dynamically determine semester dates
-		  const semConfig = await getCurrentSemConfig();  
-		  if (semConfig.sem === "None") {
-			return res.json({ ok: false, error: "No active semester found for today's date." });
-		  }
-		  const semStart = semConfig.start;
-		  const semEnd = semConfig.end;
+	    const { type, class_code, student_id } = payload;
+	    const pdfDoc = await PDFDocument.create();
+	    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+	    const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+	    const semConfig = await getCurrentSemConfig();
 	
-		  if (type === 'class') {
-			// 2. Fetch Class & Schedule
-			const classInfo = await pool.query(
-			  `SELECT s.*, u.user_name as professor_name FROM schedules s 
-			   JOIN sys_users u ON s.professor_id = u.user_id WHERE s.class_code = $1`, [class_code]
-			);
-			const info = classInfo.rows[0];
-		
-			// 3. Generate the Date List (The "D1, D2..." Columns)
-			let classDates = [];
-			let current = semStart;
-			while (current <= semEnd) {
-			  if (info.days.includes(current.toFormat('ccc'))) {
-				classDates.push(current);
-			  }
-			  current = current.plus({ days: 1 });
-			}
-		
-			// 4. Fetch All Attendance for this Class
-			const attendance = await pool.query(
-			  `SELECT a.*, u.user_name FROM sys_users u 
-			   LEFT JOIN attendance a ON u.user_id = a.student_id AND a.class_code = $1
-			   WHERE (u.user_role = 'student' OR u.user_role = 'officer') ORDER BY u.user_name ASC`, [class_code]
-			);
-		
-			// Group by student
-			const roster = {};
-			attendance.rows.forEach(r => {
-			  if (!roster[r.student_id]) {
-				roster[r.student_id] = { 
-					name: r.user_name, 
-					records: {},
-					counts: { P: 0, L: 0, A: 0, E: 0, C: 0, H: 0 } 
-				};
-			  }
-			  
-			  if (r.class_date) {
-				const dStr = DateTime.fromJSDate(r.class_date).toISODate();
-				const statusChar = r.attendance_status[0].toUpperCase();
-				roster[r.student_id].records[dStr] = statusChar;
-				
-				// Increment the specific count
-				if (roster[r.student_id].counts[statusChar] !== undefined) {
-					roster[r.student_id].counts[statusChar]++;
-				}
-			  }
-			});
+	    if (semConfig.sem === "None") return res.json({ ok: false, error: "No active semester found." });
 	
-			// Fetch Excuse Logs for this Class (matches ClassExcuseLog tab)
-			const excuses = await pool.query(
-			  `SELECT a.class_date, u.user_name, a.reason 
-			   FROM attendance a 
-			   JOIN sys_users u ON a.student_id = u.user_id 
-			   WHERE a.class_code = $1 AND a.reason IS NOT NULL 
-			   ORDER BY a.class_date DESC`, [class_code]
-			);
-		
-			const filename = `ClassReport_Full_${class_code}.pdf`;
-			await generateClassMatrixPDF(pdfDoc, info, classDates, roster, semConfig, font, boldFont);
-			await appendExcuseLogPage(pdfDoc, "CLASS EXCUSE LOG", excuses.rows, font, boldFont, "name");
-		} else if (type === 'person') {
-			const semConfig = await getCurrentSemConfig();
-			const semStart = semConfig.start;
-			const semEnd = semConfig.end;
-			
-			// 1. Fetch Student Info
-			const studentRes = await pool.query('SELECT user_name FROM sys_users WHERE user_id = $1', [student_id]);
-			const studentInfo = studentRes.rows[0];
-			
-			// 2. Fetch all unique class dates in this semester across all subjects
-			// generate the dates for the student's schedule, D1-D40 are generic columns.
-			const scheduleRes = await pool.query(
-			    `SELECT DISTINCT s.* FROM schedules s 
-			     JOIN attendance a ON s.class_code = a.class_code 
-			     WHERE a.student_id = $1`, [student_id]
-			);
-			
-			// 3. Fetch Student's specific attendance records
-			const attendance = await pool.query(
-			    `SELECT a.*, s.class_name 
-			     FROM attendance a 
-			     JOIN schedules s ON a.class_code = s.class_code 
-			     WHERE a.student_id = $1 ORDER BY s.class_name ASC`, [student_id]
-			);
-			
-			// 4. Pivot data by Class Code
-			const subjects = {};
-			attendance.rows.forEach(r => {
-			    if (!subjects[r.class_code]) {
-			        subjects[r.class_code] = { 
-			            name: r.class_name, 
-			            records: {}, 
-			            counts: { P: 0, L: 0, A: 0, E: 0, C: 0, H: 0 } 
-			        };
-			    }
-			    const dStr = DateTime.fromJSDate(r.class_date).toISODate();
-			    const statusChar = r.attendance_status[0].toUpperCase();
-			    subjects[r.class_code].records[dStr] = statusChar;
-			    if (subjects[r.class_code].counts[statusChar] !== undefined) subjects[r.class_code].counts[statusChar]++;
-			});
-			
-			// Fetch Excuse Logs for this Student (matches StudentExcuseLog tab)
-		    const excuses = await pool.query(
-		      `SELECT a.class_date, s.class_name, a.reason 
-		       FROM attendance a 
-		       JOIN schedules s ON a.class_code = s.class_code 
-		       WHERE a.student_id = $1 AND a.reason IS NOT NULL 
-		       ORDER BY a.class_date DESC`, [student_id]
-		    );
-		
-		    const filename = `StudentReport_Full_${student_id}.pdf`;
-		    await generateStudentMatrixPDF(pdfDoc, studentInfo, student_id, subjects, semConfig, font, boldFont);
-		    await appendExcuseLogPage(pdfDoc, "STUDENT EXCUSE LOG", excuses.rows, font, boldFont, "class_name");
-		}
-		const pdfBytes = await pdfDoc.save();
-		return res.json({ ok: true, pdfMain: Buffer.from(pdfBytes).toString('base64'), filename });
+	    if (type === 'class') {
+	        const classInfo = await pool.query(`SELECT s.*, u.user_name as professor_name FROM schedules s JOIN sys_users u ON s.professor_id = u.user_id WHERE s.class_code = $1`, [class_code]);
+	        if (classInfo.rows.length === 0) return res.json({ ok: false, error: "Class not found." });
+	        const info = classInfo.rows[0];
+	
+	        let classDates = [];
+	        let curr = semConfig.start;
+	        while (curr <= semConfig.end) {
+	            if (info.days.includes(curr.toFormat('ccc'))) classDates.push(curr);
+	            curr = curr.plus({ days: 1 });
+	        }
+	
+	        const attendance = await pool.query(`SELECT a.*, u.user_name FROM sys_users u LEFT JOIN attendance a ON u.user_id = a.student_id AND a.class_code = $1 WHERE (u.user_role = 'student' OR u.user_role = 'officer') ORDER BY u.user_name ASC`, [class_code]);
+	        
+	        const roster = {};
+	        attendance.rows.forEach(r => {
+	            if (!roster[r.student_id]) roster[r.student_id] = { name: r.user_name, records: {}, counts: { P:0, L:0, A:0, E:0, C:0, H:0, D:0 } };
+	            if (r.class_date) {
+	                const dStr = DateTime.fromJSDate(r.class_date).toISODate();
+	                const sChar = r.attendance_status[0].toUpperCase();
+	                roster[r.student_id].records[dStr] = sChar;
+	                if (roster[r.student_id].counts[sChar] !== undefined) roster[r.student_id].counts[sChar]++;
+	            }
+	        });
+	
+	        const excuses = await pool.query(`SELECT a.class_date, u.user_name, a.reason FROM attendance a JOIN sys_users u ON a.student_id = u.user_id WHERE a.class_code = $1 AND a.reason IS NOT NULL ORDER BY a.class_date DESC`, [class_code]);
+	
+	        await generateClassMatrixPDF(pdfDoc, info, classDates, roster, semConfig, font, boldFont);
+	        await appendExcuseLogPage(pdfDoc, "CLASS EXCUSE LOG", excuses.rows, font, boldFont, "name");
+	        
+	    } else if (type === 'person') {
+	        const studentRes = await pool.query('SELECT user_name FROM sys_users WHERE user_id = $1', [student_id]);
+	        const attendance = await pool.query(`SELECT a.*, s.class_name FROM attendance a JOIN schedules s ON a.class_code = s.class_code WHERE a.student_id = $1 ORDER BY s.class_name ASC`, [student_id]);
+	        
+	        const subjects = {};
+	        attendance.rows.forEach(r => {
+	            if (!subjects[r.class_code]) subjects[r.class_code] = { name: r.class_name, records: {}, counts: { P:0, L:0, A:0, E:0, C:0, H:0, D:0 } };
+	            const dStr = DateTime.fromJSDate(r.class_date).toISODate();
+	            const sChar = r.attendance_status[0].toUpperCase();
+	            subjects[r.class_code].records[dStr] = sChar;
+	            if (subjects[r.class_code].counts[sChar] !== undefined) subjects[r.class_code].counts[sChar]++;
+	        });
+	
+	        const excuses = await pool.query(`SELECT a.class_date, s.class_name, a.reason FROM attendance a JOIN schedules s ON a.class_code = s.class_code WHERE a.student_id = $1 AND a.reason IS NOT NULL ORDER BY a.class_date DESC`, [student_id]);
+	
+	        await generateStudentMatrixPDF(pdfDoc, studentRes.rows[0], student_id, subjects, semConfig, font, boldFont);
+	        await appendExcuseLogPage(pdfDoc, "STUDENT EXCUSE LOG", excuses.rows, font, boldFont, "class_name");
+	    }
+	
+	    const pdfBytes = await pdfDoc.save();
+	    return res.json({ ok: true, pdfMain: Buffer.from(pdfBytes).toString('base64'), filename: `Report_${type}.pdf` });
 	  }
 
 	  // --- DROPDOWNS (For Officer Reports) ---
@@ -480,9 +409,7 @@ app.post('/api', async (req, res) => {
 		  const now = getManilaNow();
 		  const semConfig = await getCurrentSemConfig();
 		
-		  if (!semConfig.start || semConfig.sem === "None") {
-		    return res.json({ ok: false, error: "No active semester detected for this date." });
-		  }
+		  if (semConfig.sem === "None") return res.json({ ok: false, error: "No active semester." });
 		
 		  try {
 		    // 1. Fetch Class Schedule to find valid meeting days
@@ -492,10 +419,9 @@ app.post('/api', async (req, res) => {
 		
 		    // 2. Loop from today until the end of the semester
 		    let current = now;
-		    const end = semConfig.end;
 		    let datesToUpdate = [];
 		
-		    while (current <= end) {
+		    while (current <= semConfig.end) {
 		      if (classDays.includes(current.toFormat('ccc'))) {
 		        datesToUpdate.push(current.toISODate());
 		      }
@@ -518,7 +444,7 @@ app.post('/api', async (req, res) => {
 		
 		    return res.json({ 
 		      ok: true, 
-		      message: `Successfully marked ${datesToUpdate.length} sessions as ${statusToApply}.` 
+		      message: `Marked remaining sessions as ${statusToApply}.` 
 		    });
 		  } catch (err) {
 		    return res.json({ ok: false, error: "Database error: " + err.message });
