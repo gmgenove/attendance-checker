@@ -561,7 +561,6 @@ app.post('/api', async (req, res) => {
 		  } catch (err) {
 		    res.status(500).json({ ok: false, status: "Database Connection Error", error: err.message });
 		  }
-		});
 	  }
 
       default: {
