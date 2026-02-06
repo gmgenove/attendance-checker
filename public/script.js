@@ -218,6 +218,9 @@ async function loadProfessorDashboard() {
     
     const res = await api('prof_dashboard', { class_code: classCode });
     if (res.ok) {
+        // Calculate total students in the roster
+        const totalStudents = res.roster.length;
+
         let html = `
             <div class="grid">
                 ${res.stats.map(s => `
@@ -227,7 +230,19 @@ async function loadProfessorDashboard() {
                     </div>
                 `).join('')}
             </div>
-            <h5 style="margin-top:15px;">Live Roster</h5>
+            
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:20px; margin-bottom:10px;">
+                <h5 style="margin:0; display:flex; align-items:center; gap:8px;">
+                    Live Roster 
+                    <span style="background:#e2e8f0; color:#475569; padding:2px 8px; border-radius:10px; font-size:10px;">
+                        ${totalStudents} Students
+                    </span>
+                </h5>
+                <div class="small" style="color:#10b981; font-size:10px; font-weight:bold;">
+                    <i class="fa fa-circle" style="font-size:8px; vertical-align:middle;"></i> LIVE
+                </div>
+            </div>
+            
             <ul id="recentCheckinList" class="small" style="list-style: none; padding: 0;">
         `;
 
