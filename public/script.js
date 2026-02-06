@@ -400,9 +400,24 @@ async function loadTodaySchedule() {
 }
 
 async function updateCheckinUI(cls) {
-    const btn = document.getElementById(`btn-${cls.class_code.replace(/\s+/g, '-')}`);
-    const btnContainer = document.getElementById(`btn-${cls.class_code.replace(/\s+/g, '-')}`).parentElement;
-    const statusSpan = document.getElementById(`status-${cls.class_code.replace(/\s+/g, '-')}`);
+    // Sanitize the class code for CSS (e.g., 'POLS 102' becomes 'POLS-102')
+    const safeCode = cls.class_code.replace(/\s+/g, '-');
+    const btn = document.getElementById(`btn-${safeCode}`);
+    const btnContainer = document.getElementById(`btn-${safeCode)}`).parentElement;
+    const statusSpan = document.getElementById(`status-${safeCode}`);
+    const excuseLink = document.getElementById(`excuse-link-${safeCode}`);
+
+    // 1. If student already has a special status, remove the prompts
+    const specialStatuses = ['EXCUSED', 'SUSPENDED', 'CANCELLED', 'HOLIDAY'];
+    
+    if (specialStatuses.includes(cls.my_status)) {
+        if (btn) btn.style.display = 'none';
+        if (excuseLink) excuseLink.style.display = 'none';
+        
+        statusSpan.textContent = `Registered as ${cls.my_status}`;
+        statusSpan.style.color = "#64748b"; // Muted Slate
+        return; // Stop here, no need to check windows or AM/PM
+    }
 
     const configData = await api('getConfig');
     const config = configData.config;
@@ -419,56 +434,55 @@ async function updateCheckinUI(cls) {
     
     // --- RENDER CHECK-OUT BUTTON ---
     if (record && record.status !== 'not_recorded' && !record.time_out) {
-        // Sanitize the class code for CSS (e.g., 'POLS 102' becomes 'POLS-102')
-        const safeCode = cls.class_code.replace(/\s+/g, '-');
-        
         // Check if button already exists using the sanitized class
         if (document.querySelector(`.checkout-btn-${safeCode}`)) return; 
     
         const outBtn = document.createElement('button');
         // Add the sanitized class to the button
-        outBtn.className = `checkout-btn checkout-btn-${safeCode}`;
-        outBtn.textContent = "Check Out";
-        outBtn.disabled = true;
-        btnContainer.appendChild(outBtn);
-
-        const updateOutTimer = () => {
-            const tzNow = new Date();
-            const end = new Date();
-            const endParts = parseTimeString(cls.end_time);
-            end.setHours(endParts.hours, endParts.minutes, 0, 00);
-
-            const enableFrom = new Date(end.getTime() - config.checkout_window_minutes * 60000); // 10 mins before end
-
-            if (tzNow >= enableFrom) {
-                outBtn.disabled = false;
-                statusSpan.textContent = "Check-out is now OPEN";
-            } else {
-                const minsToOut = Math.ceil((enableFrom - tzNow) / 60000);
-                statusSpan.textContent = `Check-out available in ${minsToOut} mins`;
-            }
-        };
-
-        outBtn.onclick = async () => {
+        if (cls.my_status === 'PRESENT' || cls.my_status === 'LATE') {
+            outBtn.className = `checkout-btn checkout-btn-${safeCode}`;
+            outBtn.textContent = "Check Out";
             outBtn.disabled = true;
-            const outRes = await api('checkout', { class_code: cls.class_code, student_id: currentUser.id });
-            if (outRes.ok) {
-                outBtn.remove();
-                statusSpan.textContent = `Completed (Out: ${outRes.time_out})`;
+            btnContainer.appendChild(outBtn);
+    
+            const updateOutTimer = () => {
+                const tzNow = new Date();
+                const end = new Date();
+                const endParts = parseTimeString(cls.end_time);
+                end.setHours(endParts.hours, endParts.minutes, 0, 00);
+    
+                const enableFrom = new Date(end.getTime() - config.checkout_window_minutes * 60000); // 10 mins before end
+    
+                if (tzNow >= enableFrom) {
+                    outBtn.disabled = false;
+                    statusSpan.textContent = "Check-out is now OPEN";
+                } else {
+                    const minsToOut = Math.ceil((enableFrom - tzNow) / 60000);
+                    statusSpan.textContent = `Check-out available in ${minsToOut} mins`;
+                }
+            };
+    
+            outBtn.onclick = async () => {
+                outBtn.disabled = true;
+                const outRes = await api('checkout', { class_code: cls.class_code, student_id: currentUser.id });
+                if (outRes.ok) {
+                    outBtn.remove();
+                    statusSpan.textContent = `Completed (Out: ${outRes.time_out})`;
+                }
+            };
+    
+            if (record && !record.time_out) {
+                const reminder = document.createElement('div');
+                reminder.className = 'small';
+                reminder.style.color = '#e11d48'; // A subtle alert red
+                reminder.style.marginTop = '10px';
+                reminder.innerHTML = `<i class="fa fa-exclamation-circle"></i> Don't forget to check out at ${cls.end_time}!`;
+                btnContainer.appendChild(reminder);
             }
-        };
-
-        if (record && !record.time_out) {
-            const reminder = document.createElement('div');
-            reminder.className = 'small';
-            reminder.style.color = '#e11d48'; // A subtle alert red
-            reminder.style.marginTop = '10px';
-            reminder.innerHTML = `<i class="fa fa-exclamation-circle"></i> Don't forget to check out at ${cls.end_time}!`;
-            btnContainer.appendChild(reminder);
+    
+            setInterval(updateOutTimer, 30000);
+            updateOutTimer();
         }
-
-        setInterval(updateOutTimer, 30000);
-        updateOutTimer();
     }
 
     // 2. Countdown Logic for "Not Yet Open" classes
