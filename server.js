@@ -103,8 +103,13 @@ app.post('/api', async (req, res) => {
 		  const { class_code, student_id } = req.body;
 		  const now = getManilaNow();
 		  const dateStr = now.toISODate();
+		  const semConfig = await getCurrentSemConfig();
 		
 		  try {
+			// Block check-in if not in a semester
+			if (!semConfig.start || semConfig.sem === "None") {
+	           return res.json({ ok: false, error: "Attendance disabled outside semester dates." });
+	        }
 			// A. Check for existing attendance (Duplicate Prevention)
 			const existing = await pool.query(
 			  'SELECT attendance_status FROM attendance WHERE class_date = $1 AND class_code = $2 AND student_id = $3',
@@ -118,39 +123,28 @@ app.post('/api', async (req, res) => {
 			// B. Get Class Start Time
 			const schedResult = await pool.query('SELECT start_time FROM schedules WHERE class_code = $1', [class_code]);
 			if (schedResult.rows.length === 0) throw new Error('Class not found');
-			
 			const [hh, mm] = schedResult.rows[0].start_time.split(':');
 			const classStart = now.set({ hour: hh, minute: mm, second: 0, millisecond: 0 });
-		
-			// C. Window Logic (Using 10/10/20 window logic)
 			const diffMins = now.diff(classStart, 'minutes').minutes;
 		
-			// Hardcoded config (or fetch from a 'config' table)
-			const semConfig = await getCurrentSemConfig();
-
-			// 1. Block check-in if not in a semester
-			if (!semConfig.start || semConfig.sem === "None") {
-			    return res.json({ ok: false, error: "Attendance is disabled outside of semester dates." });
-			} else {
-				// 2. Window Logic (using config from the DB)
-				const checkinOpen = -(parseInt(semConfig.checkin_window_minutes) || 10);	 // Opens 10 mins before
-				const lateThreshold = parseInt(semConfig.late_window_minutes) || 5;	 // Late after 5 mins
-				const absentThreshold = parseInt(semConfig.absent_window_minutes) || 20;	// Absent after 10 mins
+			// Window Logic (using config from the DB; Using 10/10/20 window logic)
+			const checkinOpen = -(parseInt(semConfig.checkin_window_minutes) || 10);	 // Opens 10 mins before
+			const lateThreshold = parseInt(semConfig.late_window_minutes) || 5;	 // Late after 5 mins
+			const absentThreshold = parseInt(semConfig.absent_window_minutes) || 20;	// Absent after 10 mins
+	
+			if (diffMins < checkinOpen) return res.json({ ok: false, error: 'Check-in not open yet' });
+			if (diffMins > absentThreshold) return res.json({ ok: false, error: 'Check-in closed (Absent)' });
 		
-				if (diffMins < checkinOpen) return res.json({ ok: false, error: 'Check-in not open yet' });
-				if (diffMins > absentThreshold) return res.json({ ok: false, error: 'Check-in closed (Absent)' });
-			
-				let status = 'PRESENT';
-				if (diffMins > lateThreshold) status = 'LATE';
-			
-				// D. Save to Postgres
-				await pool.query(
-				  'INSERT INTO attendance (class_date, class_code, student_id, attendance_status, time_in) VALUES ($1, $2, $3, $4, $5)',
-				  [dateStr, class_code, student_id, status, now.toFormat('HH:mm:ss')]
-				);
-			
-				return res.json({ ok: true, status, timestamp: now.toFormat('HH:mm:ss') });
-			}
+			let status = 'PRESENT';
+			if (diffMins > lateThreshold) status = 'LATE';
+		
+			// D. Save to Postgres
+			await pool.query(
+			  'INSERT INTO attendance (class_date, class_code, student_id, attendance_status, time_in) VALUES ($1, $2, $3, $4, $5)',
+			  [dateStr, class_code, student_id, status, now.toFormat('HH:mm:ss')]
+			);
+		
+			return res.json({ ok: true, status, timestamp: now.toFormat('HH:mm:ss') });
 		  } catch (err) {
 			return res.json({ ok: false, error: err.message });
 		  }
@@ -635,7 +629,8 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
   page.drawText('P', { x: totalX, y, size: 8, font: bold });
   page.drawText('L', { x: totalX + 20, y, size: 8, font: bold });
   page.drawText('A', { x: totalX + 40, y, size: 8, font: bold });
-  page.drawText('%', { x: totalX + 65, y, size: 8, font: bold });
+  page.drawText('D', { x: totalX + 60, y, size: 8, font: bold });
+  page.drawText('%', { x: totalX + 85, y, size: 8, font: bold });
 
   y -= 20;
   page.drawLine({ start: { x: 40, y }, end: { x: 970, y }, thickness: 0.5 });
@@ -685,7 +680,8 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
 	page.drawText(`${presentTotal}`, { x: totalX, y, size: 7, font });
 	page.drawText(`${c.L}`, { x: totalX + 20, y, size: 7, font });
 	page.drawText(`${c.A}`, { x: totalX + 40, y, size: 7, font });
-	page.drawText(`${perc}%`, { x: totalX + 65, y, size: 7, font: bold });
+	page.drawText(`${c.D || 0}`, { x: totalX + 60, y, size: 7, font });
+	page.drawText(`${perc}%`, { x: totalX + 85, y, size: 7, font: bold });
     
     // Horizontal row line
     page.drawLine({ start: { x: 40, y: y - 2 }, end: { x: 970, y: y - 2 }, thickness: 0.1, color: rgb(0.8, 0.8, 0.8) });
@@ -756,22 +752,17 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
 		});
 
         // Totals for this specific subject
-        const presentTotal = sub.counts.P + sub.counts.L + sub.counts.C;
-        const totalSessions = Object.keys(sub.records).length;
-        const perc = totalSessions > 0 ? Math.round((presentTotal / totalSessions) * 100) : 0;
-
 		const c = sub.counts;
 		const presentTotal = (c.P || 0) + (c.L || 0) + (c.C || 0);
 		const excusedSessions = (c.H || 0) + (c.S || 0) + (c.D || 0);
-		const totalSessions = Object.keys(sub.records).length;
 
 		// Subtracting excused/holiday/dropped days from the denominator
-		const totalPossible = totalSessions - excusedSessions;
+		const totalPossible = sortedDates.length - excused;
 		const perc = totalPossible > 0 ? Math.round((presentTotal / totalPossible) * 100) : 0;
 
 		// Draw Totals for the Subject Row
 		page.drawText(`${presentTotal}`, { x: totalX, y, size: 7, font });
-		page.drawText(`${perc}%`, { x: totalX + 40, y, size: 7, font: bold });
+		page.drawText(`${perc}%`, { x: 920, y, size: 7, font: bold });
         
         page.drawLine({ start: { x: 40, y: y - 2 }, end: { x: 970, y: y - 2 }, thickness: 0.1, color: rgb(0.8, 0.8, 0.8) });
     });
