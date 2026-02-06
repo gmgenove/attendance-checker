@@ -423,9 +423,9 @@ async function updateCheckinUI(cls) {
             const minsRemaining = Math.ceil((enableFrom - tzNow) / 60000);
             btn.disabled = true;
             if (minsRemaining <= config.checkin_window_minutes) statusSpan.style.color = "#f59e0b";
-            statusSpan.textContent = diff <= config.checkin_window_minutes 
-                ? `Check-in opens in ${diff} min(s)`        // Approaching opening time
-                : `Check-in opens at ${cls.start_time}`;    // Far in the future
+            statusSpan.textContent = minsRemaining <= config.checkin_window_minutes 
+                ? `Check-in opens in ${minsRemaining} min(s)`       // Approaching opening time
+                : `Check-in opens at ${cls.start_time}`;            // Far in the future
         }
     };
 
