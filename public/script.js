@@ -628,13 +628,13 @@ async function checkGlobalStatus() {
 // Toggle the excuse input visibility
 window.toggleExcuse = (e, classCode) => {
     e.preventDefault();
-    const area = document.getElementById(`excuse-area-${classCode.replace(/\s+/g}`);
+    const area = document.getElementById(`excuse-area-${classCode.replace(/\s+/g)}`);
     area.style.display = area.style.display === 'none' ? 'block' : 'none';
 };
 
 // Send the excuse to the server
 window.submitExcuse = async (classCode) => {
-    const reasonInput = document.getElementById(`reason-${classCode.replace(/\s+/g}`);
+    const reasonInput = document.getElementById(`reason-${classCode.replace(/\s+/g)}`);
     const reason = reasonInput.value;
     
     const res = await api('submit_excuse', { 
