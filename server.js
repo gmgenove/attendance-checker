@@ -379,7 +379,7 @@ app.post('/api', async (req, res) => {
 	    const { target_user_id } = payload;
 	    const hashed = await bcrypt.hash("password1234", 10);
 	    await pool.query("UPDATE sys_users SET password_hash = $1 WHERE user_id = $2", [hashed, target_user_id]);
-	    return res.json({ ok: true, message: "Password reset to pass123" });
+	    return res.json({ ok: true, message: "Password reset to password1234" });
 	  }
 
 	  case 'bulk_password_reset': {
