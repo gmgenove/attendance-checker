@@ -122,13 +122,19 @@
                         </div-->
     
                         <div class="card" style="border-top: 4px solid #7c3aed; margin-top: 15px;">
-                            <h4>Class Suspension Tool</h4>
-                            <select id="suspendClassCode">
-                                <option value="BPAOUMN-1B">BPAOUMN-1B</option>
-                            </select>
-                            <input type="text" id="suspendReason" placeholder="Reason (e.g. Typhoon Karding)" required>
-                            <button onclick="handleSuspension()" style="background:#7c3aed; color:white; border:none; margin-top:5px;">
-                                Declare Suspension
+                            <h4>Class Status Manager</h4>
+                            <div class="grid" style="grid-template-columns: 1fr 1fr; margin-bottom: 10px;">
+                                <select id="statusType">
+                                    <option value="SUSPENDED">Suspended (Admin)</option>
+                                    <option value="CANCELLED">Cancelled (Prof)</option>
+                                </select>
+                                <select id="suspendClassCode">
+                                    <option value="BPAOUMN-1B">BPAOUMN-1B</option>
+                                </select>
+                            </div>
+                            <input type="text" id="suspendReason" placeholder="Reason (e.g., Professor on official business or Typhoon Karding)">
+                            <button onclick="handleStatusChange()" style="background:#7c3aed; color:white; border:none; margin-top:5px;">
+                                Update Class Status
                             </button>
                         </div>
                     </div>
