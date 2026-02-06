@@ -97,8 +97,8 @@ app.post('/api', async (req, res) => {
 			// Format times for frontend
 			const schedule = result.rows.map(row => ({
 			  ...row,
-			  start_time: DateTime.fromFormat(row.start_time, 'HH:mm:ss').toFormat('hh:mm a'),
-              end_time: DateTime.fromFormat(row.end_time, 'HH:mm:ss').toFormat('hh:mm a')
+			  start_time: DateTime.fromFormat(row.start_time, 'HH:mm:ss'),
+              end_time: DateTime.fromFormat(row.end_time, 'HH:mm:ss')
 			}));
 		
 			return res.json({ ok: true, schedule });
