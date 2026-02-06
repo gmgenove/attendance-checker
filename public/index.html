@@ -1,192 +1,192 @@
 <!doctype html>
 <html lang="en">
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1, shrink-to-fit=no, maximum-scale=1, minimum-scale=1" />
-    <meta name="robots" content="nofollow, noindex, noarchive"/>
-    <meta name="author" content="gmgenove"/>
-    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
-    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/pdf-lib/dist/pdf-lib.min.js"></script>
-    <title>BPAOUMN 1-B Attendance Checker</title>
-    <style>
-        body{font-family:Inter,system-ui,Segoe UI,Roboto,Arial;margin:0;padding:16px;background:#f7fafc;color:#0f172a}
-        .container{max-width:900px;margin:0 auto}
-        header{display:flex;align-items:center;justify-content:space-between}
-        .card{background:white;border-radius:12px;padding:16px;margin:12px 0;box-shadow:0 6px 18px rgba(15,23,42,0.06)}
-        input,select,button{padding:10px;border-radius:8px;border:1px solid #e2e8f0}
-        button{cursor:pointer; transition: opacity 0.2s}
-        button:disabled{opacity: 0.5; cursor: not-allowed}
-        .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-        .small{font-size:0.9rem;color:#475569}
-        .muted{color:#94a3b8}
-        .error-message {color: #d93025; margin-top: 10px; font-size: 0.9em;}
-        .class-card {display: flex; justify-content: space-between; align-items: flex-start; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px 16px; margin-bottom: 10px;}
-        .class-actions {display: flex; flex-direction: column; gap: 6px;}
-        .checkin-btn {background: #10b981; color: white; border:none}
-        .checkout-btn {background: #f59e0b; /* Orange */ color: white; border: none; margin-top: 5px;}
-        .checkout-btn:hover { background: #d97706; }
-        .footer {width: 100%; margin-top: 15px; text-align: center; font-size: 10px; color: #aaa;}
-        #loading-bar { height: 3px; width: 0%; background: #3b82f6; position: fixed; top: 0; left: 0; transition: width 0.3s;}
-        @keyframes subtle-shake { 0% { transform: translateX(0); } 25% { transform: translateX(2px); } 50% { transform: translateX(-2px); } 75% { transform: translateX(2px); } 100% { transform: translateX(0); } }
-        .reminder-active {animation: subtle-shake 0.5s ease-in-out;}
-        .password-wrapper { position: relative; display: flex; align-items: center; }
-        .password-wrapper input { padding-right: 40px; }
-        .password-wrapper .field-icon { position: absolute; right: 12px; color: #94a3b8; }
-        
-        /* Status Alert Themes */
-        .alert-holiday { background: #dbeafe !important; color: #1e40af !important; border: 1px solid #bfdbfe !important; }
-        .alert-suspended { background: #f3e8ff !important; color: #6b21a8 !important; border: 1px solid #e9d5ff !important; }
-    </style>
-</head>
-<body>
-    <div id="loading-bar"></div>
-    <div class="container">
-        <header>
-            <h1>BPAOUMN 1-B Attendance</h1>
-            <div id="hdr" class="small muted"></div>
-        </header>
-
-        <div id="auth" class="card">
-            <h3 id="formTitle">Sign In</h3>
-            <form id="authForm">
-                <div class="grid">
-                    <div>
-                        <label>Student ID</label><br>
-                        <input id="userId" placeholder="2025-XXXXXX-MN-X" required />
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1, shrink-to-fit=no, maximum-scale=1, minimum-scale=1" />
+        <meta name="robots" content="nofollow, noindex, noarchive"/>
+        <meta name="author" content="gmgenove"/>
+        <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+        <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+        <script src="https://cdn.jsdelivr.net/npm/pdf-lib/dist/pdf-lib.min.js"></script>
+        <title>BPAOUMN 1-B Attendance Checker</title>
+        <style>
+            body{font-family:Inter,system-ui,Segoe UI,Roboto,Arial;margin:0;padding:16px;background:#f7fafc;color:#0f172a}
+            .container{max-width:900px;margin:0 auto}
+            header{display:flex;align-items:center;justify-content:space-between}
+            .card{background:white;border-radius:12px;padding:16px;margin:12px 0;box-shadow:0 6px 18px rgba(15,23,42,0.06)}
+            input,select,button{padding:10px;border-radius:8px;border:1px solid #e2e8f0}
+            button{cursor:pointer; transition: opacity 0.2s}
+            button:disabled{opacity: 0.5; cursor: not-allowed}
+            .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+            .small{font-size:0.9rem;color:#475569}
+            .muted{color:#94a3b8}
+            .error-message {color: #d93025; margin-top: 10px; font-size: 0.9em;}
+            .class-card {display: flex; justify-content: space-between; align-items: flex-start; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px 16px; margin-bottom: 10px;}
+            .class-actions {display: flex; flex-direction: column; gap: 6px;}
+            .checkin-btn {background: #10b981; color: white; border:none}
+            .checkout-btn {background: #f59e0b; /* Orange */ color: white; border: none; margin-top: 5px;}
+            .checkout-btn:hover { background: #d97706; }
+            .footer {width: 100%; margin-top: 15px; text-align: center; font-size: 10px; color: #aaa;}
+            #loading-bar { height: 3px; width: 0%; background: #3b82f6; position: fixed; top: 0; left: 0; transition: width 0.3s;}
+            @keyframes subtle-shake { 0% { transform: translateX(0); } 25% { transform: translateX(2px); } 50% { transform: translateX(-2px); } 75% { transform: translateX(2px); } 100% { transform: translateX(0); } }
+            .reminder-active {animation: subtle-shake 0.5s ease-in-out;}
+            .password-wrapper { position: relative; display: flex; align-items: center; }
+            .password-wrapper input { padding-right: 40px; }
+            .password-wrapper .field-icon { position: absolute; right: 12px; color: #94a3b8; }
+            
+            /* Status Alert Themes */
+            .alert-holiday { background: #dbeafe !important; color: #1e40af !important; border: 1px solid #bfdbfe !important; }
+            .alert-suspended { background: #f3e8ff !important; color: #6b21a8 !important; border: 1px solid #e9d5ff !important; }
+        </style>
+    </head>
+    <body>
+        <div id="loading-bar"></div>
+        <div class="container">
+            <header>
+                <h1>BPAOUMN 1-B Attendance</h1>
+                <div id="hdr" class="small muted"></div>
+            </header>
+    
+            <div id="auth" class="card">
+                <h3 id="formTitle">Sign In</h3>
+                <form id="authForm">
+                    <div class="grid">
+                        <div>
+                            <label>Student ID</label><br>
+                            <input id="userId" placeholder="2025-XXXXXX-MN-X" required />
+                        </div>
+                        <div class="password-wrapper">
+                            <input id="passwordInput" type="password" placeholder="Enter password" required>
+                            <i id="togglePassword" class="fa fa-fw fa-eye field-icon" style="cursor:pointer; margin-right:212px;"></i>
+                        </div>
                     </div>
-                    <div class="password-wrapper">
-                        <input id="passwordInput" type="password" placeholder="Enter password" required>
-                        <i id="togglePassword" class="fa fa-fw fa-eye field-icon" style="cursor:pointer; margin-right:212px;"></i>
-                    </div>
-                </div>
-                <div style="margin-top:12px">
-                    <select id="roleSelect" required>
-                        <option value="">Select Role</option>
-                        <option value="student">Student</option>
-                        <option value="officer">Officer</option>
-                    </select>
-                    <button type="submit" id="submitBtn">Sign In</button>
-                    <p id="switchText" class="small">Don't have an account? <a href="#">Sign up</a></p>
-                </div>
-                <div id="errorMsg" class="error-message"></div>
-            </form>
-        </div>
-
-        <div id="app" style="display:none">
-            <div class="card" style="display:flex; justify-content:space-between; align-items:center">
-                <div>
-                    <strong id="welcome"></strong>
-                    <div class="small muted" id="roleBadge"></div>
-                </div>
-                <div style="display:flex; gap:8px">
-                    <button onclick="toggleSettings()" class="small"><i class="fa fa-cog"></i></button>
-                    <button id="signoutBtn" class="small danger">Sign out</button>
-                </div>
-            </div>
-
-            <div id="statusAlert" class="card" style="display:none; text-align:center; padding: 15px; margin-bottom: 15px;">
-                <h3 id="alertTitle" style="margin:0; font-size: 1.1rem;"></h3>
-                <p id="alertBody" style="margin:5px 0 0 0; font-size: 0.9rem; opacity: 0.9;"></p>
-            </div>
-
-            <div class="card">
-                <h3>Today's Schedule</h3>
-                <div id="holidayNotice"></div>
-                <div id="scheduleList"></div>
-            </div>
-
-            <div id="controls" class="card" style="display:none">
-                <div id="officerControls" style="display:none">
-                    <h3>Officer Reports</h3>
-                    <select id="reportType">
-                        <option value="">Select Report Type</option>
-                        <option value="class">Class Report</option>
-                        <option value="person">Student Report</option>
-                    </select>
-                    <div id="reportParams" style="margin: 10px 0"></div>
-                    <button id="generateReport">Generate PDF Report</button>
-                    <div id="reportOutput"></div>
-
-                    <div id="adminTools" class="card" style="border-top: 4px solid #ef4444; margin-top: 20px;">
-                        <h4>System Maintenance</h4>
-                        <p class="small muted">Reset all student passwords to the default: <strong>pass123</strong></p>
-                        <button onclick="handleBulkReset()" style="background: #ef4444; color: white; border: none;">
-                            Bulk Reset Student Passwords
-                        </button>
-                    </div>
-
-                    <div class="card" style="border-top: 4px solid #7c3aed; margin-top: 15px;">
-                        <h4>Class Suspension Tool</h4>
-                        <select id="suspendClassCode">
-                            <option value="BPAOUMN-1B">BPAOUMN-1B</option>
+                    <div style="margin-top:12px">
+                        <select id="roleSelect" required>
+                            <option value="">Select Role</option>
+                            <option value="student">Student</option>
+                            <option value="officer">Officer</option>
                         </select>
-                        <input type="text" id="suspendReason" placeholder="Reason (e.g. Typhoon Karding)">
-                        <button onclick="handleSuspension()" style="background:#7c3aed; color:white; border:none; margin-top:5px; width:100%;">
-                            Declare Suspension
-                        </button>
+                        <button type="submit" id="submitBtn">Sign In</button>
+                        <p id="switchText" class="small">Don't have an account? <a href="#">Sign up</a></p>
                     </div>
-                </div>
-
-                <div id="studentControls" style="display:none">
-                    <button id="viewMyAttendance">Download My Attendance PDF</button>
-                    <div id="myAttendanceOutput"></div>
-                </div>
-
-                <div id="profControls" style="display:none">
-                    <h3>Live Attendance Monitor</h3>
-                    
-                    <div style="margin-bottom: 15px; position: relative;">
-                        <input type="text" id="studentSearch" placeholder="Search student name..." style="width: 100%; box-sizing: border-box; padding-left: 35px;">
-                        <i class="fa fa-search" style="position: absolute; left: 12px; top: 13px; color: #94a3b8;"></i>
-                    </div>
-                
-                    <div id="profDashboardOutput" class="small muted">Loading Live Stats...</div>
-                    <button onclick="loadProfessorDashboard()" style="margin-top:10px">Refresh Live Stats</button>
-                </div>
-
-                <div class="card">
-                    <div style="display:flex; justify-content: space-between; align-items: center;">
-                        <h3>Attendance Overview</h3>
-                        <button onclick="loadAttendanceSummary()" class="small">View Totals</button>
-                    </div>
-                    
-                    <div id="profSummaryOutput"></div>
-                </div>
-            </div>
-            <div class="card" id="settingsCard" style="display:none;">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <h3>Account Settings</h3>
-                    <button onclick="toggleSettings()" class="small muted">Close</button>
-                </div>
-                <form id="changePasswordForm">
-                    <div style="margin-bottom:10px;">
-                        <label class="small">Current Password</label><br>
-                        <input type="password" id="currentPw" required style="width:100%">
-                    </div>
-                    <div style="margin-bottom:10px;">
-                        <label class="small">New Password</label><br>
-                        <input type="password" id="newPw" required style="width:100%">
-                    </div>
-                    <div style="margin-bottom:15px;">
-                        <label class="small">Confirm New Password</label><br>
-                        <input type="password" id="confirmNewPw" required style="width:100%">
-                    </div>
-                    <button type="submit" style="background:#3b82f6; color:white; border:none; width:100%">Update Password</button>
+                    <div id="errorMsg" class="error-message"></div>
                 </form>
-                <div id="settingsMsg" class="small" style="margin-top:10px; text-align:center;"></div>
             </div>
-        </div>
-        <div class="footer">
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 10px;">
-                <div id="systemStatus" style="font-size: 11px; font-weight: 500;">
-                    <i class="fa fa-circle" style="color: #cbd5e1;"></i> Checking System...
+    
+            <div id="app" style="display:none">
+                <div class="card" style="display:flex; justify-content:space-between; align-items:center">
+                    <div>
+                        <strong id="welcome"></strong>
+                        <div class="small muted" id="roleBadge"></div>
+                    </div>
+                    <div style="display:flex; gap:8px">
+                        <button onclick="toggleSettings()" class="small"><i class="fa fa-cog"></i></button>
+                        <button id="signoutBtn" class="small danger">Sign out</button>
+                    </div>
                 </div>
-                <div>&copy; <span id="copyrightYear"></span> /gmgenove</div>
+    
+                <div id="statusAlert" class="card" style="display:none; text-align:center; padding: 15px; margin-bottom: 15px;">
+                    <h3 id="alertTitle" style="margin:0; font-size: 1.1rem;"></h3>
+                    <p id="alertBody" style="margin:5px 0 0 0; font-size: 0.9rem; opacity: 0.9;"></p>
+                </div>
+    
+                <div class="card">
+                    <h3>Today's Schedule</h3>
+                    <div id="holidayNotice"></div>
+                    <div id="scheduleList"></div>
+                </div>
+    
+                <div id="controls" class="card" style="display:none">
+                    <div id="officerControls" style="display:none">
+                        <h3>Officer Reports</h3>
+                        <select id="reportType">
+                            <option value="">Select Report Type</option>
+                            <option value="class">Class Report</option>
+                            <option value="person">Student Report</option>
+                        </select>
+                        <div id="reportParams" style="margin: 10px 0"></div>
+                        <button id="generateReport">Generate PDF Report</button>
+                        <div id="reportOutput"></div>
+    
+                        <div id="adminTools" class="card" style="border-top: 4px solid #ef4444; margin-top: 20px;">
+                            <h4>System Maintenance</h4>
+                            <p class="small muted">Reset all student passwords to the default: <strong>pass123</strong></p>
+                            <button onclick="handleBulkReset()" style="background: #ef4444; color: white; border: none;">
+                                Bulk Reset Student Passwords
+                            </button>
+                        </div>
+    
+                        <div class="card" style="border-top: 4px solid #7c3aed; margin-top: 15px;">
+                            <h4>Class Suspension Tool</h4>
+                            <select id="suspendClassCode">
+                                <option value="BPAOUMN-1B">BPAOUMN-1B</option>
+                            </select>
+                            <input type="text" id="suspendReason" placeholder="Reason (e.g. Typhoon Karding)">
+                            <button onclick="handleSuspension()" style="background:#7c3aed; color:white; border:none; margin-top:5px; width:100%;">
+                                Declare Suspension
+                            </button>
+                        </div>
+                    </div>
+    
+                    <div id="studentControls" style="display:none">
+                        <button id="viewMyAttendance">Download My Attendance PDF</button>
+                        <div id="myAttendanceOutput"></div>
+                    </div>
+    
+                    <div id="profControls" style="display:none">
+                        <h3>Live Attendance Monitor</h3>
+                        
+                        <div style="margin-bottom: 15px; position: relative;">
+                            <input type="text" id="studentSearch" placeholder="Search student name..." style="width: 100%; box-sizing: border-box; padding-left: 35px;">
+                            <i class="fa fa-search" style="position: absolute; left: 12px; top: 13px; color: #94a3b8;"></i>
+                        </div>
+                    
+                        <div id="profDashboardOutput" class="small muted">Loading Live Stats...</div>
+                        <button onclick="loadProfessorDashboard()" style="margin-top:10px">Refresh Live Stats</button>
+                    </div>
+    
+                    <div class="card">
+                        <div style="display:flex; justify-content: space-between; align-items: center;">
+                            <h3>Attendance Overview</h3>
+                            <button onclick="loadAttendanceSummary()" class="small">View Totals</button>
+                        </div>
+                        
+                        <div id="profSummaryOutput"></div>
+                    </div>
+                </div>
+                <div class="card" id="settingsCard" style="display:none;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h3>Account Settings</h3>
+                        <button onclick="toggleSettings()" class="small muted">Close</button>
+                    </div>
+                    <form id="changePasswordForm">
+                        <div style="margin-bottom:10px;">
+                            <label class="small">Current Password</label><br>
+                            <input type="password" id="currentPw" required style="width:100%">
+                        </div>
+                        <div style="margin-bottom:10px;">
+                            <label class="small">New Password</label><br>
+                            <input type="password" id="newPw" required style="width:100%">
+                        </div>
+                        <div style="margin-bottom:15px;">
+                            <label class="small">Confirm New Password</label><br>
+                            <input type="password" id="confirmNewPw" required style="width:100%">
+                        </div>
+                        <button type="submit" style="background:#3b82f6; color:white; border:none; width:100%">Update Password</button>
+                    </form>
+                    <div id="settingsMsg" class="small" style="margin-top:10px; text-align:center;"></div>
+                </div>
+            </div>
+            <div class="footer">
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 10px;">
+                    <div id="systemStatus" style="font-size: 11px; font-weight: 500;">
+                        <i class="fa fa-circle" style="color: #cbd5e1;"></i> Checking System...
+                    </div>
+                    <div>&copy; <span id="copyrightYear"></span> /gmgenove</div>
+                </div>
             </div>
         </div>
-    </div>
-    <script src="script.js"></script>
-</body>
+        <script src="script.js"></script>
+    </body>
 </html>
