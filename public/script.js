@@ -361,13 +361,15 @@ async function loadTodaySchedule() {
         // Send the excuse to the server
         window.submitExcuse = async (classCode) => {
             const reasonInput = document.getElementById(`reason-${classCode.replace(/\s+/g)}`);
-            const reason = reasonInput.value;
         
             // Null-check before accessing .value to prevent the crash
             if (!reasonInput) {
                 console.error(`Input field not found for: reason-${classCode.replace(/\s+/g)}`);
                 return alert("System Error: Could not find the excuse input field.");
             }
+
+            const reason = reasonInput.value.trim();
+            if (reason.length < 5) return alert("Please provide a valid reason (min 5 characters).");
             
             const res = await api('submit_excuse', { 
                 class_code: classCode, 
