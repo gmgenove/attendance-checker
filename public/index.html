@@ -76,6 +76,11 @@
                 <button id="signoutBtn">Sign out</button>
             </div>
 
+            <div id="statusAlert" class="card" style="display:none; text-align:center; padding: 15px; margin-bottom: 15px;">
+                <h3 id="alertTitle" style="margin:0; font-size: 1.1rem;"></h3>
+                <p id="alertBody" style="margin:5px 0 0 0; font-size: 0.9rem; opacity: 0.9;"></p>
+            </div>
+
             <div class="card">
                 <h3>Today's Schedule</h3>
                 <div id="holidayNotice"></div>
@@ -99,6 +104,17 @@
                         <p class="small muted">Reset all student passwords to the default: <strong>pass123</strong></p>
                         <button onclick="handleBulkReset()" style="background: #ef4444; color: white; border: none;">
                             Bulk Reset Student Passwords
+                        </button>
+                    </div>
+
+                    <div class="card" style="border-top: 4px solid #7c3aed; margin-top: 15px;">
+                        <h4>Class Suspension Tool</h4>
+                        <select id="suspendClassCode">
+                            <option value="BPAOUMN-1B">BPAOUMN-1B</option>
+                        </select>
+                        <input type="text" id="suspendReason" placeholder="Reason (e.g. Typhoon Karding)">
+                        <button onclick="handleSuspension()" style="background:#7c3aed; color:white; border:none; margin-top:5px; width:100%;">
+                            Declare Suspension
                         </button>
                     </div>
                 </div>
