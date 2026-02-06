@@ -360,14 +360,24 @@ async function loadTodaySchedule() {
 
         // Send the excuse to the server
         window.submitExcuse = async (classCode) => {
-            const reasonInput = document.getElementById(`reason-${classCode.replace(/\s+/g)}`);
+            // 1. Critical Check: Is classCode actually valid?
+            if (!classCode || typeof classCode !== 'string') {
+                console.error("Invalid classCode received:", classCode);
+                return alert("Error: Class reference is missing.");
+            }
         
+            // 2. Sanitize carefully
+            const safeCode = classCode.replace(/\s+/g, '-');
+            
+            // 3. Select the input
+            const reasonInput = document.getElementById(`reason-${safeCode}`);
             // Null-check before accessing .value to prevent the crash
             if (!reasonInput) {
-                console.error(`Input field not found for: reason-${classCode.replace(/\s+/g)}`);
-                return alert("System Error: Could not find the excuse input field.");
+                // If it still fails, log the specific ID we looked for to help debug
+                console.error(`Looking for ID: reason-${safeCode}`);
+                return alert("System Error: Could not find the input field for this class.");
             }
-
+        
             const reason = reasonInput.value.trim();
             if (reason.length < 5) return alert("Please provide a valid reason (min 5 characters).");
             
