@@ -156,14 +156,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     const checkHealth = async () => {
-        const res = await api('health_check');
-        const footer = document.querySelector('.footer');
+        const statusEl = document.getElementById('systemStatus');
+        if (!statusEl) return;
+    
+        const res = await api('health_check'); 
+        
         if (res.ok) {
-            //footer.innerHTML += `<div style="color: #10b981; font-size: 10px;">● System Online</div>`;
-            return "System Online";
+            statusEl.innerHTML = `<i class="fa fa-circle" style="color: #10b981;"></i> System Online`;
+            statusEl.style.color = "#10b981"; // Emerald Green
         } else {
-            //footer.innerHTML += `<div style="color: #ef4444; font-size: 10px;">● System Offline: ${res.error}</div>`;
-            return "System Offline";
+            statusEl.innerHTML = `<i class="fa fa-circle" style="color: #ef4444;"></i> System Offline`;
+            statusEl.style.color = "#ef4444"; // Rose Red
+            
+            // Optional: Show error message in the main UI if it's a critical DB error
+            const errorMsg = document.getElementById('errorMsg');
+            if (errorMsg) errorMsg.textContent = "⚠️ Database Connection Error. Please refresh.";
         }
     };
 
