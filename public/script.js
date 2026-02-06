@@ -233,38 +233,41 @@ async function loadProfessorDashboard() {
 
         res.roster.forEach(r => {
             let statusColor = "#94a3b8"; // Default Grey for NOT YET ARRIVED
-            let opacity = "1";
+            let opacity = r.status === 'NOT YET ARRIVED' ? "0.6" : "1";
 
             if (r.status === 'PRESENT') statusColor = "#10b981";
             if (r.status === 'LATE') statusColor = "#f59e0b";
-            if (r.status === 'ABSENT' || r.status === 'INCOMPLETE') statusColor = "#ef4444"; // Red for issues
-            if (r.status === 'NOT YET ARRIVED') opacity = "0.6";
+            if (r.status === 'ABSENT' || r.status === 'INCOMPLETE') statusColor = "#ef4444";
+            if (r.status === 'HOLIDAY') statusColor = "#3b82f6";
+            if (r.status === 'SUSPENDED') statusColor = "#7c3aed";
 
             html += `
-                <li style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; opacity: ${opacity};">
+                <li style="padding: 12px 0; border-bottom: 1px solid #f1f5f9; opacity: ${opacity};">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span>
-                            <strong>${r.user_name}</strong>
+                        <span style="flex: 1;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <strong>${r.user_name}</strong>
+                                <span style="font-size:9px; padding:2px 6px; border-radius:10px; background:#f1f5f9; color:${statusColor}; font-weight:bold; border: 1px solid ${statusColor}33;">
+                                    ${r.status}
+                                </span>
+                            </div>
                             <div class="small muted">${r.time_in ? 'In at ' + r.time_in : 'No time recorded'}</div>
                         </span>
-                        <span style="font-weight:bold; font-size:10px; color:${statusColor}">${r.status}</span>
-                    </div>
-                </li>
-                <li style="padding: 10px 0; border-bottom: 1px solid #f1f5f9;">
-                    <span><strong>${r.user_name}</strong></span>
-                    <button onclick="resetSinglePassword('${r.user_id}')" class="small" style="float:right; style="background: #ef4444; color: white; border: none;">Reset Password</button>
-                </li>
-                <li style="padding: 10px 0; border-bottom: 1px solid #f1f5f9;">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span><strong>${r.user_name}</strong></span>
-                        <div style="margin-top:5px;">
-                            <button onclick="bulkStatusUpdate('${r.user_id}', 'CREDITED')" class="small" style="background:#064e3b; color:#e6f4ea; border:1px solid #ddd;">Credit All</button>
-                            <button onclick="bulkStatusUpdate('${r.user_id}', 'DROPPED')" class="small danger" style="background:none; border:1px solid #ddd;">Mark Dropped</button>
+        
+                        <div style="display:flex; gap:4px; align-items:center;">
+                            <button onclick="bulkStatusUpdate('${r.user_id}', 'CREDITED')" title="Credit Rest of Semester" style="background:#064e3b; color:white; border:none; padding:4px 8px; font-size:10px; border-radius:4px;">
+                                Credit
+                            </button>
+                            <button onclick="bulkStatusUpdate('${r.user_id}', 'DROPPED')" title="Mark as Dropped" style="background:none; color:#ef4444; border:1px solid #ef4444; padding:4px 8px; font-size:10px; border-radius:4px;">
+                                Drop
+                            </button>
+                            <button onclick="resetSinglePassword('${r.user_id}')" title="Reset Password" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; padding:4px 8px; font-size:10px; border-radius:4px;">
+                                <i class="fa fa-key"></i>
+                            </button>
                         </div>
                     </div>
                 </li>`;
         });
-        
         html += `</ul>`;
         container.innerHTML = html;
         
