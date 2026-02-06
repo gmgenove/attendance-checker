@@ -131,7 +131,7 @@
                             <select id="suspendClassCode">
                                 <option value="">Loading Classes...</option>
                             </select>
-                            <input type="text" id="suspendReason" placeholder="Reason (e.g., Professor on official business or Typhoon Karding)" minlength="5" required>
+                            <input type="text" id="suspendReason" placeholder="Reason (e.g., Professor on official business or Typhoon Karding)" minlength="5" style="width: 80%;" required>
                             <button onclick="handleStatusChange()" style="background:#7c3aed; color:white; border:none; margin-top:5px;">
                                 Update Class Status
                             </button>
@@ -141,13 +141,14 @@
                             <h4>Make-up Class Scheduler</h4>
                             <div class="grid">
                                 <select id="makeupClassCode">
-                                    </select>
-                                <input type="date" id="makeupDate">
+                                    <option value="">Loading Classes...</option>
+                                </select>
+                                <input type="date" id="makeupDate" style="width: 30%;">
+                                <button onclick="handleMakeUpClass()" style="background:#10b981; color:white; border:none; margin-top:5px; width:25%;">
+                                    Authorize Make-up Session
+                                </button>
                             </div>
                             <p class="small muted" style="margin-top:5px;">This allows students to check in on the selected date.</p>
-                            <button onclick="handleMakeUpClass()" style="background:#10b981; color:white; border:none; margin-top:5px; width:100%;">
-                                Authorize Make-up Session
-                            </button>
                         </div>
                     </div>
     
