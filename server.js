@@ -85,6 +85,7 @@ app.post('/api', async (req, res) => {
 		  try {
 			const now = getManilaNow();
 			const dayName = now.toFormat('ccc'); // Mon, Tue, etc.
+			const dateStr = now.toISODate();
 
 			// 1. Get the current active semester info
 	        const semInfo = await getCurrentSemConfig();
@@ -980,15 +981,18 @@ const autoTagAbsentees = async () => {
 
     // 1. Check if today is a holiday
     const holidayCheck = await pool.query(
-      'SELECT holiday_name FROM holidays WHERE holiday_date = $1', [dateStr]
+      `SELECT holiday_name FROM holidays WHERE holiday_date = $1`, [dateStr]
     );
 
     const isHoliday = holidayCheck.rows.length > 0;
     const holidayReason = isHoliday ? holidayCheck.rows[0].holiday_name : null;
 
     // 2. Find all classes scheduled for today + Authorized Make-up sessions
-    const schedules = await pool.query(
-      "SELECT * FROM schedules WHERE ($1 = ANY(days) AND semester = $2 AND academic_year = $3) OR EXISTS (SELECT 1 FROM attendance a WHERE a.class_code = s.class_code AND a.class_date = $4 AND a.attendance_status = 'PENDING')", [dayName, semInfo.sem, semInfo.year, dateStr]
+    const schedules = await pool.query(`
+      SELECT * FROM schedules 
+	  WHERE ($1 = ANY(days) AND semester = $2 AND academic_year = $3) 
+	  OR EXISTS (SELECT 1 FROM attendance a 
+	  WHERE a.class_code = s.class_code AND a.class_date = $4 AND a.attendance_status = 'PENDING')`, [dayName, semInfo.sem, semInfo.year, dateStr]
     );
 
     for (const sched of schedules.rows) {
