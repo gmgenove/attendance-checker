@@ -416,9 +416,10 @@ async function updateCheckinUI(cls) {
     // Sanitize the class code for CSS (e.g., 'POLS 102' becomes 'POLS-102')
     const safeCode = cls.class_code.replace(/\s+/g, '-');
     const btn = document.getElementById(`btn-${safeCode}`);
-    const btnContainer = document.getElementById(`btn-${safeCode)}`).parentElement;
+    const btnContainer = document.getElementById(`btn-${safeCode}`).parentElement;
     const statusSpan = document.getElementById(`status-${safeCode}`);
     const excuseLink = document.getElementById(`excuse-link-${safeCode}`);
+    
 
     // 1. If student already has a special status, remove the prompts
     const specialStatuses = ['EXCUSED', 'SUSPENDED', 'CANCELLED', 'HOLIDAY'];
@@ -441,6 +442,16 @@ async function updateCheckinUI(cls) {
                 </div>`;
             }
             statusSpan.innerHTML += '</div>`;
+
+            // Global toggle function
+            window.toggleReasonPreview = (e, safeCode) => {
+                e.preventDefault();
+                const preview = document.getElementById(`reason-preview-${safeCode}`);
+                if (preview) {
+                    preview.style.display = preview.style.display === 'none' ? 'block' : 'none';
+                    e.target.textContent = preview.style.display === 'none' ? 'View Filed Reason' : 'Hide Reason';
+                }
+            };
         return; // Stop here, no need to check windows or AM/PM
     }
 
