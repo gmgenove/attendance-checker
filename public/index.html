@@ -31,10 +31,9 @@
             #loading-bar { height: 3px; width: 0%; background: #3b82f6; position: fixed; top: 0; left: 0; transition: width 0.3s;}
             @keyframes subtle-shake { 0% { transform: translateX(0); } 25% { transform: translateX(2px); } 50% { transform: translateX(-2px); } 75% { transform: translateX(2px); } 100% { transform: translateX(0); } }
             .reminder-active {animation: subtle-shake 0.5s ease-in-out;}
-            .password-wrapper { position: relative; display: flex; align-items: center; width: 100%; max-width: 260px; }
+            .password-wrapper { position: relative; display: block; align-items: center; width: 100%; max-width: 260px; }
             .password-wrapper input { padding-right: 40px; width: 100%; box-sizing: border-box; }
-            .password-wrapper .field-icon { position: absolute; right: 12px; color: #94a3b8; }
-            
+            .password-wrapper .field-icon { position: absolute; right: -5px; color: #94a3b8; margin-top: 11px; }
             /* Status Alert Themes */
             .alert-holiday { background: #dbeafe !important; color: #1e40af !important; border: 1px solid #bfdbfe !important; }
             .alert-suspended { background: #f3e8ff !important; color: #6b21a8 !important; border: 1px solid #e9d5ff !important; }
@@ -53,7 +52,7 @@
                 <form id="authForm">
                     <div class="grid">
                         <div>
-                            <label>Student ID</label><br>
+                            <label for="userId">Student ID</label><br>
                             <input id="userId" placeholder="2025-XXXXXX-MN-X" maxlength="16" required />
                         </div>
                         <div class="password-wrapper">
@@ -124,7 +123,7 @@
                             <select id="suspendClassCode">
                                 <option value="BPAOUMN-1B">BPAOUMN-1B</option>
                             </select>
-                            <input type="text" id="suspendReason" placeholder="Reason (e.g. Typhoon Karding)">
+                            <input type="text" id="suspendReason" placeholder="Reason (e.g. Typhoon Karding)" required>
                             <button onclick="handleSuspension()" style="background:#7c3aed; color:white; border:none; margin-top:5px; width:100%;">
                                 Declare Suspension
                             </button>
@@ -164,16 +163,16 @@
                     </div>
                     <form id="changePasswordForm">
                         <div style="margin-bottom:10px;">
-                            <label class="small">Current Password</label><br>
-                            <input type="password" id="currentPw" required style="width:100%">
+                            <label class="small" for="currentPw">Current Password</label><br>
+                            <input type="password" id="currentPw" required style="width:100%" minlength="12">
                         </div>
                         <div style="margin-bottom:10px;">
-                            <label class="small">New Password</label><br>
-                            <input type="password" id="newPw" required style="width:100%">
+                            <label class="small" for="newPw">New Password</label><br>
+                            <input type="password" id="newPw" required style="width:100%" minlength="12">
                         </div>
                         <div style="margin-bottom:15px;">
-                            <label class="small">Confirm New Password</label><br>
-                            <input type="password" id="confirmNewPw" required style="width:100%">
+                            <label class="small" for="confirmNewPw">Confirm New Password</label><br>
+                            <input type="password" id="confirmNewPw" required style="width:100%" minlength="12">
                         </div>
                         <button type="submit" style="background:#3b82f6; color:white; border:none; width:100%">Update Password</button>
                     </form>
