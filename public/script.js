@@ -267,8 +267,7 @@ async function loadProfessorDashboard() {
                                 ${isMakeup ? `<span style="font-size:8px; background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; padding:1px 4px; border-radius:4px;">MAKE-UP</span>` : ''}
                                 <span style="font-size:9px; padding:2px 6px; border-radius:10px; background:#f1f5f9; color:${statusColor}; font-weight:bold; border: 1px solid">${r.status}</span>
                             </div>
-                            <div class="small muted">${r.time_in ? 'In at ' + r.time_in : 'No time recorded'}</div>
-                            <div class="small muted">${r.time_in ? 'In: ' + r.time_in : 'Pending Make-up'}</div>
+                            <div class="small muted">${r.time_in ? 'In at ' + r.time_in : isMakeup ? 'Pending Make-up' : 'No time recorded'}</div>
                         </span>
         
                         <div style="display:flex; gap:4px; align-items:center;">
