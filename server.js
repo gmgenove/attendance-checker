@@ -614,7 +614,7 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
   
   y -= 15;
   page.drawText(`Schedule:`, { x: 40, y, size: 10, font: bold });
-  page.drawText(`${info.days.join('/')} | ${DateTime.fromFormat(info.start_time, 'HH:mm:ss').toFormat('hh:mm a')}-${info.DateTime.fromFormat(info.end_time, 'HH:mm:ss').toFormat('hh:mm a')}`, { x: 120, y, size: 10, font });
+  page.drawText(`${info.days.join('/')} | ${DateTime.fromFormat(info.start_time, 'HH:mm:ss').toFormat('hh:mm a')}-${DateTime.fromFormat(info.end_time, 'HH:mm:ss').toFormat('hh:mm a')}`, { x: 120, y, size: 10, font });
   
   y -= 15;
   page.drawText(`Section:`, { x: 40, y, size: 10, font: bold });
@@ -950,6 +950,11 @@ const autoTagAbsentees = async () => {
     const now = getManilaNow();
     const dayName = now.toFormat('ccc');
     const dateStr = now.toISODate();
+	const semInfo = await getCurrentSemConfig();
+
+    if (semInfo.sem === 'None') {
+      return;
+    }
 
     // 1. Check if today is a holiday
     const holidayCheck = await pool.query(
