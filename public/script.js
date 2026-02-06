@@ -212,7 +212,7 @@ function showApp() {
     
     // Set User Info
     document.getElementById('welcome').textContent = currentUser.name;
-    document.getElementById('roleBadge').textContent = currentUser.role.toUpperCase();
+    document.getElementById('roleBadge').textContent = currentUser.id + " " + (currentUser.role.toUpperCase());
     
     // Control section visibility
     const controls = document.getElementById('controls');
