@@ -295,7 +295,7 @@ app.post('/api', async (req, res) => {
 			    let statusChar = r.attendance_status === 'HOLIDAY' ? 'H' : 
                  r.attendance_status === 'SUSPENDED' ? 'S' : 
                  r.attendance_status === 'CANCELLED' ? 'C' : 
-				 r.attendance_status === 'DROPPED') ? 'D' :
+				 r.attendance_status === 'DROPPED' ? 'D' :
                  r.attendance_status[0].toUpperCase();	// Default (P, L, A, E)
 			
 			    roster[r.student_id].records[dStr] = statusChar;
