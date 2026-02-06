@@ -283,11 +283,10 @@ async function loadProfessorDashboard() {
                 <li style="padding: 10px 0; border-bottom: 1px solid #f1f5f9;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <span><strong>${r.user_name}</strong></span>
-                        <div>
+                        <div style="margin-top:5px;">
                             <button onclick="bulkStatusUpdate('${r.user_id}', 'CREDITED')" class="small">Credit All</button>
-                            <button onclick="bulkStatusUpdate('${r.user_id}', 'DROPPED')" class="small danger">Drop All</button>
+                            <button onclick="bulkStatusUpdate('${r.user_id}', 'DROPPED')" class="small danger">Mark Dropped</button>
                         </div>
-                    </div>
                 </li>`;
         });
         
