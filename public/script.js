@@ -329,6 +329,7 @@ async function loadTodaySchedule() {
             <div style="flex:1">
                 <strong>${cls.class_name}</strong><br>
                 <span class="small muted">${cls.start_time} - ${cls.end_time}</span>
+                <span class="muted small">Prof. ${cls.professor_name}</span>
                 <div id="status-${cls.class_code}" class="small" style="margin:5px 0">Checking status...</div>
                 
                 <div id="excuse-area-${cls.class_code}" style="display:none; margin-top:10px; background:#f1f5f9; padding:8px; border-radius:8px;">
