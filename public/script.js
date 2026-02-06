@@ -389,7 +389,19 @@ async function loadTodaySchedule() {
         
             if (res.ok) {
                 alert("Excuse filed! This will be included in the official Excuse Log.");
-                loadTodaySchedule(); 
+                // 1. Find the class in your local data array and update its status
+                const classObj = currentScheduleData.find(c => c.class_code === classCode);
+                if (classObj) {
+                    classObj.my_status = 'EXCUSED'; // Lock the status locally
+                    classObj.time_in = res.filedAt; // Update the local timestamp
+                }
+        
+                // 2. Re-run the UI update to hide the "File Excuse" link and inputs
+                updateCheckinUI(classObj);
+                
+                // 3. Hide the excuse area explicitly
+                const area = document.getElementById(`excuse-area-${safeCode}`);
+                if (area) area.style.display = 'none';
             } else {
                 alert(res.error);
             }
@@ -413,9 +425,14 @@ async function updateCheckinUI(cls) {
     if (specialStatuses.includes(cls.my_status)) {
         if (btn) btn.style.display = 'none';
         if (excuseLink) excuseLink.style.display = 'none';
-        
-        statusSpan.textContent = `Registered as ${cls.my_status}`;
-        statusSpan.style.color = "#64748b"; // Muted Slate
+
+        // Display the timestamp if available (from cls.time_in)
+        const timeLabel = cls.time_in && cls.time_in !== '00:00:00' ? `at ${cls.time_in}` : '';
+            
+        statusSpan.innerHTML = `
+            <span style="color: #64748b;">    
+                <i class="fa fa-check-circle"></i> Registered as <strong>${cls.my_status}</strong> ${timeLabel}
+            </span>`;
         return; // Stop here, no need to check windows or AM/PM
     }
 
