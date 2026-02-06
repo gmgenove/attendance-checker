@@ -61,7 +61,7 @@ app.post('/api', async (req, res) => {
       // --- SIGN UP ---
       case 'signup': {
         const { id, password, role } = payload;
-        // Verify user exists in roster first (same as your GAS logic)
+        // Verify user exists in roster first
         const check = await pool.query('SELECT * FROM sys_users WHERE user_id = $1 AND user_role = $2', [id, role]);
         if (check.rows.length === 0) return res.json({ ok: false, error: 'ID not found in roster' });
         if (check.rows[0].password_hash) return res.json({ ok: false, error: 'Account already exists' });
@@ -122,13 +122,16 @@ app.post('/api', async (req, res) => {
 			const [hh, mm] = schedResult.rows[0].start_time.split(':');
 			const classStart = now.set({ hour: hh, minute: mm, second: 0, millisecond: 0 });
 		
-			// C. Window Logic (Using your 10/10/20 window logic)
+			// C. Window Logic (Using 10/10/20 window logic)
 			const diffMins = now.diff(classStart, 'minutes').minutes;
 		
 			// Hardcoded config (or fetch from a 'config' table)
-			const checkinOpen = -10; // Opens 10 mins before
-			const lateThreshold = 5; // Late after 5 mins
-			const absentThreshold = 10; // Absent after 10 mins
+			const semConfig = await getCurrentSemConfig();
+		
+		  if (!semConfig.start || semConfig.sem === "None") {
+			const checkinOpen = -semConfig.checkin_window_minutes; // Opens 10 mins before
+			const lateThreshold = semConfig.late_window_minutes; // Late after 5 mins
+			const absentThreshold = semConfig.absent_window_minutes; // Absent after 10 mins
 		
 			if (diffMins < checkinOpen) return res.json({ ok: false, error: 'Check-in not open yet' });
 			if (diffMins > absentThreshold) return res.json({ ok: false, error: 'Check-in closed (Absent)' });
@@ -323,7 +326,7 @@ app.post('/api', async (req, res) => {
 			const studentInfo = studentRes.rows[0];
 			
 			// 2. Fetch all unique class dates in this semester across all subjects
-			// We will generate the 40 most relevant dates for the student's schedule, D1-D40 are generic columns.
+			// generate the dates for the student's schedule, D1-D40 are generic columns.
 			const scheduleRes = await pool.query(
 			    `SELECT DISTINCT s.* FROM schedules s 
 			     JOIN attendance a ON s.class_code = a.class_code 
@@ -411,7 +414,7 @@ app.post('/api', async (req, res) => {
 	        return res.status(403).json({ ok: false, error: "Unauthorized access." });
 	    }
 	
-	    const defaultPassword = "pass123"; // You can change this default
+	    const defaultPassword = "password1234"; // You can change this default
 	    const hashedDefault = await bcrypt.hash(defaultPassword, 10);
 	
 	    try {
@@ -471,25 +474,55 @@ app.post('/api', async (req, res) => {
 		}
 		return res.json({ ok: true, isHoliday: false });
 	  }
-	
-	  case 'credit_attendance': {
-		const { class_code, student_id } = payload;
-	    const now = getManilaNow();
-	    const semConfig = await getCurrentSemConfig();
-	
-	    if (now > semConfig.adjEnd) {
-	        return res.json({ ok: false, error: `Adjustment period for ${semConfig.name} has ended.` });
-	    }
-	
-	    // Mark as CREDITED for today (or use your logic to loop through semester dates)
-		await pool.query(`
-		    INSERT INTO attendance (class_date, class_code, student_id, attendance_status, time_in)
-		    VALUES ($1, $2, $3, 'CREDITED', $4)
-		    ON CONFLICT (class_date, class_code, student_id) 
-		    DO UPDATE SET attendance_status = 'CREDITED'
-		`, [now.toISODate(), class_code, student_id, now.toFormat('HH:mm:ss')]);
-	
-	    return res.json({ ok: true, message: "Attendance credited successfully." });
+
+      case 'credit_attendance': {
+		  const { class_code, student_id, type } = payload; // type can be 'CREDITED' or 'DROPPED'
+		  const now = getManilaNow();
+		  const semConfig = await getCurrentSemConfig();
+		
+		  if (!semConfig.start || semConfig.sem === "None") {
+		    return res.json({ ok: false, error: "No active semester detected." });
+		  }
+		
+		  // 1. Fetch Class Schedule
+		  const schedRes = await pool.query("SELECT days FROM schedules WHERE class_code = $1", [class_code]);
+		  if (schedRes.rows.length === 0) return res.json({ ok: false, error: "Class not found." });
+		  const classDays = schedRes.rows[0].days;
+		
+		  try {
+		    // 2. Loop from Today until the End of the Semester
+		    let current = now;
+		    const end = semConfig.end;
+		    let datesToUpdate = [];
+		
+		    while (current <= end) {
+		      if (classDays.includes(current.toFormat('ccc'))) {
+		        datesToUpdate.push(current.toISODate());
+		      }
+		      current = current.plus({ days: 1 });
+		    }
+		
+		    if (datesToUpdate.length === 0) {
+		      return res.json({ ok: false, error: "No future class dates found to update." });
+		    }
+		
+		    // 3. Perform Bulk Upsert with the chosen status
+		    const statusToApply = type === 'DROPPED' ? 'DROPPED' : 'CREDITED';
+		    
+		    await pool.query(`
+		      INSERT INTO attendance (class_date, class_code, student_id, attendance_status, time_in)
+		      SELECT unnest($1::date[]), $2, $3, $4, $5
+		      ON CONFLICT (class_date, class_code, student_id) 
+		      DO UPDATE SET attendance_status = $4
+		    `, [datesToUpdate, class_code, student_id, statusToApply, now.toFormat('HH:mm:ss')]);
+		
+		    return res.json({ 
+		      ok: true, 
+		      message: `Successfully marked ${datesToUpdate.length} sessions as ${statusToApply}.` 
+		    });
+		  } catch (err) {
+		    return res.json({ ok: false, error: "Database error: " + err.message });
+		  }
 	  }
 
 	  case 'submit_excuse': {
@@ -621,7 +654,10 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
     // Draw Aggregated Totals
     const c = student.counts;
     const presentTotal = c.P + c.L + c.C;
-    const perc = dates.length > 0 ? Math.round((presentTotal / dates.length) * 100) : 0;
+	// We also subtract Dropped days from the total possible days so their % isn't ruined
+	const droppedCount = c.D || 0; // 'D' from 'DROPPED'
+	const totalPossible = dates.length - droppedCount;
+	const perc = totalPossible > 0 ? Math.round((presentTotal / totalPossible) * 100) : 0;
 
     page.drawText(`${presentTotal}`, { x: totalX, y, size: 7, font });
     page.drawText(`${c.L}`, { x: totalX + 20, y, size: 7, font });
