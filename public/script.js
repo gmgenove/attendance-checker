@@ -252,14 +252,14 @@ async function loadProfessorDashboard() {
                 </li>
                 <li style="padding: 10px 0; border-bottom: 1px solid #f1f5f9;">
                     <span><strong>${r.user_name}</strong></span>
-                    <button onclick="resetSinglePassword('${r.user_id}')" class="small" style="float:right; background:none; border:1px solid #ddd;">Reset PW</button>
+                    <button onclick="resetSinglePassword('${r.user_id}')" class="small" style="float:right; style="background: #ef4444; color: white; border: none;">Reset Password</button>
                 </li>
                 <li style="padding: 10px 0; border-bottom: 1px solid #f1f5f9;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <span><strong>${r.user_name}</strong></span>
                         <div style="margin-top:5px;">
-                            <button onclick="bulkStatusUpdate('${r.user_id}', 'CREDITED')" class="small">Credit All</button>
-                            <button onclick="bulkStatusUpdate('${r.user_id}', 'DROPPED')" class="small danger">Mark Dropped</button>
+                            <button onclick="bulkStatusUpdate('${r.user_id}', 'CREDITED')" class="small" style="background:#064e3b; color:#e6f4ea; border:1px solid #ddd;">Credit All</button>
+                            <button onclick="bulkStatusUpdate('${r.user_id}', 'DROPPED')" class="small danger" style="background:none; border:1px solid #ddd;">Mark Dropped</button>
                         </div>
                     </div>
                 </li>`;
