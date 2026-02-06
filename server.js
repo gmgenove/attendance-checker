@@ -121,7 +121,7 @@ app.post('/api', async (req, res) => {
               end_time: DateTime.fromFormat(row.end_time, 'HH:mm:ss').toFormat('hh:mm a')
 			}));
 		
-			return res.json({ ok: true, schedule });
+			return res.json({ ok: true, schedule: result.rows });
 		  } catch (err) {
 			return res.json({ ok: false, error: err.message });
 		  }
