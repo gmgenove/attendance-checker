@@ -286,10 +286,11 @@ app.post('/api', async (req, res) => {
 			    const dStr = DateTime.fromJSDate(r.class_date).toISODate();
 			    
 			    // FIX: Character priority logic
-			    let statusChar = r.attendance_status[0].toUpperCase(); // Default (P, L, A, E)
-			    if (r.attendance_status === 'HOLIDAY') statusChar = 'H';
-			    if (r.attendance_status === 'SUSPENDED') statusChar = 'S';
-			    if (r.attendance_status === 'DROPPED') statusChar = 'D';
+			    let statusChar = r.attendance_status === 'HOLIDAY' ? 'H' : 
+                 r.attendance_status === 'SUSPENDED' ? 'S' : 
+                 r.attendance_status === 'CANCELLED' ? 'C' : 
+				 r.attendance_status === 'DROPPED') ? 'D' :
+                 r.attendance_status[0].toUpperCase();	// Default (P, L, A, E)
 			
 			    roster[r.student_id].records[dStr] = statusChar;
 			    
@@ -518,25 +519,24 @@ app.post('/api', async (req, res) => {
 	  }
 
 	  case 'suspend_class': {
-	    const { class_code, reason, date } = payload;
+	    const { class_code, reason, date, statusType } = payload; // statusType: 'SUSPENDED' or 'CANCELLED'
 	    const targetDate = date || getManilaNow().toISODate();
 	
 	    if (!reason || reason.trim().length < 5) {
-	        return res.json({ ok: false, error: "Please provide a specific reason for suspension." });
+	        return res.json({ ok: false, error: "Please provide a specific reason." });
 	    }
 	
 	    try {
-	        // Mark every student/officer in the roster as SUSPENDED for this date/class
 	        await pool.query(`
 	            INSERT INTO attendance (class_date, class_code, student_id, attendance_status, reason, time_in)
-	            SELECT $1, $2, user_id, 'SUSPENDED', $3, '00:00:00'
+	            SELECT $1, $2, user_id, $4, $3, '00:00:00'
 	            FROM sys_users
 	            WHERE user_role IN ('student', 'officer')
 	            ON CONFLICT (class_date, class_code, student_id) 
-	            DO UPDATE SET attendance_status = 'SUSPENDED', reason = $3
-	        `, [targetDate, class_code, reason.trim()]);
+	            DO UPDATE SET attendance_status = $4, reason = $3
+	        `, [targetDate, class_code, reason.trim(), statusType]);
 	
-	        return res.json({ ok: true, message: `Class ${class_code} marked as Suspended for ${targetDate}.` });
+	        return res.json({ ok: true, message: `Class marked as ${statusType.toLowerCase()}.` });
 	    } catch (err) {
 	        return res.json({ ok: false, error: err.message });
 	    }
@@ -667,8 +667,9 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
 	  if (status === 'A') statusColor = rgb(0.8, 0, 0);       // Red
 	  if (status === 'H') statusColor = rgb(0.2, 0.5, 0.8);   // Blue (Holiday)
 	  if (status === 'S') statusColor = rgb(0.5, 0.2, 0.7);   // Purple (Suspended)
+	  if (status === 'C') color = rgb(0.4, 0.4, 0.4); // Dark Grey (Cancelled)
 	  if (status === 'D') statusColor = rgb(0.5, 0.5, 0.5);   // Gray (Dropped)
-	
+
 	  page.drawText(status, { 
 	    x: startX + (i * colWidth), 
 	    y, 
