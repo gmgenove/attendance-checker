@@ -476,21 +476,21 @@ app.post('/api', async (req, res) => {
 	  }
 
       case 'credit_attendance': {
-		  const { class_code, student_id, type } = payload; // type can be 'CREDITED' or 'DROPPED'
+		  const { class_code, student_id, type } = payload; // type: 'CREDITED' or 'DROPPED'
 		  const now = getManilaNow();
 		  const semConfig = await getCurrentSemConfig();
 		
 		  if (!semConfig.start || semConfig.sem === "None") {
-		    return res.json({ ok: false, error: "No active semester detected." });
+		    return res.json({ ok: false, error: "No active semester detected for this date." });
 		  }
 		
-		  // 1. Fetch Class Schedule
-		  const schedRes = await pool.query("SELECT days FROM schedules WHERE class_code = $1", [class_code]);
-		  if (schedRes.rows.length === 0) return res.json({ ok: false, error: "Class not found." });
-		  const classDays = schedRes.rows[0].days;
-		
 		  try {
-		    // 2. Loop from Today until the End of the Semester
+		    // 1. Fetch Class Schedule to find valid meeting days
+		    const schedRes = await pool.query("SELECT days FROM schedules WHERE class_code = $1", [class_code]);
+		    if (schedRes.rows.length === 0) return res.json({ ok: false, error: "Class not found." });
+		    const classDays = schedRes.rows[0].days;
+		
+		    // 2. Loop from today until the end of the semester
 		    let current = now;
 		    const end = semConfig.end;
 		    let datesToUpdate = [];
@@ -506,8 +506,8 @@ app.post('/api', async (req, res) => {
 		      return res.json({ ok: false, error: "No future class dates found to update." });
 		    }
 		
-		    // 3. Perform Bulk Upsert with the chosen status
-		    const statusToApply = type === 'DROPPED' ? 'DROPPED' : 'CREDITED';
+		    // 3. Bulk Upsert the status (D for Dropped, C for Credited)
+		    const statusToApply = (type === 'DROPPED') ? 'DROPPED' : 'CREDITED';
 		    
 		    await pool.query(`
 		      INSERT INTO attendance (class_date, class_code, student_id, attendance_status, time_in)
@@ -653,15 +653,18 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
 
     // Draw Aggregated Totals
     const c = student.counts;
-    const presentTotal = c.P + c.L + c.C;
+    const presentTotal = (c.P || 0) + (c.L || 0) + (c.C || 0); 
 	// We also subtract Dropped days from the total possible days so their % isn't ruined
 	const droppedCount = c.D || 0; // 'D' from 'DROPPED'
+	// Calculate percentage based only on non-dropped days
 	const totalPossible = dates.length - droppedCount;
 	const perc = totalPossible > 0 ? Math.round((presentTotal / totalPossible) * 100) : 0;
 
+	// Draw the row
     page.drawText(`${presentTotal}`, { x: totalX, y, size: 7, font });
     page.drawText(`${c.L}`, { x: totalX + 20, y, size: 7, font });
     page.drawText(`${c.A}`, { x: totalX + 40, y, size: 7, font });
+	page.drawText(`${droppedCount}`, { x: totalX + 45, y, size: 7, font, color: rgb(0.5, 0.5, 0.5) }); // Added Dropped column
     page.drawText(`${perc}%`, { x: totalX + 65, y, size: 7, font: bold });
     
     // Horizontal row line
