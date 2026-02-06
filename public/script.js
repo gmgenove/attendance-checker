@@ -544,9 +544,9 @@ document.getElementById('reportType').onchange = async (e) => {
     const data = await api('get_dropdowns');
     
     if (type === 'class') {
-        container.innerHTML = `<select id="paramId"><option value="">Select Class</option>${data.classes.map(c => `<option value="${c.code}">${c.name}</option>`).join('')}</select>`;
+        container.innerHTML = `<select id="paramId"><option value="">Select Class</option>${data.classes.map(c => `<option value="${c.code}">${c.name} (${c.code})</option>`).join('')}</select>`;
     } else {
-        container.innerHTML = `<select id="paramId"><option value="">Select Student</option>${data.students.map(s => `<option value="${s.user_id}">${s.user_name}</option>`).join('')}</select>`;
+        container.innerHTML = `<select id="paramId"><option value="">Select Student</option>${data.students.map(s => `<option value="${s.user_id}">${s.user_name} (${s.user_id})</option>`).join('')}</select>`;
     }
 };
 
