@@ -31,8 +31,8 @@
             #loading-bar { height: 3px; width: 0%; background: #3b82f6; position: fixed; top: 0; left: 0; transition: width 0.3s;}
             @keyframes subtle-shake { 0% { transform: translateX(0); } 25% { transform: translateX(2px); } 50% { transform: translateX(-2px); } 75% { transform: translateX(2px); } 100% { transform: translateX(0); } }
             .reminder-active {animation: subtle-shake 0.5s ease-in-out;}
-            .password-wrapper { position: relative; display: flex; align-items: center; }
-            .password-wrapper input { padding-right: 40px; }
+            .password-wrapper { position: relative; display: flex; align-items: center; width: 100%; max-width: 260px; margin-left: auto; }
+            .password-wrapper input { width: 100%; box-sizing: border-box; padding-right: 40px; }
             .password-wrapper .field-icon { position: absolute; right: 12px; color: #94a3b8; }
             
             /* Status Alert Themes */
@@ -54,11 +54,13 @@
                     <div class="grid">
                         <div>
                             <label>Student ID</label><br>
-                            <input id="userId" placeholder="2025-XXXXXX-MN-X" required />
+                            <input id="userId" placeholder="2025-XXXXXX-MN-X" maxlength="16" required />
                         </div>
                         <div class="password-wrapper">
-                            <input id="passwordInput" type="password" placeholder="Enter password" required>
-                            <i id="togglePassword" class="fa fa-fw fa-eye field-icon" style="cursor:pointer; margin-right:212px;"></i>
+                            <label for="passwordInput">Password</label><br>
+                            <input id="passwordInput" type="password" placeholder="Enter password" minlength="12" required>
+                                <i id="togglePassword" class="fa fa-fw fa-eye field-icon" style="cursor:pointer; margin-right:12px;" />
+                            </input>
                         </div>
                     </div>
                     <div style="margin-top:12px">
