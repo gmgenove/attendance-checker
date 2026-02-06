@@ -209,6 +209,7 @@ function showApp() {
 
     if (isElevated) {
         loadProfessorDashboard();
+        populateClassDropdowns()
     }
 }
 
@@ -749,6 +750,29 @@ document.getElementById('changePasswordForm').addEventListener('submit', async (
         msg.textContent = res.error;
     }
 });
+
+async function populateClassDropdowns() {
+    const dropdown = document.getElementById('suspendClassCode');
+    const reportDropdown = document.getElementById('paramId'); // Also useful for the report section
+    
+    const res = await api('get_dropdowns');
+    
+    if (res.ok && res.classes) {
+        const options = res.classes.map(c => 
+            `<option value="${c.code}">${c.name} (${c.code})</option>`
+        ).join('');
+        
+        const placeholder = '<option value="">-- Select Class --</option>';
+        dropdown.innerHTML = placeholder + options;
+        
+        // If the report parameter dropdown exists, sync it too
+        if (reportDropdown && document.getElementById('reportType').value === 'class') {
+            reportDropdown.innerHTML = placeholder + options;
+        }
+    } else {
+        dropdown.innerHTML = '<option value="">Error loading classes</option>';
+    }
+}
 
 // Refresh the dashboard every 60 seconds if the user is an Officer/Prof
 setInterval(() => {
