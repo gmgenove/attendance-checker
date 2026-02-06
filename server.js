@@ -25,6 +25,16 @@ const getManilaNow = () => DateTime.now().setZone(TIMEZONE);
 // Simple GET route for UptimeRobot
 app.get('/ping', (req, res) => res.send('System Awake'));
 
+app.get('/health', async (req, res) => {
+  try {
+	// Perform a simple query to verify DB connection
+    const result = await pool.query('SELECT NOW() as server_time');
+    res.json({ ok: true, status: "Healthy", db: "Connected", db_time: result.rows[0].server_time, uptime: process.uptime().toFixed(2) + " seconds" });
+  } catch (err) {
+    res.status(500).json({ ok: false, status: "Database Connection Error", error: err.message });
+  }
+});
+
 // 3. Simple Router for all other actions
 app.post('/api', async (req, res) => {
   const { action, ...payload } = req.body;
@@ -542,25 +552,6 @@ app.post('/api', async (req, res) => {
 		    isSuspended: suspensions.rows.length > 0,
 		    suspensionReason: suspensions.rows[0]?.reason
 		  });
-	  }
-
-	  case 'health_check': {
-		  try {
-			// Perform a simple query to verify DB connection
-			const result = await pool.query('SELECT NOW() as server_time');
-			return res.json({
-			  ok: true,
-			  status: "Healthy",
-			  db_time: result.rows[0].server_time,
-			  uptime: process.uptime().toFixed(2) + " seconds"
-			});
-		  } catch (err) {
-			return res.status(500).json({ 
-			  ok: false, 
-			  status: "Database Connection Error", 
-			  error: err.message 
-			});
-		  }
 	  }
 
       default: {
