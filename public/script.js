@@ -394,6 +394,7 @@ async function loadTodaySchedule() {
                 if (classObj) {
                     classObj.my_status = 'EXCUSED'; // Lock the status locally
                     classObj.time_in = res.filedAt; // Update the local timestamp
+                    classObj.reason = reason; // Save the text they just typed!
                 }
         
                 // 2. Re-run the UI update to hide the "File Excuse" link and inputs
@@ -430,9 +431,16 @@ async function updateCheckinUI(cls) {
         const timeLabel = cls.time_in && cls.time_in !== '00:00:00' ? `at ${cls.time_in}` : '';
             
         statusSpan.innerHTML = `
-            <span style="color: #64748b;">    
-                <i class="fa fa-check-circle"></i> Registered as <strong>${cls.my_status}</strong> ${timeLabel}
-            </span>`;
+            <div style="color: #64748b;"><i class="fa fa-check-circle"></i> Registered as <strong>${cls.my_status}</strong> ${timeLabel}`;
+            if (cls.my_status === "EXCUSED") {
+                statusSpan.innerHTML += `<div style="margin-top: 4px;">
+                    <a href="#" onclick="toggleReasonPreview(event, '${safeCode}')" style="font-size: 10px; color: #3b82f6; text-decoration: underline;">View Filed Reason</a>
+                </div>
+                <div id="reason-preview-${safeCode}" style="display: none; margin-top: 8px; padding: 8px; background: #f8fafc; border-left: 3px solid #cbd5e1; font-style: italic; font-size: 11px;">
+                    "${cls.reason || 'No reason details available.'}"
+                </div>`;
+            }
+            statusSpan.innerHTML += '</div>`;
         return; // Stop here, no need to check windows or AM/PM
     }
 
