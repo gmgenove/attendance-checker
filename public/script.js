@@ -546,7 +546,7 @@ document.getElementById('reportType').onchange = async (e) => {
     if (type === 'class') {
         container.innerHTML = `<select id="paramId"><option value="">Select Class</option>${data.classes.map(c => `<option value="${c.code}">${c.name}</option>`).join('')}</select>`;
     } else {
-        container.innerHTML = `<select id="paramId"><option value="">Select Student</option>${data.students.map(s => `<option value="${s.id}">${s.name}</option>`).join('')}</select>`;
+        container.innerHTML = `<select id="paramId"><option value="">Select Student</option>${data.students.map(s => `<option value="${s.user_id}">${s.user_name}</option>`).join('')}</select>`;
     }
 };
 
@@ -780,8 +780,8 @@ document.getElementById('changePasswordForm').addEventListener('submit', async (
 });
 
 async function populateClassDropdowns() {
-    const dropdown = document.getElementById('suspendClassCode');
-    const reportDropdown = document.getElementById('paramId'); // Also useful for the report section
+    const suspend = document.getElementById('suspendClassCode');
+    const makeup = document.getElementById('makeupClassCode');
     
     const res = await api('get_dropdowns');
     
@@ -790,15 +790,12 @@ async function populateClassDropdowns() {
             `<option value="${c.code}">${c.name} (${c.code})</option>`
         ).join('');
         
-        const placeholder = '<option value="">-- Select Class --</option>';
-        dropdown.innerHTML = placeholder + options;
-        
-        // If the report parameter dropdown exists, sync it too
-        if (reportDropdown && document.getElementById('reportType').value === 'class') {
-            reportDropdown.innerHTML = placeholder + options;
-        }
+        const placeholder = '<option value="">Select Class</option>';
+        suspend.innerHTML = placeholder + options;
+        makeup.innerHTML = placeholder + options;
     } else {
-        dropdown.innerHTML = '<option value="">Error loading classes</option>';
+        suspend.innerHTML = '<option value="">Error loading classes</option>';
+        makeup.innerHTML = '<option value="">Error loading classes</option>';
     }
 }
 
