@@ -484,18 +484,18 @@ async function updateCheckinUI(cls) {
         creditBtn.className = "small muted";
         creditBtn.onclick = () => api('credit_attendance', { class_code: cls.class_code, student_id: currentUser.id });
         btnContainer.appendChild(creditBtn);
-    }
 
-    creditBtn.onclick = async () => {
-        if (confirm("This will mark you as CREDITED for ALL remaining sessions of this class for the entire semester. Proceed?")) {
-            const res = await api('credit_attendance', { 
-                class_code: cls.class_code, 
-                student_id: currentUser.id 
-            });
-            alert(res.message);
-            loadTodaySchedule();
-        }
-    };
+        creditBtn.onclick = async () => {
+            if (confirm("This will mark you as CREDITED for ALL remaining sessions of this class for the entire semester. Proceed?")) {
+                const res = await api('credit_attendance', { 
+                    class_code: cls.class_code, 
+                    student_id: currentUser.id 
+                });
+                alert(res.message);
+                loadTodaySchedule();
+            }
+        };
+    }
 }
 
 // Optimized Report Handler
