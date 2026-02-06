@@ -105,7 +105,7 @@ app.post('/api', async (req, res) => {
 			  OR EXISTS (
 		        SELECT 1 FROM attendance a 
 		        WHERE a.class_code = s.class_code 
-		        AND a.class_date = $2 
+		        AND a.class_date = $2::date 
 		        AND a.attendance_status = 'PENDING'
 		     )
 			`;
@@ -138,7 +138,7 @@ app.post('/api', async (req, res) => {
 	        }
 			// A. Check for existing attendance (Duplicate Prevention)
 			const existing = await pool.query(
-			  'SELECT attendance_status FROM attendance WHERE class_date = $1 AND class_code = $2 AND student_id = $3',
+			  'SELECT attendance_status FROM attendance WHERE class_date = $1::date AND class_code = $2 AND student_id = $3',
 			  [dateStr, class_code, student_id]
 			);
 		
@@ -184,14 +184,14 @@ app.post('/api', async (req, res) => {
 		
 		// Updated columns: class_date instead of date, attendance_status instead of status
 		const check = await pool.query(
-			"SELECT attendance_status FROM attendance WHERE class_date = $1 AND class_code = $2 AND student_id = $3",
+			"SELECT attendance_status FROM attendance WHERE class_date = $1::date AND class_code = $2 AND student_id = $3",
 			[dateStr, class_code, student_id]
 		);
 		
 		if (check.rows.length === 0) return res.json({ ok: false, error: "You must check in before checking out." });
 		
 		await pool.query(
-			"UPDATE attendance SET time_out = $1 WHERE class_date = $2 AND class_code = $3 AND student_id = $4",
+			"UPDATE attendance SET time_out = $1 WHERE class_date = $2::date AND class_code = $3 AND student_id = $4",
 			[timeStr, dateStr, class_code, student_id]
 		);
 		
@@ -203,7 +203,7 @@ app.post('/api', async (req, res) => {
         const { class_code, student_id } = payload;
         const date = DateTime.now().setZone(TIMEZONE).toISODate();
         const result = await pool.query(
-          'SELECT attendance_status, time_in FROM attendance WHERE class_date = $1 AND class_code = $2 AND student_id = $3',
+          'SELECT attendance_status, time_in FROM attendance WHERE class_date = $1::date AND class_code = $2 AND student_id = $3',
           [date, class_code, student_id]
         );
         return res.json({ ok: true, record: result.rows[0] || { status: 'not_recorded' } });
@@ -217,7 +217,7 @@ app.post('/api', async (req, res) => {
 		const stats = await pool.query(`
 			SELECT attendance_status, COUNT(*) as count 
 			FROM attendance 
-			WHERE class_code = $1 AND class_date = $2
+			WHERE class_code = $1 AND class_date = $2::date
 			GROUP BY attendance_status
 		`, [class_code, date]);
 		
@@ -229,7 +229,7 @@ app.post('/api', async (req, res) => {
 				a.time_in, 
 				COALESCE(a.attendance_status, 'NOT YET ARRIVED') as status
 			FROM sys_users u
-			LEFT JOIN attendance a ON u.user_id = a.student_id AND a.class_code = $1 AND a.class_date = $2
+			LEFT JOIN attendance a ON u.user_id = a.student_id AND a.class_code = $1 AND a.class_date = $2::date
 			WHERE u.user_role IN ('student', 'officer')
 			ORDER BY 
 				CASE WHEN a.attendance_status IS NULL THEN 1 ELSE 0 END,
@@ -444,7 +444,7 @@ app.post('/api', async (req, res) => {
 
 	  case 'check_holiday': {
 		const today = getManilaNow().toISODate();
-		const result = await pool.query('SELECT holiday_name, holiday_type FROM holidays WHERE holiday_date = $1', [today]);
+		const result = await pool.query('SELECT holiday_name, holiday_type FROM holidays WHERE holiday_date = $1::date', [today]);
 		
 		if (result.rows.length > 0) {
 			return res.json({ 
@@ -566,12 +566,11 @@ app.post('/api', async (req, res) => {
 		  const dateStr = now.toISODate();
 		  
 		  // 1. Check for Holiday
-		  const holiday = await pool.query('SELECT holiday_name, holiday_type FROM holidays WHERE holiday_date = $1', [dateStr]);
+		  const holiday = await pool.query('SELECT holiday_name, holiday_type FROM holidays WHERE holiday_date = $1::date', [dateStr]);
 		  
 		  // 2. Check for Suspensions (Checking if any class today is marked SUSPENDED)
 		  const suspensions = await pool.query(
-		    'SELECT DISTINCT reason FROM attendance WHERE class_date = $1 AND attendance_status = \'SUSPENDED\'', 
-		    [dateStr]
+		    'SELECT DISTINCT reason FROM attendance WHERE class_date = $1::date AND attendance_status = \'SUSPENDED\'', [dateStr]
 		  );
 		
 		  return res.json({
@@ -981,7 +980,7 @@ const autoTagAbsentees = async () => {
 
     // 1. Check if today is a holiday
     const holidayCheck = await pool.query(
-      `SELECT holiday_name FROM holidays WHERE holiday_date = $1`, [dateStr]
+      `SELECT holiday_name FROM holidays WHERE holiday_date = $1::date`, [dateStr]
     );
 
     const isHoliday = holidayCheck.rows.length > 0;
@@ -992,7 +991,7 @@ const autoTagAbsentees = async () => {
       SELECT * FROM schedules 
 	  WHERE ($1 = ANY(days) AND semester = $2 AND academic_year = $3) 
 	  OR EXISTS (SELECT 1 FROM attendance a 
-	  WHERE a.class_code = s.class_code AND a.class_date = $4 AND a.attendance_status = 'PENDING')`, [dayName, semInfo.sem, semInfo.year, dateStr]
+	  WHERE a.class_code = s.class_code AND a.class_date = $4::date AND a.attendance_status = 'PENDING')`, [dayName, semInfo.sem, semInfo.year, dateStr]
     );
 
     for (const sched of schedules.rows) {
@@ -1009,7 +1008,7 @@ const autoTagAbsentees = async () => {
           WHERE u.user_role IN ('student', 'officer')
           AND NOT EXISTS (
             SELECT 1 FROM attendance a 
-            WHERE a.class_date = $1 AND a.class_code = $2 AND a.student_id = u.user_id
+            WHERE a.class_date = $1::date AND a.class_code = $2 AND a.student_id = u.user_id
           )
         `, [dateStr, sched.class_code, holidayReason]);
         
@@ -1026,7 +1025,7 @@ const autoTagAbsentees = async () => {
           WHERE u.user_role IN ('student', 'officer')
           AND NOT EXISTS (
             SELECT 1 FROM attendance a 
-            WHERE a.class_date = $1 AND a.class_code = $2 AND a.student_id = u.user_id
+            WHERE a.class_date = $1::date AND a.class_code = $2 AND a.student_id = u.user_id
           )
         `, [dateStr, sched.class_code]);
 
@@ -1034,7 +1033,7 @@ const autoTagAbsentees = async () => {
         await pool.query(`
           UPDATE attendance 
           SET attendance_status = 'INCOMPLETE'
-          WHERE class_date = $1 AND class_code = $2 
+          WHERE class_date = $1::date AND class_code = $2 
           AND time_out IS NULL AND attendance_status IN ('PRESENT', 'LATE')
         `, [dateStr, sched.class_code]);
       }
