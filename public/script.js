@@ -1,7 +1,6 @@
 const API_BASE = '/api'; // Optimized for same-domain Render hosting
 let currentUser = null;
 let isSignup = false;
-let timer = null;
 
 // API Helper
 async function api(action, payload = {}) {
@@ -262,6 +261,7 @@ async function loadProfessorDashboard() {
                             <button onclick="bulkStatusUpdate('${r.user_id}', 'CREDITED')" class="small">Credit All</button>
                             <button onclick="bulkStatusUpdate('${r.user_id}', 'DROPPED')" class="small danger">Mark Dropped</button>
                         </div>
+                    </div>
                 </li>`;
         });
         
@@ -360,7 +360,6 @@ async function updateCheckinUI(cls) {
 
         const updateOutTimer = () => {
             const tzNow = new Date();
-            const [hh, mm] = cls.end_time.split(':');
             const end = new Date();
             const endParts = parseTimeString(cls.end_time);
             end.setHours(endParts.hours, endParts.minutes, 0, 00);
@@ -629,13 +628,13 @@ async function checkGlobalStatus() {
 // Toggle the excuse input visibility
 window.toggleExcuse = (e, classCode) => {
     e.preventDefault();
-    const area = document.getElementById(`excuse-area-${classCode}`);
+    const area = document.getElementById(`excuse-area-${classCode.replace(/\s+/g}`);
     area.style.display = area.style.display === 'none' ? 'block' : 'none';
 };
 
 // Send the excuse to the server
 window.submitExcuse = async (classCode) => {
-    const reasonInput = document.getElementById(`reason-${classCode}`);
+    const reasonInput = document.getElementById(`reason-${classCode.replace(/\s+/g}`);
     const reason = reasonInput.value;
     
     const res = await api('submit_excuse', { 
@@ -722,14 +721,6 @@ document.getElementById('changePasswordForm').addEventListener('submit', async (
         msg.textContent = res.error;
     }
 });
-
-window.onload = () => {
-    const saved = localStorage.getItem('currentUser');
-    if (saved) {
-        currentUser = JSON.parse(saved);
-        showApp();
-    }
-};
 
 // Refresh the dashboard every 60 seconds if the user is an Officer/Prof
 setInterval(() => {
