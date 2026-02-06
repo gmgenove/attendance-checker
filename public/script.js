@@ -174,7 +174,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
     
-    // Check health 2 seconds after load (to let web server wake up)
+    // Check health 2 seconds after load (to let DB server wake up)
     setTimeout(checkHealth, 2000);
 });
 
@@ -212,7 +212,7 @@ function showApp() {
     
     // Set User Info
     document.getElementById('welcome').textContent = currentUser.name;
-    document.getElementById('roleBadge').textContent = currentUser.id + " " + (currentUser.role.toUpperCase());
+    document.getElementById('roleBadge').textContent = currentUser.id + " (" + currentUser.role.toUpperCase() + ")";
     
     // Control section visibility
     const controls = document.getElementById('controls');
