@@ -316,7 +316,7 @@ async function loadTodaySchedule() {
             <div class="class-actions" style="text-align:right">
                 <button class="checkin-btn" id="btn-${cls.class_code.replace(/\s+/g, '-')}" disabled>Check In</button>
                 <div style="margin-top:8px">
-                    <a href="#" onclick="toggleExcuse(event, '${cls.class_code}')" class="small muted" style="text-decoration:none">File Excuse?</a>
+                    <a href="#" onclick="toggleExcuse(event, '${cls.class_code.replace(/\s+/g, '-')}')" class="small muted" style="text-decoration:none">File Excuse?</a>
                 </div>
             </div>
         `;
