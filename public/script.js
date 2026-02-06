@@ -304,7 +304,7 @@ async function loadTodaySchedule() {
         card.innerHTML = `
             <div style="flex:1">
                 <strong>${cls.class_name}</strong><br>
-                <span class="small muted">${cls.start_time.toFormat('hh:mm a')} - ${cls.end_time.toFormat('hh:mm a')}</span>
+                <span class="small muted">${DateTime.fromFormat(cls.start_time, 'HH:mm:ss').toFormat('hh:mm a')} - ${DateTime.fromFormat(cls.end_time, 'HH:mm:ss').toFormat('hh:mm a')}</span>
                 <div class="small muted" style="margin:5px 0">Prof. ${cls.professor_name}</div>
                 <div id="status-${cls.class_code.replace(/\s+/g, '-')}" class="small" style="margin:5px 0">Checking status...</div>
                 
