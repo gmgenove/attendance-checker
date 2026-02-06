@@ -85,14 +85,24 @@ app.post('/api', async (req, res) => {
 		  try {
 			const now = getManilaNow();
 			const dayName = now.toFormat('ccc'); // Mon, Tue, etc.
-		
+
+			// 1. Get the current active semester info
+	        const semInfo = await getCurrentSemConfig();
+	        
+	        if (semInfo.sem === "None") {
+	            return res.json({ ok: true, schedule: [], message: "No active semester found." });
+	        }
+
+			// 2. Filter query by Day, Semester, and Academic Year
 			const query = `
 			  SELECT s.*, u.user_name as professor_name 
 			  FROM schedules s
 			  LEFT JOIN sys_users u ON s.professor_id = u.user_id
 			  WHERE $1 = ANY(s.days)
+			  AND s.semester = $2 
+              AND s.academic_year = $3
 			`;
-			const result = await pool.query(query, [dayName]);
+			const result = await pool.query(query, [dayName, semInfo.sem, semInfo.year]);
 			
 			// Format times for frontend
 			const schedule = result.rows.map(row => ({
@@ -339,8 +349,9 @@ app.post('/api', async (req, res) => {
 
 	  // --- DROPDOWNS (For Officer Reports) ---
       case 'get_dropdowns': {
-        const classes = await pool.query('SELECT class_code as code, class_name as name FROM schedules');
-        const students = await pool.query('SELECT user_id, user_name FROM sys_users WHERE user_role = \'student\'');
+		const semInfo = await getCurrentSemConfig();
+        const classes = await pool.query('SELECT class_code as code, class_name as name FROM schedules WHERE semester = $1 AND academic_year = $2', [semInfo.sem, semInfo.year]');
+        const students = await pool.query('SELECT user_id, user_name FROM sys_users WHERE (user_role = \'student\' OR user_role = \'officer\')');
         return res.json({ ok: true, classes: classes.rows, students: students.rows });
       }
 
@@ -862,7 +873,9 @@ const initDb = async () => {
       class_name TEXT, 
       days TEXT[], 
       start_time TIME, 
-      end_time TIME, 
+      end_time TIME,
+      semester TEXT,
+      academic_year TEXT,
       professor_id TEXT
     );
 
