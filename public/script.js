@@ -317,12 +317,22 @@ async function loadTodaySchedule() {
 
     // Otherwise, clear and loop through classes
     list.innerHTML = '';
+    const timeMap = {}; // To track time overlaps
     res.schedule.forEach(cls => {
+        const timeKey = `${cls.start_time}-${cls.end_time}`;
+        if (!timeMap[timeKey]) timeMap[timeKey] = [];
+        timeMap[timeKey].push(cls.class_code);
+        
+        const isConflict = timeMap[timeKey].length > 1;
+            
         const card = document.createElement('div');
         card.className = 'class-card';
         card.innerHTML = `
             <div style="flex:1">
-                <strong>${cls.class_name}</strong><br>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <strong>${cls.class_name}</strong>
+                    ${isConflict ? `<span style="background:#fee2e2; color:#b91c1c; border:1px solid #fecaca; font-size:9px; padding:1px 6px; border-radius:4px; font-weight:bold;">CONFLICT</span>` : ''}
+                </div>
                 <span class="small muted">${cls.start_time} - ${cls.end_time}</span>
                 <div class="small muted" style="margin:5px 0">Prof. ${cls.professor_name}</div>
                 <div id="status-${cls.class_code.replace(/\s+/g, '-')}" class="small" style="margin:5px 0">Checking status...</div>
