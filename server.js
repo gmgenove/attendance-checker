@@ -568,9 +568,9 @@ app.post('/api', async (req, res) => {
 		try {
 			// Perform a simple query to verify DB connection
 		    const result = await pool.query('SELECT NOW() as server_time');
-		    res.json({ ok: true, status: "Healthy", db: "Connected", db_time: result.rows[0].server_time, uptime: process.uptime().toFixed(2) + " seconds" });
+			return res.json({ ok: true, status: "Healthy", db: "Connected", db_time: result.rows[0].server_time, uptime: process.uptime().toFixed(2) + " seconds" });
 		  } catch (err) {
-		    res.status(500).json({ ok: false, status: "Database Connection Error", error: err.message });
+			return res.status(500).json({ ok: false, status: "Database Connection Error", error: err.message });
 		  }
 	  }
 
