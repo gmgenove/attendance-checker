@@ -441,7 +441,7 @@ async function updateCheckinUI(cls) {
                     "${cls.reason || 'No reason details available.'}"
                 </div>`;
             }
-            statusSpan.innerHTML += '</div>`;
+            statusSpan.innerHTML += `</div>`;
 
             // Global toggle function
             window.toggleReasonPreview = (e, safeCode) => {
