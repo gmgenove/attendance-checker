@@ -127,11 +127,15 @@ app.post('/api', async (req, res) => {
 		
 			// Hardcoded config (or fetch from a 'config' table)
 			const semConfig = await getCurrentSemConfig();
-		
+
+			// 1. Block check-in if not in a semester
 			if (!semConfig.start || semConfig.sem === "None") {
-				const checkinOpen = -(parseInt(semConfig.checkin_window_minutes)); // Opens 10 mins before
-				const lateThreshold = parseInt(semConfig.late_window_minutes); // Late after 5 mins
-				const absentThreshold = parseInt(semConfig.absent_window_minutes); // Absent after 10 mins
+			    return res.json({ ok: false, error: "Attendance is disabled outside of semester dates." });
+			} else {
+				// 2. Window Logic (using config from the DB)
+				const checkinOpen = -(parseInt(semConfig.checkin_window_minutes) || 10);	 // Opens 10 mins before
+				const lateThreshold = parseInt(semConfig.late_window_minutes) || 5;	 // Late after 5 mins
+				const absentThreshold = parseInt(semConfig.absent_window_minutes) || 20;	// Absent after 10 mins
 		
 				if (diffMins < checkinOpen) return res.json({ ok: false, error: 'Check-in not open yet' });
 				if (diffMins > absentThreshold) return res.json({ ok: false, error: 'Check-in closed (Absent)' });
@@ -146,8 +150,6 @@ app.post('/api', async (req, res) => {
 				);
 			
 				return res.json({ ok: true, status, timestamp: now.toFormat('HH:mm:ss') });
-			} else {
-				return res.json({ ok: false, error: err.message });
 			}
 		  } catch (err) {
 			return res.json({ ok: false, error: err.message });
@@ -301,17 +303,26 @@ app.post('/api', async (req, res) => {
 	        
 	        const subjects = {};
 	        attendance.rows.forEach(r => {
-	            if (!subjects[r.class_code]) subjects[r.class_code] = { name: r.class_name, records: {}, counts: { P: 0, L: 0, A: 0, E: 0, C: 0, H: 0, S: 0, D: 0 } };
-	            const dStr = DateTime.fromJSDate(r.class_date).toISODate();
-	            // Character Mapping Consistency
+			    if (!subjects[r.class_code]) {
+			        subjects[r.class_code] = { 
+			            name: r.class_name, 
+			            records: {}, 
+			            counts: { P: 0, L: 0, A: 0, E: 0, C: 0, H: 0, S: 0, D: 0 } 
+			        };
+			    }
+			    const dStr = DateTime.fromJSDate(r.class_date).toISODate();
+			    
+			    // Character Mapping Consistency
 			    let statusChar = r.attendance_status[0].toUpperCase();
 			    if (r.attendance_status === 'HOLIDAY') statusChar = 'H';
 			    if (r.attendance_status === 'SUSPENDED') statusChar = 'S';
 			    if (r.attendance_status === 'DROPPED') statusChar = 'D';
 			
 			    subjects[r.class_code].records[dStr] = statusChar;
-	            if (subjects[r.class_code].counts[sChar] !== undefined) subjects[r.class_code].counts[sChar]++;
-	        });
+			    if (subjects[r.class_code].counts[statusChar] !== undefined) {
+			        subjects[r.class_code].counts[statusChar]++;
+			    }
+			});
 	
 	        const excuses = await pool.query(`SELECT a.class_date, s.class_name, a.reason FROM attendance a JOIN schedules s ON a.class_code = s.class_code WHERE a.student_id = $1 AND a.reason IS NOT NULL ORDER BY a.class_date DESC`, [student_id]);
 	
@@ -674,7 +685,6 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
 	page.drawText(`${presentTotal}`, { x: totalX, y, size: 7, font });
 	page.drawText(`${c.L}`, { x: totalX + 20, y, size: 7, font });
 	page.drawText(`${c.A}`, { x: totalX + 40, y, size: 7, font });
-	page.drawText(`${droppedCount}`, { x: totalX + 45, y, size: 7, font, color: rgb(0.5, 0.5, 0.5) }); // Added Dropped column
 	page.drawText(`${perc}%`, { x: totalX + 65, y, size: 7, font: bold });
     
     // Horizontal row line
