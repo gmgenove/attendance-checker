@@ -407,8 +407,7 @@ async function updateCheckinUI(cls) {
 
         // Your check-in window (matches server: 10 mins before)
         const enableFrom = new Date(start.getTime() - config.checkin_window_minutes * 60000);
-        const absentThreshold = new Date(startTime.getTime() + config.absent_window_minutes * 60000);
-        const minsRemaining = Math.ceil((enableFrom - tzNow) / 60000);
+        const absentThreshold = new Date(start.getTime() + config.absent_window_minutes * 60000);
 
         if (tzNow >= enableFrom && tzNow <= absentThreshold) {
             // Window is open!
@@ -421,9 +420,9 @@ async function updateCheckinUI(cls) {
             statusSpan.textContent = "Check-in closed (Absent)";
             statusSpan.style.color = "#ef4444";
         } else {
-            const diff = Math.ceil((enableFrom - tzNow) / 60000);
+            const minsRemaining = Math.ceil((enableFrom - tzNow) / 60000);
             btn.disabled = true;
-            if (diff <= config.checkin_window_minutes) statusSpan.style.color = "#f59e0b";
+            if (minsRemaining <= config.checkin_window_minutes) statusSpan.style.color = "#f59e0b";
             statusSpan.textContent = diff <= config.checkin_window_minutes 
                 ? `Check-in opens in ${diff} min(s)`        // Approaching opening time
                 : `Check-in opens at ${cls.start_time}`;    // Far in the future
