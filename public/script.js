@@ -225,6 +225,7 @@ function showApp() {
     document.getElementById('studentControls').style.display = (currentUser.role === 'student') ? 'block' : 'none';
 
     loadTodaySchedule();
+    checkGlobalStatus();
     
     // Show both the Live Monitor and Summary to Professors AND Officers
     document.getElementById('profControls').style.display = isElevated ? 'block' : 'none';
@@ -604,6 +605,35 @@ async function handleBulkReset() {
     }
 }
 
+async function checkGlobalStatus() {
+    const res = await api('get_today_status');
+    const alertBox = document.getElementById('statusAlert');
+    const title = document.getElementById('alertTitle');
+    const body = document.getElementById('alertBody');
+
+    if (res.ok && (res.isHoliday || res.isSuspended)) {
+        alertBox.style.display = 'block';
+        
+        if (res.isHoliday) {
+            // Blue theme for Holidays
+            alertBox.style.background = '#dbeafe';
+            alertBox.style.color = '#1e40af';
+            alertBox.style.border = '1px solid #bfdbfe';
+            title.innerHTML = `📅 Holiday: ${res.holidayName}`;
+            body.innerHTML = "Automatic holiday tagging is active for all classes today.";
+        } else if (res.isSuspended) {
+            // Purple theme for Suspensions
+            alertBox.style.background = '#f3e8ff';
+            alertBox.style.color = '#6b21a8';
+            alertBox.style.border = '1px solid #e9d5ff';
+            title.innerHTML = `⚠️ Class Suspension`;
+            body.innerHTML = `Reason: ${res.suspensionReason}`;
+        }
+    } else {
+        alertBox.style.display = 'none';
+    }
+}
+
 // Toggle the excuse input visibility
 window.toggleExcuse = (e, classCode) => {
     e.preventDefault();
@@ -642,6 +672,22 @@ window.bulkStatusUpdate = async (studentId, type) => {
         });
         alert(res.message);
         loadProfessorDashboard();
+    }
+};
+
+window.handleSuspension = async () => {
+    const classCode = document.getElementById('suspendClassCode').value;
+    const reason = document.getElementById('suspendReason').value;
+    
+    if (!confirm(`Declare suspension for ${classCode}? This marks the entire roster.`)) return;
+
+    const res = await api('suspend_class', { class_code: classCode, reason: reason });
+    if (res.ok) {
+        alert(res.message);
+        document.getElementById('suspendReason').value = '';
+        if (typeof loadProfessorDashboard === 'function') loadProfessorDashboard();
+    } else {
+        alert(res.error);
     }
 };
 
