@@ -88,8 +88,8 @@ app.post('/api', async (req, res) => {
 			// Format times for frontend
 			const schedule = result.rows.map(row => ({
 			  ...row,
-			  start_time: row.start_time.slice(0, 5), // HH:mm
-			  end_time: row.end_time.slice(0, 5)
+			  start_time: DateTime.fromFormat(row.start_time, 'HH:mm:ss').toFormat('hh:mm a'),
+              end_time: DateTime.fromFormat(row.end_time, 'HH:mm:ss').toFormat('hh:mm a')
 			}));
 		
 			return res.json({ ok: true, schedule });
@@ -603,7 +603,7 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
   
   y -= 15;
   page.drawText(`Schedule:`, { x: 40, y, size: 10, font: bold });
-  page.drawText(`${info.days.join('/')} | ${info.start_time}-${info.end_time}`, { x: 120, y, size: 10, font });
+  page.drawText(`${info.days.join('/')} | ${DateTime.fromFormat(info.start_time, 'HH:mm:ss').toFormat('hh:mm a')}-${info.DateTime.fromFormat(info.end_time, 'HH:mm:ss').toFormat('hh:mm a')}`, { x: 120, y, size: 10, font });
   
   y -= 15;
   page.drawText(`Section:`, { x: 40, y, size: 10, font: bold });
