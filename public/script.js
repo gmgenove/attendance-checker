@@ -757,6 +757,30 @@ window.toggleSettings = () => {
     document.getElementById('settingsMsg').textContent = '';
 };
 
+window.toggleProfSummary = () => {
+    const summaryDiv = document.getElementById('profSummaryOutput');
+    const btn = document.getElementById('toggleTotalsBtn');
+    
+    if (!summaryDiv || !btn) return;
+
+    if (summaryDiv.style.display === 'none') {
+        // Show it
+        summaryDiv.style.display = 'block';
+        btn.textContent = 'Hide Totals';
+        btn.style.background = '#64748b'; // Change color to indicate "active" state
+        
+        // Optional: Trigger the data load only when opened to save resources
+        if (summaryDiv.innerHTML.trim() === "") {
+            loadProfessorSummary(); 
+        }
+    } else {
+        // Hide it
+        summaryDiv.style.display = 'none';
+        btn.textContent = 'View Totals';
+        btn.style.background = ''; // Revert to original CSS
+    }
+};
+
 document.getElementById('changePasswordForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const msg = document.getElementById('settingsMsg');
