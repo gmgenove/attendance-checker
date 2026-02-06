@@ -649,7 +649,8 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
 
   dates.slice(0, 35).forEach((d, i) => {
     const xPos = startX + (i * colWidth);
-    page.drawText(`D${i+1}`, { x: xPos, y, size: 7, font: bold });
+	const isMakeupDay = checkDateIfMakeup(d, info.class_code); // Helper to check attendance table
+    page.drawText(`D${i+1}${isMakeupDay ? '*' : ''}`, { x: xPos, y, size: 7, font: bold });
     page.drawText(d.toFormat('MM/dd'), { x: xPos, y: y - 8, size: 5, font });
   });
 
@@ -715,6 +716,8 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
     
     // Horizontal row line
     page.drawLine({ start: { x: 40, y: y - 2 }, end: { x: 970, y: y - 2 }, thickness: 0.1, color: rgb(0.8, 0.8, 0.8) });
+	// Footer Legend
+	page.drawText(`* Denotes authorized Make-up Session`, { x: 40, y: 30, size: 6, font });
   });
 }
 
@@ -984,10 +987,13 @@ const autoTagAbsentees = async () => {
     const isHoliday = holidayCheck.rows.length > 0;
     const holidayReason = isHoliday ? holidayCheck.rows[0].holiday_name : null;
 
-    // 2. Find all classes scheduled for today
+    // 2. Find all classes scheduled for today + Authorized Make-up sessions
     const schedules = await pool.query(
-      "SELECT * FROM schedules WHERE $1 = ANY(days) AND semester = $2 AND academic_year = $3", 
-      [dayName, semInfo.sem, semInfo.year]
+      "SELECT * FROM schedules WHERE ($1 = ANY(days) AND semester = $2 AND academic_year = $3) OR EXISTS (
+        SELECT 1 FROM attendance a 
+        WHERE a.class_code = s.class_code AND a.class_date = $4 AND a.attendance_status = 'PENDING'
+    	)", 
+      [dayName, semInfo.sem, semInfo.year, dateStr]
     );
 
     for (const sched of schedules.rows) {
