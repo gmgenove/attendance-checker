@@ -625,18 +625,17 @@ async function checkGlobalStatus() {
         
         if (res.isHoliday) {
             // Blue theme for Holidays
-            alertBox.style.background = '#dbeafe';
-            alertBox.style.color = '#1e40af';
-            alertBox.style.border = '1px solid #bfdbfe';
+            alertBox.className = "card alert-holiday"; // Blue theme for Holidays
             title.innerHTML = `📅 Holiday: ${res.holidayName}`;
             body.innerHTML = "Automatic holiday tagging is active for all classes today.";
-        } else if (res.isSuspended) {
-            // Purple theme for Suspensions
-            alertBox.style.background = '#f3e8ff';
-            alertBox.style.color = '#6b21a8';
-            alertBox.style.border = '1px solid #e9d5ff';
-            title.innerHTML = `⚠️ Class Suspension`;
-            body.innerHTML = `Reason: ${res.suspensionReason}`;
+        } else if (res.isSuspended || res.isCancelled) {
+            // Check if the reason contains a Prof cancellation or Admin suspension
+            const isProf = res.suspensionReason.toLowerCase().includes('prof') || 
+                           res.suspensionReason.toLowerCase().includes('meeting');           
+            const isCancelled = isProf || res.isCancelled;
+            alertBox.className = isCancelled ? 'card alert-cancelled' : 'card alert-suspended';
+            title.innerHTML = isCancelled ? `📢 Notice of Non-Meeting` : `⚠️ Class Suspension`;
+            body.innerHTML = `<strong>Reason:</strong> ${res.suspensionReason}`;
         }
     } else {
         alertBox.style.display = 'none';
@@ -684,16 +683,27 @@ window.bulkStatusUpdate = async (studentId, type) => {
     }
 };
 
-window.handleSuspension = async () => {
+window.handleStatusChange = async () => {
     const classCode = document.getElementById('suspendClassCode').value;
     const reason = document.getElementById('suspendReason').value;
+    const type = document.getElementById('statusType').value; // CANCELLED or SUSPENDED
     
-    if (!confirm(`Declare suspension for ${classCode}? This marks the entire roster.`)) return;
+    if (!reason || reason.length < 5) return alert("Please provide a detailed reason.");
 
-    const res = await api('suspend_class', { class_code: classCode, reason: reason });
+    const confirmMsg = `Declare ${type.toLowerCase()} for ${classCode}?\nReason: ${reason}. This marks the entire roster.`;
+    if (!confirm(confirmMsg)) return;
+
+    const res = await api('suspend_class', { 
+        class_code: classCode, 
+        reason: reason, 
+        statusType: type 
+    });
+
     if (res.ok) {
-        alert(res.message);
+        alert(`Notice Posted: ${res.message}`);
         document.getElementById('suspendReason').value = '';
+        // Refresh UI to show the new banner immediately
+        checkGlobalStatus();
         if (typeof loadProfessorDashboard === 'function') loadProfessorDashboard();
     } else {
         alert(res.error);
