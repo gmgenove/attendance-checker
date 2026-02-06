@@ -338,9 +338,15 @@ async function updateCheckinUI(cls) {
     
     // --- RENDER CHECK-OUT BUTTON ---
     if (record && record.status !== 'not_recorded' && !record.time_out) {
-        if (document.querySelector(`.checkout-btn-${cls.class_code}`)) return; 
+        // Sanitize the class code for CSS (e.g., 'POLS 102' becomes 'POLS-102')
+        const safeCode = cls.class_code.replace(/\s+/g, '-');
+        
+        // Check if button already exists using the sanitized class
+        if (document.querySelector(`.checkout-btn-${safeCode}`)) return; 
+    
         const outBtn = document.createElement('button');
-        outBtn.className = `checkout-btn checkout-btn-${cls.class_code}`;    // Add style for this (e.g., orange)
+        // Add the sanitized class to the button
+        outBtn.className = `checkout-btn checkout-btn-${safeCode}`;
         outBtn.textContent = "Check Out";
         outBtn.disabled = true;
         btnContainer.appendChild(outBtn);
