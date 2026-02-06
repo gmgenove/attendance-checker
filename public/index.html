@@ -174,9 +174,9 @@
                         <div style="display:flex; justify-content: space-between; align-items: center;">
                             <h3>Attendance Overview</h3>
                             <button onclick="loadAttendanceSummary()" class="small">View Totals</button>
+                            <button id="toggleTotalsBtn" onclick="toggleProfSummary()">View Totals</button>
+                            <div id="profSummaryOutput" style="display: none; margin-top: 15px;"></div>
                         </div>
-                        
-                        <div id="profSummaryOutput"></div>
                     </div>
                 </div>
                 <div class="card" id="settingsCard" style="display:none;">
