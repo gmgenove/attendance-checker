@@ -962,8 +962,8 @@ const autoTagAbsentees = async () => {
 
     // 2. Find all classes scheduled for today
     const schedules = await pool.query(
-      "SELECT * FROM schedules WHERE $1 = ANY(days)", 
-      [dayName]
+      "SELECT * FROM schedules WHERE $1 = ANY(days) AND semester = $2 AND academic_year = $3", 
+      [dayName, semInfo.sem, semInfo.year]
     );
 
     for (const sched of schedules.rows) {
