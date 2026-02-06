@@ -654,6 +654,12 @@ window.toggleExcuse = (e, classCode) => {
 window.submitExcuse = async (classCode) => {
     const reasonInput = document.getElementById(`reason-${classCode.replace(/\s+/g)}`);
     const reason = reasonInput.value;
+
+    // Null-check before accessing .value to prevent the crash
+    if (!reasonInput) {
+        console.error(`Input field not found for: reason-${classCode.replace(/\s+/g)}`);
+        return alert("System Error: Could not find the excuse input field.");
+    }
     
     const res = await api('submit_excuse', { 
         class_code: classCode, 
@@ -715,10 +721,18 @@ window.handleMakeUpClass = async () => {
     const code = document.getElementById('makeupClassCode').value;
     const date = document.getElementById('makeupDate').value;
     
-    if(!code || !date) return alert("Select both class and date.");
+    if (!code || !date) return alert("Select both class and date.");
+
+    // Quick Holiday Conflict Check
+    const holidayRes = await api('check_holiday_by_date', { date: date });
+    if (holidayRes.isHoliday) {
+        if (!confirm(`Warning: ${date} is marked as ${holidayRes.holidayName}. Are you sure you want a make-up class on a holiday?`)) {
+            return;
+        }
+    }
     
     const res = await api('authorize_makeup', { class_code: code, date: date });
-    if(res.ok) {
+    if (res.ok) {
         alert(res.message);
         loadTodaySchedule(); 
     }
