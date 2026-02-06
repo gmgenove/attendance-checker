@@ -551,6 +551,24 @@ app.post('/api', async (req, res) => {
 
 	  case 'authorize_makeup': {
 		const { class_code, date } = payload;
+
+		// Check if professor is already scheduled for another class on this date/time
+	    const conflictCheck = await pool.query(`
+	        SELECT s.class_name 
+	        FROM schedules s
+	        JOIN attendance a ON s.class_code = a.class_code
+	        WHERE a.class_date = $1::date AND s.professor_id = (
+	            SELECT professor_id FROM schedules WHERE class_code = $2
+	        )
+	    `, [date, class_code]);
+	
+	    if (conflictCheck.rows.length > 0) {
+	        return res.json({ 
+	            ok: false, 
+	            error: `Conflict: Professor is already assigned to ${conflictCheck.rows[0].class_name} on this date.` 
+	        });
+	    }
+		  
 		// Mark everyone as 'PENDING' for the make-up date
 		await pool.query(`
 			INSERT INTO attendance (class_date, class_code, student_id, attendance_status, time_in)
