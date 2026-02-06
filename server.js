@@ -98,11 +98,17 @@ app.post('/api', async (req, res) => {
 			  SELECT s.*, u.user_name as professor_name 
 			  FROM schedules s
 			  LEFT JOIN sys_users u ON s.professor_id = u.user_id
-			  WHERE $1 = ANY(s.days)
+			  WHERE ($1 = ANY(s.days)
 			  AND s.semester = $2 
-              AND s.academic_year = $3
+              AND s.academic_year = $3) 
+			  OR EXISTS (
+		        SELECT 1 FROM attendance a 
+		        WHERE a.class_code = s.class_code 
+		        AND a.class_date = $2 
+		        AND a.attendance_status = 'PENDING'
+		     )
 			`;
-			const result = await pool.query(query, [dayName, semInfo.sem, semInfo.year]);
+			const result = await pool.query(query, [dayName, semInfo.sem, semInfo.year, dateStr]);
 			
 			// Format times for frontend
 			const schedule = result.rows.map(row => ({
@@ -540,6 +546,18 @@ app.post('/api', async (req, res) => {
 	    } catch (err) {
 	        return res.json({ ok: false, error: err.message });
 	    }
+	  }
+
+	  case 'authorize_makeup': {
+		const { class_code, date } = payload;
+		// Mark everyone as 'PENDING' for the make-up date
+		await pool.query(`
+			INSERT INTO attendance (class_date, class_code, student_id, attendance_status, time_in)
+			SELECT $1, $2, user_id, 'PENDING', '00:00:00'
+			FROM sys_users WHERE user_role IN ('student', 'officer')
+			ON CONFLICT DO NOTHING
+		`, [date, class_code]);
+		return res.json({ ok: true, message: `Make-up session authorized for ${date}` });
 	  }
 
 	  case 'get_today_status': {
