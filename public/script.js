@@ -1,6 +1,7 @@
 const API_BASE = '/api'; // Optimized for same-domain Render hosting
 let currentUser = null;
 let isSignup = false;
+let timer = null;
 
 // API Helper
 async function api(action, payload = {}) {
@@ -32,6 +33,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const submitBtn = document.getElementById("submitBtn");
     const formTitle = document.getElementById("formTitle");
     const switchText = document.getElementById("switchText");
+    const authForm = document.getElementById("authForm");
+
+    // UI Initialization
+    document.getElementById('copyrightYear').textContent = new Date().getFullYear();
+    document.getElementById("hdr").textContent = new Date().toLocaleString("en-US", { dateStyle: 'full' });
 
     // Password visibility toggle logic
     document.getElementById('togglePassword').addEventListener('click', function() {
@@ -39,7 +45,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         pwd.type = pwd.type === 'password' ? 'text' : 'password';
         this.classList.toggle('fa-eye-slash');
     });
-    document.getElementById('copyrightYear').textContent = new Date().getFullYear();
 
     // Toggle between Sign In / Sign Up
     switchText.addEventListener("click", (e) => {
@@ -102,14 +107,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (authMsg) setTimeout(() => authMsg.textContent = "", 1000);
         }
     });
-
-    // --- Initialize Today's Date Header ---
-    const updateHeaderDate = () => {
-        const hdr = document.getElementById("hdr");
-        if (hdr) {
-            hdr.textContent = new Date().toLocaleString("en-US", { dateStyle: 'full' });
-        }
-    };
     
     // --- Check for Holiday (Restored Behavior) ---
     async function checkHolidayAndDisplay() {
@@ -129,7 +126,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error("Holiday check failed", err);
         }
     }
-    
+
+    // Live Search Logic
+    document.getElementById('studentSearch').addEventListener('input', (e) => {
+        const term = e.target.value.toLowerCase();
+        const listItems = document.querySelectorAll('#recentCheckinList li');
+        
+        listItems.forEach(item => {
+            const name = item.textContent.toLowerCase();
+            // Hide items that don't match the search term
+            item.style.display = name.includes(term) ? 'block' : 'none';
+        });
+    });
+
     // --- Automatic Session Restore ---
     const restoreSession = () => {
         const raw = localStorage.getItem('currentUser');
@@ -146,22 +155,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    const searchInput = document.getElementById('studentSearch');
-    searchInput.addEventListener('input', (e) => {
-        const term = e.target.value.toLowerCase();
-        const listItems = document.querySelectorAll('#recentCheckinList li');
-        
-        listItems.forEach(item => {
-            const name = item.textContent.toLowerCase();
-            // Hide items that don't match the search term
-            item.style.display = name.includes(term) ? 'block' : 'none';
-        });
-    });
-
-    // Run these on load
-    updateHeaderDate();
-    restoreSession();
-
     const checkHealth = async () => {
         const res = await api('health_check');
         const footer = document.querySelector('.footer');
@@ -173,38 +166,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             return "System Offline";
         }
     };
-    
+
+    // Run these on load
+    updateHeaderDate();
+    restoreSession();
+
     // Check health 2 seconds after load (to let DB server wake up)
     setTimeout(checkHealth, 2000);
 });
-
-// Auth Logic
-document.getElementById('authForm').onsubmit = async (e) => {
-    e.preventDefault();
-    const btn = document.getElementById('submitBtn');
-    btn.disabled = true;
-    
-    const payload = {
-        id: document.getElementById('userId').value.trim(),
-        password: document.getElementById('passwordInput').value,
-        role: document.getElementById('roleSelect').value
-    };
-
-    const res = await api(isSignup ? 'signup' : 'signin', payload);
-    if (res.ok) {
-        if (isSignup) {
-            alert("Signup success! Please sign in.");
-            location.reload();
-        } else {
-            currentUser = res.user;
-            localStorage.setItem('currentUser', JSON.stringify(res.user));
-            showApp();
-        }
-    } else {
-        document.getElementById('errorMsg').textContent = res.error;
-    }
-    btn.disabled = false;
-};
 
 function showApp() {
     document.getElementById('auth').style.display = 'none';
@@ -431,7 +400,7 @@ async function updateCheckinUI(cls) {
             btn.disabled = false;
             statusSpan.textContent = "Check-in window is OPEN";
             statusSpan.style.color = "#10b981";
-            clearInterval(timer); // Stop counting down once open
+            if (timer) clearInterval(timer); // Stop counting down once open
         } else if (minsRemaining > 0 && minsRemaining <= config.checkin_window_minutes) {
             // Approaching opening time
             btn.disabled = true;
@@ -445,8 +414,8 @@ async function updateCheckinUI(cls) {
     };
 
     // Run immediately and then every 30 seconds
-    updateCountdown();
     const timer = setInterval(updateCountdown, 30000);
+    updateCountdown();
 
     // 3. Handle the Click
     btn.onclick = async () => {
