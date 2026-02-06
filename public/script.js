@@ -34,16 +34,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     const switchText = document.getElementById("switchText");
 
     // Password visibility toggle logic
-    // Ensure you have <span id="togglePassword" class="fa fa-fw fa-eye field-icon"></span> in your HTML
-    const togglePassword = document.getElementById("togglePassword");
-    if (togglePassword) {
-        togglePassword.addEventListener("click", () => {
-            const isPassword = passwordInput.type === "password";
-            passwordInput.type = isPassword ? "text" : "password";
-            togglePassword.classList.toggle("fa-eye");
-            togglePassword.classList.toggle("fa-eye-slash");
-        });
-    }
+    document.getElementById('togglePassword').addEventListener('click', function() {
+        const pwd = document.getElementById('passwordInput');
+        pwd.type = pwd.type === 'password' ? 'text' : 'password';
+        this.classList.toggle('fa-eye-slash');
+    });
+    document.getElementById('copyrightYear').textContent = new Date().getFullYear();
 
     // Toggle between Sign In / Sign Up
     switchText.addEventListener("click", (e) => {
