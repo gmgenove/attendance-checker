@@ -362,7 +362,8 @@ async function updateCheckinUI(cls) {
             const tzNow = new Date();
             const [hh, mm] = cls.end_time.split(':');
             const end = new Date();
-            end.setHours(parseInt(hh), parseInt(mm), 0, 0);
+            const endParts = parseTimeString(cls.end_time);
+            end.setHours(endParts.hours, endParts.minutes, 0, 00);
 
             const enableFrom = new Date(end.getTime() - config.checkout_window_minutes * 60000); // 10 mins before end
 
@@ -400,29 +401,32 @@ async function updateCheckinUI(cls) {
     // 2. Countdown Logic for "Not Yet Open" classes
     const updateCountdown = () => {
         const tzNow = new Date();
-        const [hh, mm] = cls.start_time.split(':');
+        const startParts = parseTimeString(cls.start_time);    // convert am/pm to 24hr
         const start = new Date();
-        start.setHours(parseInt(hh), parseInt(mm), 0, 0);
+        start.setHours(startParts.hours, startParts.minutes, 0, 0);
 
         // Your check-in window (matches server: 10 mins before)
-        const enableFrom = new Date(start.getTime() - config.checkin_window_minutes * 60000); 
+        const enableFrom = new Date(start.getTime() - config.checkin_window_minutes * 60000);
+        const absentThreshold = new Date(startTime.getTime() + config.absent_window_minutes * 60000);
         const minsRemaining = Math.ceil((enableFrom - tzNow) / 60000);
 
-        if (tzNow >= enableFrom) {
+        if (tzNow >= enableFrom && tzNow <= absentThreshold) {
             // Window is open!
             btn.disabled = false;
             statusSpan.textContent = "Check-in window is OPEN";
             statusSpan.style.color = "#10b981";
             if (timer) clearInterval(timer); // Stop counting down once open
-        } else if (minsRemaining > 0 && minsRemaining <= config.checkin_window_minutes) {
-            // Approaching opening time
+        } else if (now > absentThreshold) {
             btn.disabled = true;
-            statusSpan.textContent = `Check-in opens in ${minsRemaining} min${minsRemaining > 1 ? 's' : ''}`;
-            statusSpan.style.color = "#f59e0b";
+            statusSpan.textContent = "Check-in closed (Absent)";
+            statusSpan.style.color = "#ef4444";
         } else {
-            // Far in the future
+            const diff = Math.ceil((enableFrom - tzNow) / 60000);
             btn.disabled = true;
-            statusSpan.textContent = `Check-in opens at ${cls.start_time}`;
+            if (diff <= config.checkin_window_minutes) statusSpan.style.color = "#f59e0b";
+            statusSpan.textContent = diff <= config.checkin_window_minutes 
+                ? `Check-in opens in ${diff} min(s)`        // Approaching opening time
+                : `Check-in opens at ${cls.start_time}`;    // Far in the future
         }
     };
 
@@ -572,6 +576,14 @@ function signout() {
     document.getElementById("submitBtn").disabled = false;
 }
 document.getElementById('signoutBtn').onclick = signout;
+
+function parseTimeString(timeStr) {
+    const [time, modifier] = timeStr.split(' ');
+    let [hours, minutes] = time.split(':');
+    if (hours === '12') hours = '00';
+    if (modifier === 'PM') hours = parseInt(hours, 10) + 12;
+    return { hours: parseInt(hours), minutes: parseInt(minutes) };
+}
 
 async function handleBulkReset() {
     const confirmation = confirm("WARNING: This will reset ALL student passwords to 'password1234'. Are you sure you want to proceed?");
