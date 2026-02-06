@@ -250,6 +250,7 @@ async function loadProfessorDashboard() {
         res.roster.forEach(r => {
             let statusColor = "#94a3b8"; // Default Grey for NOT YET ARRIVED
             let opacity = r.status === 'NOT YET ARRIVED' ? "0.6" : "1";
+            const isMakeup = r.status === 'PENDING' || r.is_makeup_session; // Check if it's the authorized makeup day
 
             if (r.status === 'PRESENT') statusColor = "#10b981";
             if (r.status === 'LATE') statusColor = "#f59e0b";
@@ -263,11 +264,11 @@ async function loadProfessorDashboard() {
                         <span style="flex: 1;">
                             <div style="display:flex; align-items:center; gap:8px;">
                                 <strong>${r.user_name}</strong>
-                                <span style="font-size:9px; padding:2px 6px; border-radius:10px; background:#f1f5f9; color:${statusColor}; font-weight:bold; border: 1px solid ${statusColor}33;">
-                                    ${r.status}
-                                </span>
+                                ${isMakeup ? `<span style="font-size:8px; background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; padding:1px 4px; border-radius:4px;">MAKE-UP</span>` : ''}
+                                <span style="font-size:9px; padding:2px 6px; border-radius:10px; background:#f1f5f9; color:${statusColor}; font-weight:bold; border: 1px solid">${r.status}</span>
                             </div>
                             <div class="small muted">${r.time_in ? 'In at ' + r.time_in : 'No time recorded'}</div>
+                            <div class="small muted">${r.time_in ? 'In: ' + r.time_in : 'Pending Make-up'}</div>
                         </span>
         
                         <div style="display:flex; gap:4px; align-items:center;">
