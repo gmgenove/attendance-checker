@@ -31,6 +31,13 @@
         #loading-bar { height: 3px; width: 0%; background: #3b82f6; position: fixed; top: 0; left: 0; transition: width 0.3s;}
         @keyframes subtle-shake { 0% { transform: translateX(0); } 25% { transform: translateX(2px); } 50% { transform: translateX(-2px); } 75% { transform: translateX(2px); } 100% { transform: translateX(0); } }
         .reminder-active {animation: subtle-shake 0.5s ease-in-out;}
+        .password-wrapper { position: relative; display: flex; align-items: center; }
+        .password-wrapper input { width: 100%; padding-right: 40px; }
+        .password-wrapper .field-icon { position: absolute; right: 12px; color: #94a3b8; }
+        
+        /* Status Alert Themes */
+        .alert-holiday { background: #dbeafe !important; color: #1e40af !important; border: 1px solid #bfdbfe !important; }
+        .alert-suspended { background: #f3e8ff !important; color: #6b21a8 !important; border: 1px solid #e9d5ff !important; }
     </style>
 </head>
 <body>
@@ -51,7 +58,7 @@
                     </div>
                     <div class="password-wrapper">
                         <input id="passwordInput" type="password" placeholder="Enter password" required>
-                        <span id="togglePassword" class="fa fa-fw fa-eye field-icon" style="cursor:pointer; margin-left:-30px;"></span>
+                        <i id="togglePassword" class="fa fa-fw fa-eye field-icon" style="cursor:pointer;"></i>
                     </div>
                 </div>
                 <div style="margin-top:12px">
@@ -73,7 +80,10 @@
                     <strong id="welcome"></strong>
                     <div class="small muted" id="roleBadge"></div>
                 </div>
-                <button id="signoutBtn">Sign out</button>
+                <div style="display:flex; gap:8px">
+                    <button onclick="toggleSettings()" class="small"><i class="fa fa-cog"></i></button>
+                    <button id="signoutBtn" class="small danger">Sign out</button>
+                </div>
             </div>
 
             <div id="statusAlert" class="card" style="display:none; text-align:center; padding: 15px; margin-bottom: 15px;">
@@ -168,7 +178,7 @@
                 <div id="settingsMsg" class="small" style="margin-top:10px; text-align:center;"></div>
             </div>
         </div>
-        <div class="footer"><p>&copy; 2025 /gmgenove</p></div>
+        <div class="footer"><p>&copy; <span id="copyrightYear"></span> /gmgenove</p></div>
     </div>
     <script src="script.js"></script>
 </body>
