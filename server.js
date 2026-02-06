@@ -105,7 +105,7 @@ app.post('/api', async (req, res) => {
 			  OR EXISTS (
 		        SELECT 1 FROM attendance a 
 		        WHERE a.class_code = s.class_code 
-		        AND a.class_date = $2::date 
+		        AND a.class_date = $4::date 
 		        AND a.attendance_status = 'PENDING'
 		     )
 			`;
