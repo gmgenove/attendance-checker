@@ -20,6 +20,7 @@
             button:disabled{opacity: 0.5; cursor: not-allowed}
             .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
             .small{font-size:0.9rem;color:#475569}
+            .danger{background:#fff1f2;color:#7f1d1d}
             .muted{color:#94a3b8}
             .error-message {color: #d93025; margin-top: 10px; font-size: 0.9em;}
             .class-card {display: flex; justify-content: space-between; align-items: flex-start; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px 16px; margin-bottom: 10px;}
@@ -110,13 +111,13 @@
                         <button id="generateReport">Generate PDF Report</button>
                         <div id="reportOutput"></div>
     
-                        <div id="adminTools" class="card" style="border-top: 4px solid #ef4444; margin-top: 20px;">
+                        <!--div id="adminTools" class="card" style="border-top: 4px solid #ef4444; margin-top: 20px;">
                             <h4>System Maintenance</h4>
                             <p class="small muted">Reset all student passwords to the default: <strong>pass123</strong></p>
                             <button onclick="handleBulkReset()" style="background: #ef4444; color: white; border: none;">
                                 Bulk Reset Student Passwords
                             </button>
-                        </div>
+                        </div-->
     
                         <div class="card" style="border-top: 4px solid #7c3aed; margin-top: 15px;">
                             <h4>Class Suspension Tool</h4>
@@ -124,7 +125,7 @@
                                 <option value="BPAOUMN-1B">BPAOUMN-1B</option>
                             </select>
                             <input type="text" id="suspendReason" placeholder="Reason (e.g. Typhoon Karding)" required>
-                            <button onclick="handleSuspension()" style="background:#7c3aed; color:white; border:none; margin-top:5px; width:100%;">
+                            <button onclick="handleSuspension()" style="background:#7c3aed; color:white; border:none; margin-top:5px;">
                                 Declare Suspension
                             </button>
                         </div>
