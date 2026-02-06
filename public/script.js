@@ -166,9 +166,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         const res = await api('health_check');
         const footer = document.querySelector('.footer');
         if (res.ok) {
-            footer.innerHTML += `<div style="color: #10b981; font-size: 10px;">● System Online</div>`;
+            //footer.innerHTML += `<div style="color: #10b981; font-size: 10px;">● System Online</div>`;
+            return "System Online";
         } else {
-            footer.innerHTML += `<div style="color: #ef4444; font-size: 10px;">● System Offline: ${res.error}</div>`;
+            //footer.innerHTML += `<div style="color: #ef4444; font-size: 10px;">● System Offline: ${res.error}</div>`;
+            return "System Offline";
         }
     };
     
