@@ -209,7 +209,7 @@ function showApp() {
 
     if (isElevated) {
         loadProfessorDashboard();
-        populateClassDropdowns()
+        populateClassDropdowns();
     }
 }
 
@@ -340,6 +340,13 @@ async function loadTodaySchedule() {
             </div>
         `;
         list.appendChild(card);
+
+        // Toggle the excuse input visibility
+        window.toggleExcuse = (e, classCode) => {
+            e.preventDefault();
+            const area = document.getElementById(`excuse-area-${classCode.replace(/\s+/g)}`);
+            area.style.display = area.style.display === 'none' ? 'block' : 'none';
+        };
 
         // Send the excuse to the server
         window.submitExcuse = async (classCode) => {
@@ -668,13 +675,6 @@ async function checkGlobalStatus() {
         alertBox.style.display = 'none';
     }
 }
-
-// Toggle the excuse input visibility
-window.toggleExcuse = (e, classCode) => {
-    e.preventDefault();
-    const area = document.getElementById(`excuse-area-${classCode.replace(/\s+/g)}`);
-    area.style.display = area.style.display === 'none' ? 'block' : 'none';
-};
 
 window.bulkStatusUpdate = async (studentId, type) => {
     const classCode = "BPAOUMN-1B"; // Get current active class
