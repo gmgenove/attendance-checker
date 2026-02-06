@@ -266,16 +266,31 @@ app.post('/api', async (req, res) => {
 	        
 	        const roster = {};
 	        attendance.rows.forEach(r => {
-	            if (!roster[r.student_id]) roster[r.student_id] = { name: r.user_name, records: {}, counts: { P:0, L:0, A:0, E:0, C:0, H:0, D:0 } };
-	            if (r.class_date) {
-	                const dStr = DateTime.fromJSDate(r.class_date).toISODate();
-	                const sChar = r.attendance_status[0].toUpperCase();
-	                roster[r.student_id].records[dStr] = sChar;
-	                if (roster[r.student_id].counts[sChar] !== undefined) roster[r.student_id].counts[sChar]++;
-	            }
-	        });
-	
-	        const excuses = await pool.query(`SELECT a.class_date, u.user_name, a.reason FROM attendance a JOIN sys_users u ON a.student_id = u.user_id WHERE a.class_code = $1 AND a.reason IS NOT NULL ORDER BY a.class_date DESC`, [class_code]);
+	          if (!roster[r.student_id]) roster[r.student_id] = { name: r.user_name, records: {}, counts: { P: 0, L: 0, A: 0, E: 0, C: 0, H: 0, S: 0, D: 0 } };
+			  if (r.class_date) {
+			    const dStr = DateTime.fromJSDate(r.class_date).toISODate();
+			    
+			    // FIX: Character priority logic
+			    let statusChar = r.attendance_status[0].toUpperCase(); // Default (P, L, A, E)
+			    if (r.attendance_status === 'HOLIDAY') statusChar = 'H';
+			    if (r.attendance_status === 'SUSPENDED') statusChar = 'S';
+			    if (r.attendance_status === 'DROPPED') statusChar = 'D';
+			
+			    roster[r.student_id].records[dStr] = statusChar;
+			    
+			    if (roster[r.student_id].counts[statusChar] !== undefined) {
+			        roster[r.student_id].counts[statusChar]++;
+			    }
+			  }
+			});
+
+			const excuses = await pool.query(
+			    `SELECT a.class_date, u.user_name, a.reason 
+			     FROM attendance a 
+			     JOIN sys_users u ON a.student_id = u.user_id 
+			     WHERE a.class_code = $1 AND (a.reason IS NOT NULL OR a.attendance_status = 'SUSPENDED')
+			     ORDER BY a.class_date DESC`, [class_code]
+			);
 	
 	        await generateClassMatrixPDF(pdfDoc, info, classDates, roster, semConfig, font, boldFont);
 	        await appendExcuseLogPage(pdfDoc, "CLASS EXCUSE LOG", excuses.rows, font, boldFont, "name");
@@ -472,6 +487,53 @@ app.post('/api', async (req, res) => {
 	    return res.json({ ok: true, message: "Excuse filed successfully." });
 	  }
 
+	  case 'suspend_class': {
+	    const { class_code, reason, date } = payload;
+	    const targetDate = date || getManilaNow().toISODate();
+	
+	    if (!reason || reason.trim().length < 5) {
+	        return res.json({ ok: false, error: "Please provide a specific reason for suspension." });
+	    }
+	
+	    try {
+	        // Mark every student/officer in the roster as SUSPENDED for this date/class
+	        await pool.query(`
+	            INSERT INTO attendance (class_date, class_code, student_id, attendance_status, reason, time_in)
+	            SELECT $1, $2, user_id, 'SUSPENDED', $3, '00:00:00'
+	            FROM sys_users
+	            WHERE (user_role = 'student' OR user_role = 'officer')
+	            ON CONFLICT (class_date, class_code, student_id) 
+	            DO UPDATE SET attendance_status = 'SUSPENDED', reason = $3
+	        `, [targetDate, class_code, reason.trim()]);
+	
+	        return res.json({ ok: true, message: `Class ${class_code} marked as Suspended for ${targetDate}.` });
+	    } catch (err) {
+	        return res.json({ ok: false, error: err.message });
+	    }
+	  }
+
+	  case 'get_today_status': {
+		  const now = getManilaNow();
+		  const dateStr = now.toISODate();
+		  
+		  // 1. Check for Holiday
+		  const holiday = await pool.query('SELECT holiday_name, holiday_type FROM holidays WHERE holiday_date = $1', [dateStr]);
+		  
+		  // 2. Check for Suspensions (Checking if any class today is marked SUSPENDED)
+		  const suspensions = await pool.query(
+		    'SELECT DISTINCT reason FROM attendance WHERE class_date = $1 AND attendance_status = \'SUSPENDED\'', 
+		    [dateStr]
+		  );
+		
+		  return res.json({
+		    ok: true,
+		    isHoliday: holiday.rows.length > 0,
+		    holidayName: holiday.rows[0]?.holiday_name,
+		    isSuspended: suspensions.rows.length > 0,
+		    suspensionReason: suspensions.rows[0]?.reason
+		  });
+	  }
+
 	  case 'health_check': {
 		  try {
 			// Perform a simple query to verify DB connection
@@ -573,25 +635,42 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
 
     // Draw Status Grid
     dates.slice(0, 35).forEach((d, i) => {
-      const status = student.records[d.toISODate()] || '-';
-      page.drawText(status, { x: startX + (i * colWidth), y, size: 7, font });
-    });
+	  const status = student.records[d.toISODate()] || '-';
+	  
+	  // DEFAULT COLOR (Black)
+	  let statusColor = rgb(0, 0, 0); 
+	
+	  // FIX: Apply conditional coloring
+	  if (status === 'P') statusColor = rgb(0, 0.5, 0);       // Green
+	  if (status === 'A') statusColor = rgb(0.8, 0, 0);       // Red
+	  if (status === 'H') statusColor = rgb(0.2, 0.5, 0.8);   // Blue (Holiday)
+	  if (status === 'S') statusColor = rgb(0.5, 0.2, 0.7);   // Purple (Suspended)
+	  if (status === 'D') statusColor = rgb(0.5, 0.5, 0.5);   // Gray (Dropped)
+	
+	  page.drawText(status, { 
+	    x: startX + (i * colWidth), 
+	    y, 
+	    size: 7, 
+	    font, 
+	    color: statusColor 
+	  });
+	});
 
     // Draw Aggregated Totals
     const c = student.counts;
-    const presentTotal = (c.P || 0) + (c.L || 0) + (c.C || 0); 
-	// We also subtract Dropped days from the total possible days so their % isn't ruined
-	const droppedCount = c.D || 0; // 'D' from 'DROPPED'
-	// Calculate percentage based only on non-dropped days
-	const totalPossible = dates.length - droppedCount;
+    const presentTotal = (c.P || 0) + (c.L || 0) + (c.C || 0);
+	// EXCLUDE H, S, and D from the total possible days so their % isn't ruined
+	const excusedSessions = (c.H || 0) + (c.S || 0) + (c.D || 0);
+	// Total sessions that actually required attendance
+	const totalPossible = dates.length - excusedSessions;
 	const perc = totalPossible > 0 ? Math.round((presentTotal / totalPossible) * 100) : 0;
 
-	// Draw the row
-    page.drawText(`${presentTotal}`, { x: totalX, y, size: 7, font });
-    page.drawText(`${c.L}`, { x: totalX + 20, y, size: 7, font });
-    page.drawText(`${c.A}`, { x: totalX + 40, y, size: 7, font });
+	// Draw Totals
+	page.drawText(`${presentTotal}`, { x: totalX, y, size: 7, font });
+	page.drawText(`${c.L}`, { x: totalX + 20, y, size: 7, font });
+	page.drawText(`${c.A}`, { x: totalX + 40, y, size: 7, font });
 	page.drawText(`${droppedCount}`, { x: totalX + 45, y, size: 7, font, color: rgb(0.5, 0.5, 0.5) }); // Added Dropped column
-    page.drawText(`${perc}%`, { x: totalX + 65, y, size: 7, font: bold });
+	page.drawText(`${perc}%`, { x: totalX + 65, y, size: 7, font: bold });
     
     // Horizontal row line
     page.drawLine({ start: { x: 40, y: y - 2 }, end: { x: 970, y: y - 2 }, thickness: 0.1, color: rgb(0.8, 0.8, 0.8) });
@@ -835,6 +914,16 @@ const autoTagAbsentees = async () => {
     const dayName = now.toFormat('ccc');
     const dateStr = now.toISODate();
 
+    // 1. Check if today is a holiday
+    const holidayCheck = await pool.query(
+      'SELECT holiday_name FROM holidays WHERE holiday_date = $1', 
+      [dateStr]
+    );
+
+    const isHoliday = holidayCheck.rows.length > 0;
+    const holidayReason = isHoliday ? holidayCheck.rows[0].holiday_name : null;
+
+    // 2. Find all classes scheduled for today
     const schedules = await pool.query(
       "SELECT * FROM schedules WHERE $1 = ANY(days)", 
       [dayName]
@@ -844,10 +933,26 @@ const autoTagAbsentees = async () => {
       const [endHH, endMM] = sched.end_time.split(':');
       const classEnd = now.set({ hour: endHH, minute: endMM, second: 0 });
 
-      // Only process classes that ended at least 30 minutes ago
-      if (now > classEnd.plus({ minutes: 30 })) {
+      // A. AUTOMATIC HOLIDAY TAGGING
+      if (isHoliday) {
+        // Tag everyone as HOLIDAY for this class if not already tagged
+        await pool.query(`
+          INSERT INTO attendance (class_date, class_code, student_id, attendance_status, reason, time_in)
+          SELECT $1, $2, u.user_id, 'HOLIDAY', $3, '00:00:00'
+          FROM sys_users u
+          WHERE (u.user_role = 'student' OR u.user_role = 'officer')
+          AND NOT EXISTS (
+            SELECT 1 FROM attendance a 
+            WHERE a.class_date = $1 AND a.class_code = $2 AND a.student_id = u.user_id
+          )
+        `, [dateStr, sched.class_code, holidayReason]);
         
-        // A. Mark completely missing students as ABSENT
+        continue; // Skip the rest of the logic for this class if it's a holiday
+      }
+
+      // B. REGULAR MAINTENANCE (Only if not a holiday)
+      if (now > classEnd.plus({ minutes: 30 })) {
+        // Mark missing students as ABSENT
         await pool.query(`
           INSERT INTO attendance (class_date, class_code, student_id, attendance_status, time_in)
           SELECT $1, $2, u.user_id, 'ABSENT', '00:00:00'
@@ -859,16 +964,13 @@ const autoTagAbsentees = async () => {
           )
         `, [dateStr, sched.class_code]);
 
-        // B. Mark "Forgetful" students as INCOMPLETE
-        // (They checked in but never checked out)
-		await pool.query(`
-		  UPDATE attendance 
-		  SET attendance_status = 'INCOMPLETE'
-		  WHERE class_date = $1
-		  AND class_code = $2 
-		  AND time_out IS NULL 
-		  AND attendance_status IN ('PRESENT', 'LATE')
-		`, [dateStr, sched.class_code]);
+        // Mark forgetful students as INCOMPLETE
+        await pool.query(`
+          UPDATE attendance 
+          SET attendance_status = 'INCOMPLETE'
+          WHERE class_date = $1 AND class_code = $2 
+          AND time_out IS NULL AND attendance_status IN ('PRESENT', 'LATE')
+        `, [dateStr, sched.class_code]);
       }
     }
   } catch (err) {
