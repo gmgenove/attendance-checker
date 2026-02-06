@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const formTitle = document.getElementById("formTitle");
     const switchText = document.getElementById("switchText");
 
-    // Re-added Password visibility toggle logic
+    // Password visibility toggle logic
     // Ensure you have <span id="togglePassword" class="fa fa-fw fa-eye field-icon"></span> in your HTML
     const togglePassword = document.getElementById("togglePassword");
     if (togglePassword) {
@@ -176,7 +176,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
     
-    // Check health 2 seconds after load (to let Render wake up)
+    // Check health 2 seconds after load (to let web server wake up)
     setTimeout(checkHealth, 2000);
 });
 
@@ -279,6 +279,15 @@ async function loadProfessorDashboard() {
                 <li style="padding: 10px 0; border-bottom: 1px solid #f1f5f9;">
                     <span><strong>${r.user_name}</strong></span>
                     <button onclick="resetSinglePassword('${r.user_id}')" class="small" style="float:right; background:none; border:1px solid #ddd;">Reset PW</button>
+                </li>
+                <li style="padding: 10px 0; border-bottom: 1px solid #f1f5f9;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span><strong>${r.user_name}</strong></span>
+                        <div>
+                            <button onclick="bulkStatusUpdate('${r.user_id}', 'CREDITED')" class="small">Credit All</button>
+                            <button onclick="bulkStatusUpdate('${r.user_id}', 'DROPPED')" class="small danger">Drop All</button>
+                        </div>
+                    </div>
                 </li>`;
         });
         
@@ -345,6 +354,9 @@ async function updateCheckinUI(cls) {
     const btn = document.getElementById(`btn-${cls.class_code}`);
     const btnContainer = document.getElementById(`btn-${cls.class_code}`).parentElement;
     const statusSpan = document.getElementById(`status-${cls.class_code}`);
+
+    const configData = await api('getConfig');
+    const config = configData.config;
     
     // 1. Initial status check from server
     const res = await api('get_attendance', { class_code: cls.class_code, student_id: currentUser.id });
@@ -371,7 +383,7 @@ async function updateCheckinUI(cls) {
             const end = new Date();
             end.setHours(parseInt(hh), parseInt(mm), 0, 0);
 
-            const enableFrom = new Date(end.getTime() - 10 * 60000); // 10 mins before end
+            const enableFrom = new Date(end.getTime() - config.checkout_window_minutes * 60000); // 10 mins before end
 
             if (tzNow >= enableFrom) {
                 outBtn.disabled = false;
@@ -412,7 +424,7 @@ async function updateCheckinUI(cls) {
         start.setHours(parseInt(hh), parseInt(mm), 0, 0);
 
         // Your check-in window (matches server: 10 mins before)
-        const enableFrom = new Date(start.getTime() - 10 * 60000); 
+        const enableFrom = new Date(start.getTime() - config.checkin_window_minutes * 60000); 
         const minsRemaining = Math.ceil((enableFrom - tzNow) / 60000);
 
         if (tzNow >= enableFrom) {
@@ -421,7 +433,7 @@ async function updateCheckinUI(cls) {
             statusSpan.textContent = "Check-in window is OPEN";
             statusSpan.style.color = "#10b981";
             clearInterval(timer); // Stop counting down once open
-        } else if (minsRemaining > 0 && minsRemaining <= 10) {
+        } else if (minsRemaining > 0 && minsRemaining <= config.checkin_window_minutes) {
             // Approaching opening time
             btn.disabled = true;
             statusSpan.textContent = `Check-in opens in ${minsRemaining} min${minsRemaining > 1 ? 's' : ''}`;
@@ -463,14 +475,10 @@ async function updateCheckinUI(cls) {
         }
     };
 
-    const configData = await api('getConfig');
-    const config = configData.config;
-
     // Use the dynamic adjustment end from the database
     const adjustmentEnd = new Date(config.adjustment_end);
     const now = new Date();
 
-    // Add after the check-in button logic
     if (new Date() <= adjustmentEnd && (!record || record.attendance_status === 'not_recorded')) {
         const creditBtn = document.createElement('button');
         creditBtn.textContent = "Claim Attendance Credit";
@@ -478,6 +486,17 @@ async function updateCheckinUI(cls) {
         creditBtn.onclick = () => api('credit_attendance', { class_code: cls.class_code, student_id: currentUser.id });
         btnContainer.appendChild(creditBtn);
     }
+
+    creditBtn.onclick = async () => {
+        if (confirm("This will mark you as CREDITED for ALL remaining sessions of this class for the entire semester. Proceed?")) {
+            const res = await api('credit_attendance', { 
+                class_code: cls.class_code, 
+                student_id: currentUser.id 
+            });
+            alert(res.message);
+            loadTodaySchedule();
+        }
+    };
 }
 
 // Optimized Report Handler
@@ -507,7 +526,7 @@ document.getElementById('generateReport').onclick = async () => {
     const res = await api('report', { type, [type === 'class' ? 'class_code' : 'student_id']: param });
     if (res.ok) {
         const link = document.createElement('a');
-        link.href = `data:application/pdf;base64,${res.pdfMain}`; // You can merge here using pdf-lib if needed
+        link.href = `data:application/pdf;base64,${res.pdfMain}`; // merge here using pdf-lib if needed
         link.download = res.filename;
         link.textContent = "Download Generated Report";
         out.innerHTML = '';
@@ -570,7 +589,6 @@ function signout() {
     document.getElementById("formTitle").textContent = "Sign In";
     document.getElementById("submitBtn").textContent = "Sign In";
     document.getElementById("submitBtn").disabled = false;
-    //location.reload();
 }
 document.getElementById('signoutBtn').onclick = signout;
 
@@ -610,6 +628,21 @@ window.submitExcuse = async (classCode) => {
         loadTodaySchedule(); 
     } else {
         alert(res.error);
+    }
+};
+
+window.bulkStatusUpdate = async (studentId, type) => {
+    const classCode = "BPAOUMN-1B"; // Get current active class
+    const confirmMsg = `Are you sure you want to mark this student as ${type} for the rest of the semester?`;
+    
+    if (confirm(confirmMsg)) {
+        const res = await api('credit_attendance', { 
+            class_code: classCode, 
+            student_id: studentId,
+            type: type 
+        });
+        alert(res.message);
+        loadProfessorDashboard();
     }
 };
 
