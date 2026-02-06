@@ -310,13 +310,13 @@ async function loadTodaySchedule() {
                 
                 <div id="excuse-area-${cls.class_code.replace(/\s+/g, '-')}" style="display:none; margin-top:10px; background:#f1f5f9; padding:8px; border-radius:8px;">
                     <input type="text" id="reason-${cls.class_code.replace(/\s+/g, '-')}" placeholder="Reason for excuse..." style="width:100%; font-size:12px; margin-bottom:5px;">
-                    <button onclick="submitExcuse('${cls.class_code.replace(/\s+/g, '-')}')" style="font-size:11px; padding:5px 10px; background:#64748b; color:white; border:none;">Submit Excuse</button>
+                    <button onclick="submitExcuse('${cls.class_code}')" style="font-size:11px; padding:5px 10px; background:#64748b; color:white; border:none;">Submit Excuse</button>
                 </div>
             </div>
             <div class="class-actions" style="text-align:right">
                 <button class="checkin-btn" id="btn-${cls.class_code.replace(/\s+/g, '-')}" disabled>Check In</button>
                 <div style="margin-top:8px">
-                    <a href="#" onclick="toggleExcuse(event, '${cls.class_code.replace(/\s+/g, '-')}')" class="small muted" style="text-decoration:none">File Excuse?</a>
+                    <a href="#" onclick="toggleExcuse(event, '${cls.class_code}')" class="small muted" style="text-decoration:none">File Excuse?</a>
                 </div>
             </div>
         `;
