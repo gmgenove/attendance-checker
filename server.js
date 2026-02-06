@@ -129,7 +129,7 @@ app.post('/api', async (req, res) => {
 			const semConfig = await getCurrentSemConfig();
 		
 			if (!semConfig.start || semConfig.sem === "None") {
-				const checkinOpen = -(parseInt(semConfig.checkin_window_minutes); // Opens 10 mins before
+				const checkinOpen = -(parseInt(semConfig.checkin_window_minutes)); // Opens 10 mins before
 				const lateThreshold = parseInt(semConfig.late_window_minutes); // Late after 5 mins
 				const absentThreshold = parseInt(semConfig.absent_window_minutes); // Absent after 10 mins
 		
