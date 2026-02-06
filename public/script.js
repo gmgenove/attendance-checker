@@ -711,6 +711,19 @@ window.handleStatusChange = async () => {
     }
 };
 
+window.handleMakeUpClass = async () => {
+    const code = document.getElementById('makeupClassCode').value;
+    const date = document.getElementById('makeupDate').value;
+    
+    if(!code || !date) return alert("Select both class and date.");
+    
+    const res = await api('authorize_makeup', { class_code: code, date: date });
+    if(res.ok) {
+        alert(res.message);
+        loadTodaySchedule(); 
+    }
+};
+
 window.toggleSettings = () => {
     const card = document.getElementById('settingsCard');
     card.style.display = card.style.display === 'none' ? 'block' : 'none';
