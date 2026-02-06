@@ -32,6 +32,8 @@
             #loading-bar { height: 3px; width: 0%; background: #3b82f6; position: fixed; top: 0; left: 0; transition: width 0.3s;}
             @keyframes subtle-shake { 0% { transform: translateX(0); } 25% { transform: translateX(2px); } 50% { transform: translateX(-2px); } 75% { transform: translateX(2px); } 100% { transform: translateX(0); } }
             @keyframes pulse-green { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+            @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+            #profSummaryOutput { animation: fadeIn 0.3s ease-in-out; }
             .fa-circle { animation: pulse-green 2s infinite; }
             .reminder-active {animation: subtle-shake 0.5s ease-in-out;}
             .password-wrapper { position: relative; display: block; align-items: center; width: 100%; max-width: 260px; }
