@@ -296,7 +296,7 @@ async function loadTodaySchedule() {
     const list = document.getElementById('scheduleList');
     list.innerHTML = '<div class="small muted">Checking for classes...</div>';
     
-    const res = await api('today_schedule');
+    const res = await api('today_schedule', { student_id: currentUser.id });
     
     if (!res.ok) {
         list.innerHTML = '<div class="error-message">Failed to load schedule.</div>';
