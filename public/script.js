@@ -41,14 +41,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Password visibility toggle logic
     document.getElementById('togglePassword').addEventListener('click', function() {
-        const pwd = document.getElementById('passwordInput');
-        pwd.type = pwd.type === 'password' ? 'text' : 'password';
-        // Toggle password visibility
-        if (pwd.type) {
-            this.classList.remove("fa-eye").add("fa-eye-slash");
-        } else {
-            this.classList.remove("fa-eye-slash").add("fa-eye");
-        }
+        const pwd = document.getElementById('passwordInput');      
+        const icon = document.getElementById('togglePassword');
+        
+        icon.addEventListener('click', () => {
+          const show = pwd.type === 'password';
+          pwd.type = show ? 'text' : 'password';
+          // Toggle password visibility
+          icon.classList.toggle('fa-eye', show);
+          icon.classList.toggle('fa-eye-slash', !show);
+        });
     });
 
     // Toggle between Sign In / Sign Up
