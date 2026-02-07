@@ -1,6 +1,7 @@
 const API_BASE = '/api'; // Optimized for same-domain Render hosting
 let currentUser = null;
 let isSignup = false;
+let currentScheduleData = [];
 
 // API Helper
 async function api(action, payload = {}) {
@@ -317,17 +318,19 @@ async function loadTodaySchedule() {
         list.innerHTML = `
             <div class="card" style="text-align:center; padding: 40px 20px; border: 1px dashed #cbd5e1; background: #f8fafc;">
                 <i class="fa fa-calendar-o" style="font-size: 2rem; color: #94a3b8; margin-bottom: 10px;"></i>
-                <div class="small muted">There are no classes scheduled for today.</div>
+                <div class="small muted">No classes scheduled for today.</div>
                 <div class="small" style="margin-top:5px; color: #64748b;">Enjoy your break!</div>
             </div>
         `;
         return;
     }
 
+    // HYDRATE GLOBAL STATE: Store the array here
+    currentScheduleData = res.schedule; 
     // Otherwise, clear and loop through classes
     list.innerHTML = '';
     const timeMap = {}; // To track time overlaps
-    res.schedule.forEach(cls => {
+    currentScheduleData.forEach(cls => {
         const timeKey = `${cls.start_time}-${cls.end_time}`;
         if (!timeMap[timeKey]) timeMap[timeKey] = [];
         timeMap[timeKey].push(cls.class_code);
@@ -347,14 +350,14 @@ async function loadTodaySchedule() {
                 <div id="status-${cls.class_code.replace(/\s+/g, '-')}" class="small" style="margin:5px 0">Checking status...</div>
                 
                 <div id="excuse-area-${cls.class_code.replace(/\s+/g, '-')}" style="display:none; margin-top:10px; background:#f1f5f9; padding:8px; border-radius:8px;">
-                    <input type="text" id="reason-${cls.class_code.replace(/\s+/g, '-')}" placeholder="Reason for excuse..." style="width:100%; font-size:12px; margin-bottom:5px;">
+                    <input type="text" id="reason-${cls.class_code.replace(/\s+/g, '-')}" placeholder="Reason for excuse..." style="width:100%; font-size:12px; margin-bottom:5px;" minlength="5" required>
                     <button onclick="submitExcuse('${cls.class_code}')" style="font-size:11px; padding:5px 10px; background:#64748b; color:white; border:none;">Submit Excuse</button>
                 </div>
             </div>
             <div class="class-actions" style="text-align:right">
                 <button class="checkin-btn" id="btn-${cls.class_code.replace(/\s+/g, '-')}" disabled>Check In</button>
                 <div style="margin-top:8px">
-                    <a href="#" onclick="toggleExcuse(event, '${cls.class_code.replace(/\s+/g, '-')}')" class="small muted" style="text-decoration:none">File Excuse?</a>
+                    <a href="#" id="excuse-link-${cls.class_code.replace(/\s+/g, '-')}" onclick="toggleExcuse(event, '${cls.class_code}')" class="small muted" style="margin-left:10px; color:#64748b; text-decoration:none;">File for Excuse</a>
                 </div>
             </div>
         `;
@@ -693,6 +696,7 @@ async function loadAttendanceSummary() {
 function signout() {
     localStorage.removeItem('currentUser');
     currentUser = null;
+    currentScheduleData = []; // Clear the memory
     
     // Reset UI
     document.getElementById('app').style.display = 'none';
