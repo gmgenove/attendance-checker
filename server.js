@@ -688,9 +688,10 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
   page.drawText('Student ID', { x: 40, y, size: 8, font: bold });
   page.drawText('Student Name', { x: 120, y, size: 8, font: bold });
 
+  const makeupDateSet = await getMakeupDateSet(info.class_code);
   dates.slice(0, 35).forEach((d, i) => {
     const xPos = startX + (i * colWidth);
-	const isMakeupDay = checkDateIfMakeup(d.toISODate(), info.class_code); // Helper to check attendance table
+	const isMakeupDay = makeupDateSet.has(d.toISODate()); // Helper to check attendance table
     page.drawText(`D${i+1}${isMakeupDay ? '*' : ''}`, { x: xPos, y, size: 7, font: bold });
     page.drawText(d.toFormat('MM/dd'), { x: xPos, y: y - 8, size: 5, font });
   });
@@ -920,6 +921,19 @@ const getCurrentSemConfig = async () => {
     // Default to nearest sem or "Out of Semester"
     return { sem: "None", start: null, end: null, adjEnd: null, name: "None", year: "None" };
   }
+};
+
+const getMakeupDateSet = async (classCode) => {
+  const result = await pool.query(
+    `SELECT DISTINCT class_date
+     FROM attendance
+     WHERE class_code = $1 AND attendance_status = 'PENDING'`,
+    [classCode]
+  );
+
+  return new Set(
+    result.rows.map(r => DateTime.fromJSDate(r.class_date).toISODate())
+  );
 };
 
 const checkDateIfMakeup = async (date, classCode) => {
