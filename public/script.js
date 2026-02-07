@@ -831,7 +831,7 @@ window.toggleProfSummary = () => {
         
         // Optional: Trigger the data load only when opened to save resources
         if (summaryDiv.innerHTML.trim() === "") {
-            loadProfessorSummary(); 
+            loadAttendanceSummary(); 
         }
     } else {
         // Hide it
