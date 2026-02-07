@@ -727,7 +727,7 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
 	  if (status === 'A') statusColor = rgb(0.8, 0, 0);       // Red
 	  if (status === 'H') statusColor = rgb(0.2, 0.5, 0.8);   // Blue (Holiday)
 	  if (status === 'S') statusColor = rgb(0.5, 0.2, 0.7);   // Purple (Suspended)
-	  if (status === 'C') color = rgb(0.4, 0.4, 0.4); // Dark Grey (Cancelled)
+	  if (status === 'C') statusColor = rgb(0.4, 0.4, 0.4); // Dark Grey (Cancelled)
 	  if (status === 'D') statusColor = rgb(0.5, 0.5, 0.5);   // Gray (Dropped)
 
 	  page.drawText(status, { 
