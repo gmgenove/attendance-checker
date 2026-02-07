@@ -40,17 +40,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById("hdr").textContent = new Date().toLocaleString("en-US", { dateStyle: 'full' });
 
     // Password visibility toggle logic
-    document.getElementById('togglePassword').addEventListener('click', function() {
-        const pwd = document.getElementById('passwordInput');      
-        const icon = document.getElementById('togglePassword');
-        
-        icon.addEventListener('click', () => {
-          const show = pwd.type === 'password';
-          pwd.type = show ? 'text' : 'password';
-          // Toggle password visibility
-          icon.classList.toggle('fa-eye', show);
-          icon.classList.toggle('fa-eye-slash', !show);
-        });
+    const pwd = document.getElementById('passwordInput');      
+    const icon = document.getElementById('togglePassword');
+    icon.addEventListener('click', () => {
+      const show = pwd.type === 'password';
+      pwd.type = show ? 'text' : 'password';
+      // Toggle password visibility
+      icon.classList.toggle('fa-eye', show);
+      icon.classList.toggle('fa-eye-slash', !show);
     });
 
     // Toggle between Sign In / Sign Up
