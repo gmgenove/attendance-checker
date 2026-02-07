@@ -42,7 +42,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('togglePassword').addEventListener('click', function() {
         const pwd = document.getElementById('passwordInput');
         pwd.type = pwd.type === 'password' ? 'text' : 'password';
-        this.classList.toggle('fa-eye');
+        // Toggle password visibility
+        if (pwd.type) {
+            this.classList.remove("fa-eye").add("fa-eye-slash");
+        } else {
+            this.classList.remove("fa-eye-slash").add("fa-eye");
+        }
     });
 
     // Toggle between Sign In / Sign Up
@@ -238,9 +243,13 @@ async function loadProfessorDashboard() {
                     <span style="background:#e2e8f0; color:#475569; padding:2px 8px; border-radius:10px; font-size:10px;">
                         ${totalStudents} Students
                     </span>
+                    ${res.is_makeup_session ? `
+                        <span style="background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:bold;">
+                            <i class="fa fa-star"></i> MAKE-UP SESSION
+                        </span>` : ''}
                 </h5>
                 <div class="small" style="color:#10b981; font-size:10px; font-weight:bold;">
-                    <i class="fa fa-circle" style="font-size:8px; vertical-align:middle;"></i> LIVE
+                    <i class="fa fa-circle pulse" style="font-size:8px; vertical-align:middle;"></i> LIVE
                 </div>
             </div>
             
@@ -354,7 +363,7 @@ async function loadTodaySchedule() {
         // Toggle the excuse input visibility
         window.toggleExcuse = (e, classCode) => {
             e.preventDefault();
-            const area = document.getElementById(`excuse-area-${classCode.replace(/\s+/g)}`);
+            const area = document.getElementById(`excuse-area-${classCode.replace(/\s+/g, '-')}`);
             area.style.display = area.style.display === 'none' ? 'block' : 'none';
         };
 
@@ -462,8 +471,8 @@ async function updateCheckinUI(cls) {
     const res = await api('get_attendance', { class_code: cls.class_code, student_id: currentUser.id });
     const record = res.record;
     
-    if (record && record.attendance_status && record.attendance_status !== 'not_recorded') {
-        statusSpan.textContent = `Status: ${record.attendance_status}`;
+    if (record && record.status && record.status !== 'not_recorded') {
+        statusSpan.textContent = `Status: ${record.status}`;
         btn.style.display = 'none';
         // Even if already checked in, check if we need to show the Check-out button logic
     }
@@ -711,7 +720,7 @@ async function handleBulkReset() {
     const confirmation = confirm("WARNING: This will reset ALL student passwords to 'password1234'. Are you sure you want to proceed?");
     
     if (confirmation) {
-        const res = await api('bulk_password_reset');
+        const res = await api('bulk_password_reset', { role: currentUser.role });
         if (res.ok) {
             alert(res.message);
         } else {
