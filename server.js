@@ -225,7 +225,7 @@ app.post('/api', async (req, res) => {
 		
 		// 1. Get counts for the header cards
 		const stats = await pool.query(`
-			SELECT attendance_status, COUNT(*) as count 
+			SELECT attendance_status as status, COUNT(*) as count 
 			FROM attendance 
 			WHERE class_code = $1 AND class_date = $2::date
 			GROUP BY attendance_status
