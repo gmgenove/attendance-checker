@@ -1,4 +1,4 @@
-const API_BASE = '/api'; // Optimized for same-domain Render hosting
+const API_BASE = '/api'; // Optimized for same-domain hosting
 let currentUser = null;
 let isSignup = false;
 let currentScheduleData = [];
