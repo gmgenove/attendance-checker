@@ -221,7 +221,7 @@ app.post('/api', async (req, res) => {
 		const { class_code } = payload;
 		const date = getManilaNow().toISODate();
 
-		const isMakeup = await checkDateIfMakeup(today, class_code);
+		const isMakeup = await checkDateIfMakeup(date, class_code);
 		
 		// 1. Get counts for the header cards
 		const stats = await pool.query(`
