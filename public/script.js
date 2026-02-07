@@ -345,7 +345,7 @@ async function loadTodaySchedule() {
                     ${isConflict ? `<span style="background:#fee2e2; color:#b91c1c; border:1px solid #fecaca; font-size:9px; padding:1px 6px; border-radius:4px; font-weight:bold;">CONFLICT</span>` : ''}
                 </div>
                 <span class="small muted">${cls.start_time} - ${cls.end_time}</span>
-                <div class="small muted" style="margin:5px 0">Prof. ${cls.professor_name}</div>
+                <div class="small muted" style="margin:5px 0">${cls.professor_name == null ? '' : Prof. cls.professor_name}</div>
                 <div id="status-${cls.class_code.replace(/\s+/g, '-')}" class="small" style="margin:5px 0">Checking status...</div>
                 
                 <div id="excuse-area-${cls.class_code.replace(/\s+/g, '-')}" style="display:none; margin-top:10px; background:#f1f5f9; padding:8px; border-radius:8px;">
