@@ -211,7 +211,7 @@ app.post('/api', async (req, res) => {
         const { class_code, student_id } = payload;
         const date = DateTime.now().setZone(TIMEZONE).toISODate();
         const result = await pool.query(
-          'SELECT attendance_status, time_in FROM attendance WHERE class_date = $1::date AND class_code = $2 AND student_id = $3',
+          'SELECT attendance_status as status, time_in, time_out FROM attendance WHERE class_date = $1::date AND class_code = $2 AND student_id = $3',
           [date, class_code, student_id]
         );
         return res.json({ ok: true, record: result.rows[0] || { status: 'not_recorded' } });
@@ -220,6 +220,8 @@ app.post('/api', async (req, res) => {
 	  case 'prof_dashboard': {
 		const { class_code } = payload;
 		const date = getManilaNow().toISODate();
+
+		const isMakeup = await checkDateIfMakeup(today, class_code);
 		
 		// 1. Get counts for the header cards
 		const stats = await pool.query(`
@@ -248,7 +250,8 @@ app.post('/api', async (req, res) => {
 		return res.json({ 
 			ok: true, 
 			stats: stats.rows, 
-			roster: roster.rows 
+			roster: roster.rows, 
+			is_makeup_session: isMakeup 
 		});
 	  }
 
@@ -400,7 +403,8 @@ app.post('/api', async (req, res) => {
 
 	  case 'bulk_password_reset': {
 	    // Only allow Officers or Professors to perform this
-	    if (currentUser.role === 'student') {
+		const { role } = payload;
+	    if (role === 'student') {
 	        return res.status(403).json({ ok: false, error: "Unauthorized access." });
 	    }
 	
@@ -686,7 +690,7 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
 
   dates.slice(0, 35).forEach((d, i) => {
     const xPos = startX + (i * colWidth);
-	const isMakeupDay = checkDateIfMakeup(d, info.class_code); // Helper to check attendance table
+	const isMakeupDay = checkDateIfMakeup(d.toISODate(), info.class_code); // Helper to check attendance table
     page.drawText(`D${i+1}${isMakeupDay ? '*' : ''}`, { x: xPos, y, size: 7, font: bold });
     page.drawText(d.toFormat('MM/dd'), { x: xPos, y: y - 8, size: 5, font });
   });
@@ -918,6 +922,25 @@ const getCurrentSemConfig = async () => {
   }
 };
 
+const checkDateIfMakeup = async (date, classCode) => {
+    try {
+        // We look for 'PENDING' because that is the status we use 
+        // to "pre-authorize" students to check in on a non-regular day.
+        const result = await pool.query(`
+            SELECT 1 FROM attendance 
+            WHERE class_date = $1::date 
+            AND class_code = $2 
+            AND attendance_status = 'PENDING'
+            LIMIT 1
+        `, [date, classCode]);
+
+        return result.rows.length > 0;
+    } catch (err) {
+        console.error("Error checking makeup status:", err);
+        return false;
+    }
+};
+
 const initDb = async () => {
   const queryText = `
     CREATE TABLE IF NOT EXISTS sys_users (
@@ -1025,7 +1048,7 @@ const autoTagAbsentees = async () => {
 
     // 2. Find all classes scheduled for today + Authorized Make-up sessions
     const schedules = await pool.query(`
-      SELECT * FROM schedules 
+      SELECT * FROM schedules s
 	  WHERE ($1 = ANY(days) AND semester = $2 AND academic_year = $3) 
 	  OR EXISTS (SELECT 1 FROM attendance a 
 	  WHERE a.class_code = s.class_code AND a.class_date = $4::date AND a.attendance_status = 'PENDING')`, [dayName, semInfo.sem, semInfo.year, dateStr]
