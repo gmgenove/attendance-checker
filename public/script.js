@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('togglePassword').addEventListener('click', function() {
         const pwd = document.getElementById('passwordInput');
         pwd.type = pwd.type === 'password' ? 'text' : 'password';
-        this.classList.toggle('fa-eye-slash');
+        this.classList.toggle('fa-eye');
     });
 
     // Toggle between Sign In / Sign Up
