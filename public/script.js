@@ -341,7 +341,7 @@ async function loadTodaySchedule() {
         card.innerHTML = `
             <div style="flex:1">
                 <div style="display:flex; align-items:center; gap:8px;">
-                    <strong>${cls.class_name}</strong>
+                    <strong>${cls.class_name} (${cls.class_code})</strong>
                     ${isConflict ? `<span style="background:#fee2e2; color:#b91c1c; border:1px solid #fecaca; font-size:9px; padding:1px 6px; border-radius:4px; font-weight:bold;">CONFLICT</span>` : ''}
                 </div>
                 <span class="small muted">${cls.start_time} - ${cls.end_time}</span>
