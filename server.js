@@ -46,7 +46,7 @@ app.post('/api', async (req, res) => {
         const { id, password, role } = payload;
         const result = await pool.query('SELECT * FROM sys_users WHERE user_id = $1 AND user_role = $2', [id, role]);
         
-        if (result.rows.length === 0) return res.status(404).json({ ok: false, error: 'User not found' });
+        if (result.rows.length === 0) return res.json({ ok: false, error: 'User not found' });
         const user = result.rows[0];
 
         let isValid = false;
@@ -63,7 +63,7 @@ app.post('/api', async (req, res) => {
           }
         }
 
-        if (!isValid) return res.status(401).json({ ok: false, error: 'Invalid credentials' });
+        if (!isValid) return res.json({ ok: false, error: 'Invalid credentials' });
         return res.json({ ok: true, user: { id: user.user_id, name: user.user_name, role: user.user_role } });
       }
 
@@ -405,7 +405,7 @@ app.post('/api', async (req, res) => {
 	    // Only allow Officers or Professors to perform this
 		const { role } = payload;
 	    if (role === 'student') {
-	        return res.status(403).json({ ok: false, error: "Unauthorized access." });
+	        return res.json({ ok: false, error: "Unauthorized access." });
 	    }
 	
 	    const defaultPassword = "password1234"; // You can change this default
@@ -423,7 +423,7 @@ app.post('/api', async (req, res) => {
 	            message: `Successfully reset passwords for ${result.rowCount} students to: ${defaultPassword}` 
 	        });
 	    } catch (err) {
-	        return res.json({ ok: false, error: err.message });
+	        return res.status(500).json({ ok: false, error: err.message });
 	    }
 	  }
 
@@ -512,7 +512,7 @@ app.post('/api', async (req, res) => {
 		      message: `Marked remaining sessions as ${statusToApply}.` 
 		    });
 		  } catch (err) {
-		    return res.json({ ok: false, error: "Database error: " + err.message });
+		    return res.status(500).json({ ok: false, error: "Database error: " + err.message });
 		  }
 	  }
 
@@ -568,7 +568,7 @@ app.post('/api', async (req, res) => {
 	
 	        return res.json({ ok: true, message: `Class marked as ${statusType.toLowerCase()}.` });
 	    } catch (err) {
-	        return res.json({ ok: false, error: err.message });
+	        return res.status(500).json({ ok: false, error: err.message });
 	    }
 	  }
 
@@ -924,16 +924,21 @@ const getCurrentSemConfig = async () => {
 };
 
 const getMakeupDateSet = async (classCode) => {
-  const result = await pool.query(
-    `SELECT DISTINCT class_date
-     FROM attendance
-     WHERE class_code = $1 AND attendance_status = 'PENDING'`,
-    [classCode]
-  );
-
-  return new Set(
-    result.rows.map(r => DateTime.fromJSDate(r.class_date).toISODate())
-  );
+	try {
+	    const result = await pool.query(`
+	      SELECT DISTINCT class_date
+	      FROM attendance
+	      WHERE class_code = $1
+	        AND attendance_status = 'PENDING'
+	    `, [classCode]);
+	
+	    return new Set(
+	      result.rows.map(r => DateTime.fromJSDate(r.class_date).toISODate())
+	    );
+	 } catch (err) {
+	    console.error("Error loading makeup dates:", err);
+	    return new Set();
+  	}
 };
 
 const checkDateIfMakeup = async (date, classCode) => {
