@@ -83,9 +83,10 @@ app.post('/api', async (req, res) => {
 	  // 1. Get Today's Schedule
 	  case 'today_schedule': {
 		  try {
+			const { student_id } = payload;
 			const now = getManilaNow();
-			const dayName = now.toFormat('ccc'); // Mon, Tue, etc.
-			const dateStr = now.toISODate();
+			const dateStr = now.toISODate(); // '2026-02-07'
+			const dayName = now.toFormat('ccc'); // 'Sat'
 
 			// 1. Get the current active semester info
 	        const semInfo = await getCurrentSemConfig();
