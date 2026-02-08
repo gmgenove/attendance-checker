@@ -220,7 +220,16 @@ app.post('/api', async (req, res) => {
 	  case 'prof_dashboard': {
 		const { class_code } = payload;
 		const date = getManilaNow().toISODate();
+		const dayName = now.toFormat('ccc'); // 'Sat'
+    	const today = now.toISODate();
 
+		// Check if today is a scheduled day
+	    const sched = await pool.query(
+	        'SELECT days FROM schedules WHERE class_code = $1', 
+	        [class_code]
+	    );
+	    
+	    const isRegularDay = sched.rows.length > 0 && sched.rows[0].days.includes(dayName);
 		const isMakeup = await checkDateIfMakeup(date, class_code);
 		
 		// 1. Get counts for the header cards
@@ -249,9 +258,10 @@ app.post('/api', async (req, res) => {
 		
 		return res.json({ 
 			ok: true, 
+			isRegularDay,
+			is_makeup_session: isMakeup,
 			stats: stats.rows, 
-			roster: roster.rows, 
-			is_makeup_session: isMakeup 
+			roster: roster.rows
 		});
 	  }
 
