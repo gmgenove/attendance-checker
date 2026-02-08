@@ -106,7 +106,7 @@
                 <div id="controls" class="card" style="display:none">
                     <div id="officerControls" style="display:none">
                         <h3>Officer Reports</h3>
-                        <select id="reportType">
+                        <select id="reportType" required>
                             <option value="">Select Report Type</option>
                             <option value="class">Class Report</option>
                             <option value="person">Student Report</option>
@@ -125,11 +125,12 @@
     
                         <div class="card" style="border-top: 4px solid #7c3aed; margin-top: 15px;">
                             <h4>Class Status Manager</h4>
-                            <select id="statusType">
+                            <select id="statusType" required>
+                                <option value="">Select Class Status</option>
                                 <option value="SUSPENDED">Suspended (Admin)</option>
                                 <option value="CANCELLED">Cancelled (Prof)</option>
                             </select>
-                            <select id="suspendClassCode">
+                            <select id="suspendClassCode" required>
                                 <option value="">Loading Classes...</option>
                             </select>
                             <input type="text" id="suspendReason" placeholder="Reason (e.g., Professor on official business or Typhoon Karding)" minlength="5" style="width: 80%;" required />
@@ -142,7 +143,7 @@
                             <h4>Make-up Class Scheduler</h4>
                             <p class="small muted" style="margin-top:5px;">This allows students to check in on the selected date.</p>
                             <div class="grid">
-                                <select id="makeupClassCode">
+                                <select id="makeupClassCode" required>
                                     <option value="">Loading Classes...</option>
                                 </select>
                                 <input type="date" id="makeupDate" style="width: 55%;" required />
