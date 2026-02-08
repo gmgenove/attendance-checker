@@ -219,7 +219,7 @@ app.post('/api', async (req, res) => {
 
 	  case 'prof_dashboard': {
 		const { class_code } = payload;
-		const date = getManilaNow().toISODate();
+		const date = getManilaNow();
 		const dayName = date.toFormat('ccc'); // 'Sat'
     	const today = date.toISODate();
 
@@ -230,7 +230,7 @@ app.post('/api', async (req, res) => {
 	    );
 	    
 	    const isRegularDay = sched.rows.length > 0 && sched.rows[0].days.includes(dayName);
-		const isMakeup = await checkDateIfMakeup(date, class_code);
+		const isMakeup = await checkDateIfMakeup(today, class_code);
 		
 		// 1. Get counts for the header cards
 		const stats = await pool.query(`
@@ -238,7 +238,7 @@ app.post('/api', async (req, res) => {
 			FROM attendance 
 			WHERE class_code = $1 AND class_date = $2::date
 			GROUP BY attendance_status
-		`, [class_code, date]);
+		`, [class_code, today]);
 		
 		// 2. Get the ENTIRE roster with their current status for this class/date
 		const roster = await pool.query(`
@@ -254,7 +254,7 @@ app.post('/api', async (req, res) => {
 				CASE WHEN a.attendance_status IS NULL THEN 1 ELSE 0 END,
 				a.time_in DESC, 
 				u.user_name ASC
-		`, [class_code, date]);
+		`, [class_code, today]);
 		
 		return res.json({ 
 			ok: true, 
