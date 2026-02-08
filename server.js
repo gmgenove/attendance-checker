@@ -90,7 +90,6 @@ app.post('/api', async (req, res) => {
 
 			// 1. Get the current active semester info
 	        const semInfo = await getCurrentSemConfig();
-	        
 	        if (semInfo.sem === "None") {
 	            return res.json({ ok: true, schedule: [], message: "No active semester found." });
 	        }
@@ -99,13 +98,14 @@ app.post('/api', async (req, res) => {
 			const query = `
 			  SELECT s.*, u.user_name as professor_name, a.attendance_status as my_status, a.time_in, a.reason 
 			  FROM schedules s
-			  LEFT JOIN sys_users u ON s.professor_id = u.user_id AND u.user_status = TRUE
+			  LEFT JOIN sys_users u ON s.professor_id = u.user_id
 			  LEFT JOIN attendance a ON s.class_code = a.class_code 
                 AND a.student_id = $1 
                 AND a.class_date = $2::date
 			  WHERE ($3 = ANY(s.days)
 				  AND s.semester = $4 
-	              AND s.academic_year = $5) 
+	              AND s.academic_year = $5
+				  AND u.user_status = TRUE) 
 				  OR EXISTS (
 			        SELECT 1 FROM attendance ma 
 			        WHERE ma.class_code = s.class_code 
@@ -151,7 +151,7 @@ app.post('/api', async (req, res) => {
 			}
 		
 			// B. Get Class Start Time
-			const schedResult = await pool.query('SELECT start_time FROM schedules WHERE class_code = $1', [class_code]);
+			const schedResult = await pool.query('SELECT start_time FROM schedules WHERE class_code = $1 AND semester = $2 AND academic_year = $3', [class_code, semConfig.sem, semConfig.year]);
 			if (schedResult.rows.length === 0) throw new Error('Class not found');
 			const [hh, mm] = schedResult.rows[0].start_time.split(':');
 			const classStart = now.set({ hour: hh, minute: mm, second: 0, millisecond: 0 });
@@ -224,9 +224,10 @@ app.post('/api', async (req, res) => {
     	const today = date.toISODate();
 
 		// Check if today is a scheduled day
+		const semConfig = await getCurrentSemConfig();
 	    const sched = await pool.query(
-	        'SELECT days FROM schedules WHERE class_code = $1', 
-	        [class_code]
+	        'SELECT days FROM schedules WHERE class_code = $1 AND semester = $2 AND academic_year = $3', 
+	        [class_code, semConfig.sem, semConfig.year]
 	    );
 	    
 	    const isRegularDay = sched.rows.length > 0 && sched.rows[0].days.includes(dayName);
@@ -248,8 +249,8 @@ app.post('/api', async (req, res) => {
 				a.time_in, 
 				COALESCE(a.attendance_status, 'NOT YET ARRIVED') as status
 			FROM sys_users u
-			LEFT JOIN attendance a ON u.user_id = a.student_id AND u.user_status = TRUE AND a.class_code = $1 AND a.class_date = $2::date
-			WHERE u.user_role IN ('student', 'officer')
+			LEFT JOIN attendance a ON u.user_id = a.student_id AND a.class_code = $1 AND a.class_date = $2::date
+			WHERE u.user_role IN ('student', 'officer') AND u.user_status = TRUE
 			ORDER BY 
 				CASE WHEN a.attendance_status IS NULL THEN 1 ELSE 0 END,
 				a.time_in DESC, 
@@ -275,8 +276,8 @@ app.post('/api', async (req, res) => {
 		        COUNT(CASE WHEN a.attendance_status = 'ABSENT' THEN 1 END) as absent_count,
 		        COUNT(CASE WHEN a.attendance_status = 'INCOMPLETE' THEN 1 END) as incomplete_count
 		    FROM sys_users u
-		    LEFT JOIN attendance a ON u.user_id = a.student_id AND u.user_status = TRUE AND a.class_code = $1
-		    WHERE u.user_role IN ('student', 'officer')
+		    LEFT JOIN attendance a ON u.user_id = a.student_id AND a.class_code = $1
+		    WHERE u.user_role IN ('student', 'officer') AND u.user_status = TRUE
 		    GROUP BY u.user_id, u.user_name
 		    ORDER BY u.user_name ASC
 		`, [class_code]);
@@ -294,7 +295,7 @@ app.post('/api', async (req, res) => {
 	    if (semConfig.sem === "None") return res.json({ ok: false, error: "No active semester found." });
 	
 	    if (type === 'class') {
-	        const classInfo = await pool.query(`SELECT s.*, u.user_name as professor_name FROM schedules s JOIN sys_users u ON s.professor_id = u.user_id AND u.user_status = TRUE WHERE s.class_code = $1`, [class_code]);
+	        const classInfo = await pool.query(`SELECT s.*, u.user_name as professor_name FROM schedules s JOIN sys_users u ON s.professor_id = u.user_id WHERE s.class_code = $1 AND s.semester = $2 AND s.academic_year = $3 AND u.user_status = TRUE`, [class_code, semConfig.sem, semConfig.year]);
 	        if (classInfo.rows.length === 0) return res.json({ ok: false, error: "Class not found." });
 	        const info = classInfo.rows[0];
 	
@@ -331,8 +332,8 @@ app.post('/api', async (req, res) => {
 			const excuses = await pool.query(
 			    `SELECT a.class_date, u.user_name, a.reason 
 			     FROM attendance a 
-			     JOIN sys_users u ON a.student_id = u.user_id AND u.user_status = TRUE 
-			     WHERE a.class_code = $1 AND (a.reason IS NOT NULL OR a.attendance_status = 'SUSPENDED')
+			     JOIN sys_users u ON a.student_id = u.user_id
+			     WHERE a.class_code = $1 AND (a.reason IS NOT NULL OR a.attendance_status = 'SUSPENDED') AND u.user_status = TRUE 
 			     ORDER BY a.class_date DESC`, [class_code]
 			);
 	
@@ -341,7 +342,7 @@ app.post('/api', async (req, res) => {
 	        
 	    } else if (type === 'person') {
 	        const studentRes = await pool.query('SELECT user_name FROM sys_users WHERE user_id = $1 AND user_status = TRUE', [student_id]);
-	        const attendance = await pool.query(`SELECT a.*, s.class_name FROM attendance a JOIN schedules s ON a.class_code = s.class_code WHERE a.student_id = $1 ORDER BY s.class_name ASC`, [student_id]);
+	        const attendance = await pool.query(`SELECT a.*, s.class_name FROM attendance a JOIN schedules s ON a.class_code = s.class_code WHERE a.student_id = $1 AND s.semester = $2 AND s.academic_year = $3 ORDER BY s.class_name ASC`, [student_id, semConfig.sem, semConfig.year]);
 	        
 	        const subjects = {};
 	        attendance.rows.forEach(r => {
@@ -366,7 +367,7 @@ app.post('/api', async (req, res) => {
 			    }
 			});
 	
-	        const excuses = await pool.query(`SELECT a.class_date, s.class_name, a.reason FROM attendance a JOIN schedules s ON a.class_code = s.class_code WHERE a.student_id = $1 AND a.reason IS NOT NULL AND semester = $2 AND academic_year = $3 ORDER BY a.class_date DESC`, [student_id, semConfig.sem, semConfig.year]);
+	        const excuses = await pool.query(`SELECT a.class_date, s.class_name, a.reason FROM attendance a JOIN schedules s ON a.class_code = s.class_code WHERE a.student_id = $1 AND a.reason IS NOT NULL AND s.semester = $2 AND s.academic_year = $3 ORDER BY a.class_date DESC`, [student_id, semConfig.sem, semConfig.year]);
 	
 	        await generateStudentMatrixPDF(pdfDoc, studentRes.rows[0], student_id, subjects, semConfig, font, boldFont);
 	        await appendExcuseLogPage(pdfDoc, "STUDENT EXCUSE LOG", excuses.rows, font, boldFont, "class_name");
@@ -552,7 +553,7 @@ app.post('/api', async (req, res) => {
 		
 		  try {
 		    // 1. Fetch Class Schedule to find valid meeting days
-		    const schedRes = await pool.query("SELECT days FROM schedules WHERE class_code = $1", [class_code]);
+		    const schedRes = await pool.query("SELECT days FROM schedules WHERE class_code = $1 AND semester = $2 AND academic_year = $3", [class_code, semConfig.sem, semConfig.year]);
 		    if (schedRes.rows.length === 0) return res.json({ ok: false, error: "Class not found." });
 		    const classDays = schedRes.rows[0].days;
 		
@@ -649,15 +650,18 @@ app.post('/api', async (req, res) => {
 	  case 'authorize_makeup': {
 		const { class_code, date } = payload;
 
+		const semConfig = await getCurrentSemConfig();
+		if (semConfig.sem === "None") return res.json({ ok: false, error: "No active semester." });
+
 		// Check if professor is already scheduled for another class on this date/time
 	    const conflictCheck = await pool.query(`
 	        SELECT s.class_name 
 	        FROM schedules s
 	        JOIN attendance a ON s.class_code = a.class_code
 	        WHERE a.class_date = $1::date AND s.professor_id = (
-	            SELECT professor_id FROM schedules WHERE class_code = $2
-	        )
-	    `, [date, class_code]);
+	            SELECT professor_id FROM schedules WHERE class_code = $2 AND semester = $3 AND academic_year = $4
+	        ) AND s.semester = $3 AND s.academic_year = $4
+	    `, [date, class_code, semConfig.sem, semConfig.year]);
 	
 	    if (conflictCheck.rows.length > 0) {
 	        return res.json({ 
@@ -1143,7 +1147,7 @@ const autoTagAbsentees = async () => {
     // 2. Find all classes scheduled for today + Authorized Make-up sessions
     const schedules = await pool.query(`
       SELECT * FROM schedules s
-	  WHERE ($1 = ANY(days) AND semester = $2 AND academic_year = $3) 
+	  WHERE ($1 = ANY(days) AND s.semester = $2 AND s.academic_year = $3) 
 	  OR EXISTS (SELECT 1 FROM attendance a 
 	  WHERE a.class_code = s.class_code AND a.class_date = $4::date AND a.attendance_status = 'PENDING')`, [dayName, semInfo.sem, semInfo.year, dateStr]
     );
