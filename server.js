@@ -378,6 +378,7 @@ app.post('/api', async (req, res) => {
 
 	  case 'generate_student_report': {
 	    const { student_id } = payload;
+		const semInfo = await getCurrentSemConfig();
 	    
 	    // 1. Fetch student name and enrollment info
 	    const user = await pool.query('SELECT user_name FROM sys_users WHERE user_id = $1 AND user_status = TRUE', [student_id]);
@@ -385,9 +386,9 @@ app.post('/api', async (req, res) => {
 	        SELECT a.*, s.class_name 
 	        FROM attendance a
 	        JOIN schedules s ON a.class_code = s.class_code
-	        WHERE a.student_id = $1 AND user_status = TRUE
+	        WHERE a.student_id = $1 AND s.semester = $2 AND s.academic_year = $3
 	        ORDER BY a.class_date DESC
-	    `, [student_id]);
+	    `, [student_id, semInfo.sem, semInfo.year]);
 	
 	    // 2. Start PDF Generation
 	    const { PDFDocument, rgb, StandardFonts } = require('pdf-lib');
