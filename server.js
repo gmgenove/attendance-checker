@@ -159,8 +159,8 @@ app.post('/api', async (req, res) => {
 		
 			// Window Logic (using config from the DB; Using 10/10/20 window logic)
 			const checkinOpen = -(parseInt(semConfig.checkin_window_minutes) || 10);	 // Opens 10 mins before
-			const lateThreshold = parseInt(semConfig.late_window_minutes) || 5;	 // Late after 5 mins
-			const absentThreshold = parseInt(semConfig.absent_window_minutes) || 20;	// Absent after 10 mins
+			const lateThreshold = parseInt(semConfig.late_window_minutes) || 15;	 // Late after 5 mins
+			const absentThreshold = parseInt(semConfig.absent_window_minutes) || 30;	// Absent after 10 mins
 	
 			if (diffMins < checkinOpen) return res.json({ ok: false, error: 'Check-in not open yet' });
 			if (diffMins > absentThreshold) return res.json({ ok: false, error: 'Check-in closed (Absent)' });
