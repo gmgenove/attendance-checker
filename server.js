@@ -220,8 +220,8 @@ app.post('/api', async (req, res) => {
 	  case 'prof_dashboard': {
 		const { class_code } = payload;
 		const date = getManilaNow().toISODate();
-		const dayName = now.toFormat('ccc'); // 'Sat'
-    	const today = now.toISODate();
+		const dayName = date.toFormat('ccc'); // 'Sat'
+    	const today = date.toISODate();
 
 		// Check if today is a scheduled day
 	    const sched = await pool.query(
