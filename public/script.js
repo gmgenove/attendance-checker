@@ -230,9 +230,22 @@ async function loadProfessorDashboard() {
     
     const res = await api('prof_dashboard', { class_code: classCode });
     if (res.ok) {
+        // 1. Determine if there is an active class session
+        // A class is "Active" if it's a regular day OR an authorized makeup
+        const hasActiveSession = res.is_makeup_session || res.is_regular_day;
+        // IF NO CLASS: Show a simple placeholder message
+        if (!hasActiveSession) {
+            container.innerHTML = `
+                <div style="text-align:center; padding: 20px; background: #f8fafc; border-radius: 8px; border: 1px dashed #cbd5e1;">
+                    <p style="margin:0;">No active class session for <strong>${classCode}</strong> today.</p>
+                    <span class="small muted">Live stats will appear once the class starts.</span>
+                </div>`;
+            return;
+        }
+
         // Calculate total students in the roster
         const totalStudents = res.roster.length;
-
+        // IF THERE IS A CLASS: Populate the existing container with the dashboard
         let html = `
             <div class="grid">
                 ${res.stats.map(s => `
@@ -261,7 +274,7 @@ async function loadProfessorDashboard() {
             
             <ul id="recentCheckinList" class="small" style="list-style: none; padding: 0;">
         `;
-
+        // Now populate the actual list rows
         res.roster.forEach(r => {
             let statusColor = "#94a3b8"; // Default Grey for NOT YET ARRIVED
             let opacity = r.status === 'NOT YET ARRIVED' ? "0.6" : "1";
