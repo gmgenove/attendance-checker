@@ -206,7 +206,7 @@ function showApp() {
 
     controls.style.display = 'block';
     document.getElementById('officerControls').style.display = (currentUser.role === 'officer') ? 'block' : 'none';
-    document.getElementById('studentControls').style.display = (currentUser.role === 'student') ? 'block' : 'none';
+    document.getElementById('studentControls').style.display = (currentUser.role === 'student' || currentUser.role === 'officer') ? 'block' : 'none';
 
     loadTodaySchedule();
     checkGlobalStatus();
