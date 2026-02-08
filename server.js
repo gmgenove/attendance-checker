@@ -44,7 +44,7 @@ app.post('/api', async (req, res) => {
       // --- SIGN IN (Hybrid SHA256/Bcrypt) ---
       case 'signin': {
         const { id, password, role } = payload;
-        const result = await pool.query('SELECT * FROM sys_users WHERE user_id = $1 AND user_role = $2', [id, role]);
+        const result = await pool.query('SELECT * FROM sys_users WHERE user_id = $1 AND user_role = $2 AND user_status = TRUE', [id, role]);
         
         if (result.rows.length === 0) return res.json({ ok: false, error: 'User not found' });
         const user = result.rows[0];
@@ -59,7 +59,7 @@ app.post('/api', async (req, res) => {
             isValid = true;
             // Upgrade to bcrypt on the fly
             const newHash = await bcrypt.hash(password, 10);
-            await pool.query('UPDATE sys_users SET password_hash = $1 WHERE user_id = $2', [newHash, id]);
+            await pool.query('UPDATE sys_users SET password_hash = $1 WHERE user_id = $2 AND user_status = TRUE', [newHash, id]);
           }
         }
 
@@ -71,12 +71,12 @@ app.post('/api', async (req, res) => {
       case 'signup': {
         const { id, password, role } = payload;
         // Verify user exists in roster first
-        const check = await pool.query('SELECT * FROM sys_users WHERE user_id = $1 AND user_role = $2', [id, role]);
+        const check = await pool.query('SELECT * FROM sys_users WHERE user_id = $1 AND user_role = $2 AND user_status = TRUE', [id, role]);
         if (check.rows.length === 0) return res.json({ ok: false, error: 'ID not found in roster' });
         if (check.rows[0].password_hash) return res.json({ ok: false, error: 'Account already exists' });
 
         const hash = await bcrypt.hash(password, 10);
-        await pool.query('UPDATE sys_users SET password_hash = $1 WHERE user_id = $2', [hash, id]);
+        await pool.query('UPDATE sys_users SET password_hash = $1 WHERE user_id = $2 AND user_status = TRUE', [hash, id]);
         return res.json({ ok: true, message: 'Signup successful' });
       }
 
@@ -99,7 +99,7 @@ app.post('/api', async (req, res) => {
 			const query = `
 			  SELECT s.*, u.user_name as professor_name, a.attendance_status as my_status, a.time_in, a.reason 
 			  FROM schedules s
-			  LEFT JOIN sys_users u ON s.professor_id = u.user_id
+			  LEFT JOIN sys_users u ON s.professor_id = u.user_id AND u.user_status = TRUE
 			  LEFT JOIN attendance a ON s.class_code = a.class_code 
                 AND a.student_id = $1 
                 AND a.class_date = $2::date
@@ -239,7 +239,7 @@ app.post('/api', async (req, res) => {
 				a.time_in, 
 				COALESCE(a.attendance_status, 'NOT YET ARRIVED') as status
 			FROM sys_users u
-			LEFT JOIN attendance a ON u.user_id = a.student_id AND a.class_code = $1 AND a.class_date = $2::date
+			LEFT JOIN attendance a ON u.user_id = a.student_id AND u.user_status = TRUE AND a.class_code = $1 AND a.class_date = $2::date
 			WHERE u.user_role IN ('student', 'officer')
 			ORDER BY 
 				CASE WHEN a.attendance_status IS NULL THEN 1 ELSE 0 END,
@@ -265,7 +265,7 @@ app.post('/api', async (req, res) => {
 		        COUNT(CASE WHEN a.attendance_status = 'ABSENT' THEN 1 END) as absent_count,
 		        COUNT(CASE WHEN a.attendance_status = 'INCOMPLETE' THEN 1 END) as incomplete_count
 		    FROM sys_users u
-		    LEFT JOIN attendance a ON u.user_id = a.student_id AND a.class_code = $1
+		    LEFT JOIN attendance a ON u.user_id = a.student_id AND u.user_status = TRUE AND a.class_code = $1
 		    WHERE u.user_role IN ('student', 'officer')
 		    GROUP BY u.user_id, u.user_name
 		    ORDER BY u.user_name ASC
@@ -284,7 +284,7 @@ app.post('/api', async (req, res) => {
 	    if (semConfig.sem === "None") return res.json({ ok: false, error: "No active semester found." });
 	
 	    if (type === 'class') {
-	        const classInfo = await pool.query(`SELECT s.*, u.user_name as professor_name FROM schedules s JOIN sys_users u ON s.professor_id = u.user_id WHERE s.class_code = $1`, [class_code]);
+	        const classInfo = await pool.query(`SELECT s.*, u.user_name as professor_name FROM schedules s JOIN sys_users u ON s.professor_id = u.user_id AND u.user_status = TRUE WHERE s.class_code = $1`, [class_code]);
 	        if (classInfo.rows.length === 0) return res.json({ ok: false, error: "Class not found." });
 	        const info = classInfo.rows[0];
 	
@@ -295,7 +295,7 @@ app.post('/api', async (req, res) => {
 	            curr = curr.plus({ days: 1 });
 	        }
 	
-	        const attendance = await pool.query(`SELECT a.*, u.user_name FROM sys_users u LEFT JOIN attendance a ON u.user_id = a.student_id AND a.class_code = $1 WHERE u.user_role IN ('student', 'officer') ORDER BY u.user_name ASC`, [class_code]);
+	        const attendance = await pool.query(`SELECT a.*, u.user_name FROM sys_users u LEFT JOIN attendance a ON u.user_id = a.student_id AND u.user_status = TRUE AND a.class_code = $1 WHERE u.user_role IN ('student', 'officer') ORDER BY u.user_name ASC`, [class_code]);
 	        
 	        const roster = {};
 	        attendance.rows.forEach(r => {
@@ -321,7 +321,7 @@ app.post('/api', async (req, res) => {
 			const excuses = await pool.query(
 			    `SELECT a.class_date, u.user_name, a.reason 
 			     FROM attendance a 
-			     JOIN sys_users u ON a.student_id = u.user_id 
+			     JOIN sys_users u ON a.student_id = u.user_id AND u.user_status = TRUE 
 			     WHERE a.class_code = $1 AND (a.reason IS NOT NULL OR a.attendance_status = 'SUSPENDED')
 			     ORDER BY a.class_date DESC`, [class_code]
 			);
@@ -330,7 +330,7 @@ app.post('/api', async (req, res) => {
 	        await appendExcuseLogPage(pdfDoc, "CLASS EXCUSE LOG", excuses.rows, font, boldFont, "name");
 	        
 	    } else if (type === 'person') {
-	        const studentRes = await pool.query('SELECT user_name FROM sys_users WHERE user_id = $1', [student_id]);
+	        const studentRes = await pool.query('SELECT user_name FROM sys_users WHERE user_id = $1 AND user_status = TRUE', [student_id]);
 	        const attendance = await pool.query(`SELECT a.*, s.class_name FROM attendance a JOIN schedules s ON a.class_code = s.class_code WHERE a.student_id = $1 ORDER BY s.class_name ASC`, [student_id]);
 	        
 	        const subjects = {};
@@ -370,7 +370,7 @@ app.post('/api', async (req, res) => {
       case 'get_dropdowns': {
 		const semInfo = await getCurrentSemConfig();
         const classes = await pool.query('SELECT class_code as code, class_name as name FROM schedules WHERE semester = $1 AND academic_year = $2', [semInfo.sem, semInfo.year]);
-        const students = await pool.query('SELECT user_id, user_name FROM sys_users WHERE (user_role = \'student\' OR user_role = \'officer\')');
+        const students = await pool.query('SELECT user_id, user_name FROM sys_users WHERE (user_role = \'student\' OR user_role = \'officer\') AND user_status = TRUE');
         return res.json({ ok: true, classes: classes.rows, students: students.rows });
       }
 
@@ -378,7 +378,7 @@ app.post('/api', async (req, res) => {
 		    const { user_id, current_password, new_password } = payload;
 		
 		    // 1. Fetch user from DB
-		    const result = await pool.query("SELECT password_hash FROM sys_users WHERE user_id = $1", [user_id]);
+		    const result = await pool.query("SELECT password_hash FROM sys_users WHERE user_id = $1 AND user_status = TRUE", [user_id]);
 		    if (result.rows.length === 0) return res.json({ ok: false, error: "User not found." });
 		
 		    const user = result.rows[0];
@@ -389,7 +389,7 @@ app.post('/api', async (req, res) => {
 		
 		    // 3. Hash and save new password
 		    const newHash = await bcrypt.hash(new_password, 10);
-		    await pool.query("UPDATE sys_users SET password_hash = $1 WHERE user_id = $2", [newHash, user_id]);
+		    await pool.query("UPDATE sys_users SET password_hash = $1 WHERE user_id = $2 AND user_status = TRUE", [newHash, user_id]);
 		
 		    return res.json({ ok: true, message: "Password updated successfully!" });
 	  }
@@ -397,7 +397,7 @@ app.post('/api', async (req, res) => {
 	  case 'reset_single_password': {
 	    const { target_user_id } = payload;
 	    const hashed = await bcrypt.hash("password1234", 10);
-	    await pool.query("UPDATE sys_users SET password_hash = $1 WHERE user_id = $2", [hashed, target_user_id]);
+	    await pool.query("UPDATE sys_users SET password_hash = $1 WHERE user_id = $2 AND user_status = TRUE", [hashed, target_user_id]);
 	    return res.json({ ok: true, message: "Password reset to password1234" });
 	  }
 
@@ -414,7 +414,7 @@ app.post('/api', async (req, res) => {
 	    try {
 	        // Reset all students in the sys_users table
 	        const result = await pool.query(
-	            "UPDATE sys_users SET password_hash = $1 WHERE user_role IN ('student', 'officer')",
+	            "UPDATE sys_users SET password_hash = $1 WHERE user_role IN ('student', 'officer') AND user_status = TRUE",
 	            [hashedDefault]
 	        );
 	
@@ -561,7 +561,7 @@ app.post('/api', async (req, res) => {
 	            INSERT INTO attendance (class_date, class_code, student_id, attendance_status, reason, time_in)
 	            SELECT $1, $2, user_id, $4, $3, '00:00:00'
 	            FROM sys_users
-	            WHERE user_role IN ('student', 'officer')
+	            WHERE user_role IN ('student', 'officer') AND user_status = TRUE
 	            ON CONFLICT (class_date, class_code, student_id) 
 	            DO UPDATE SET attendance_status = $4, reason = $3
 	        `, [targetDate, class_code, reason.trim(), statusType]);
@@ -596,7 +596,7 @@ app.post('/api', async (req, res) => {
 		await pool.query(`
 			INSERT INTO attendance (class_date, class_code, student_id, attendance_status, time_in)
 			SELECT $1, $2, user_id, 'PENDING', '00:00:00'
-			FROM sys_users WHERE user_role IN ('student', 'officer')
+			FROM sys_users WHERE user_role IN ('student', 'officer') AND user_status = TRUE
 			ON CONFLICT DO NOTHING
 		`, [date, class_code]);
 		return res.json({ ok: true, message: `Make-up session authorized for ${date}` });
@@ -966,7 +966,8 @@ const initDb = async () => {
       user_id TEXT PRIMARY KEY, 
       user_name TEXT, 
       user_role TEXT, 
-      password_hash TEXT
+      password_hash TEXT,
+      user_status BOOLEAN NOT NULL DEFAULT TRUE
     );
     
     CREATE TABLE IF NOT EXISTS schedules (
@@ -1084,10 +1085,10 @@ const autoTagAbsentees = async () => {
           INSERT INTO attendance (class_date, class_code, student_id, attendance_status, reason, time_in)
           SELECT $1, $2, u.user_id, 'HOLIDAY', $3, '00:00:00'
           FROM sys_users u
-          WHERE u.user_role IN ('student', 'officer')
+          WHERE u.user_role IN ('student', 'officer') AND u.user_status = TRUE
           AND NOT EXISTS (
             SELECT 1 FROM attendance a 
-            WHERE a.class_date = $1::date AND a.class_code = $2 AND a.student_id = u.user_id
+            WHERE a.class_date = $1::date AND a.class_code = $2 AND a.student_id = u.user_id AND u.user_status = TRUE
           )
         `, [dateStr, sched.class_code, holidayReason]);
         
@@ -1101,10 +1102,10 @@ const autoTagAbsentees = async () => {
           INSERT INTO attendance (class_date, class_code, student_id, attendance_status, time_in)
           SELECT $1, $2, u.user_id, 'ABSENT', '00:00:00'
           FROM sys_users u
-          WHERE u.user_role IN ('student', 'officer')
+          WHERE u.user_role IN ('student', 'officer') AND u.user_status = TRUE
           AND NOT EXISTS (
             SELECT 1 FROM attendance a 
-            WHERE a.class_date = $1::date AND a.class_code = $2 AND a.student_id = u.user_id
+            WHERE a.class_date = $1::date AND a.class_code = $2 AND a.student_id = u.user_id AND u.user_status = TRUE
           )
         `, [dateStr, sched.class_code]);
 
