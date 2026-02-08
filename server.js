@@ -376,6 +376,69 @@ app.post('/api', async (req, res) => {
 	    return res.json({ ok: true, pdfMain: Buffer.from(pdfBytes).toString('base64'), filename: `Report_${type}.pdf` });
 	  }
 
+	  case 'generate_student_report': {
+	    const { student_id } = payload;
+	    
+	    // 1. Fetch student name and enrollment info
+	    const user = await pool.query('SELECT user_name FROM sys_users WHERE user_id = $1 AND user_status = TRUE', [student_id]);
+	    const attendance = await pool.query(`
+	        SELECT a.*, s.class_name 
+	        FROM attendance a
+	        JOIN schedules s ON a.class_code = s.class_code
+	        WHERE a.student_id = $1 AND user_status = TRUE
+	        ORDER BY a.class_date DESC
+	    `, [student_id]);
+	
+	    // 2. Start PDF Generation
+	    const { PDFDocument, rgb, StandardFonts } = require('pdf-lib');
+	    const pdfDoc = await PDFDocument.create();
+	    let page = pdfDoc.addPage([612, 792]); // Letter size
+	    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+	    const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+	
+	    page.drawText('INDIVIDUAL ATTENDANCE REPORT', { x: 50, y: 740, size: 18, font: bold });
+	    page.drawText(`Student: ${user.rows[0].user_name}`, { x: 50, y: 720, size: 12, font });
+	    page.drawText(`Generated on: ${getManilaNow().toFormat('ff')}`, { x: 50, y: 705, size: 10 });
+	
+	    // 3. Table Headers
+	    let y = 670;
+	    page.drawText('Date', { x: 50, y, size: 10, font: bold });
+	    page.drawText('Class Code', { x: 130, y, size: 10, font: bold });
+	    page.drawText('Status', { x: 250, y, size: 10, font: bold });
+	    page.drawText('Time In/Out', { x: 330, y, size: 10, font: bold });
+	    page.drawText('Reason/Remarks', { x: 450, y, size: 10, font: bold });
+	    
+	    y -= 15;
+	    page.drawLine({ start: { x: 50, y }, end: { x: 550, y }, thickness: 1 });
+	
+	    // 4. Populate rows
+	    attendance.rows.forEach(r => {
+	        y -= 20;
+	        if (y < 50) { // Simple pagination
+	            page = pdfDoc.addPage([612, 792]);
+	            y = 740;
+	        }
+	
+	        const dateStr = r.class_date.toISOString().split('T')[0];
+	        const timeStr = `${r.time_in || '--'} / ${r.time_out || '--'}`;
+	        
+	        page.drawText(dateStr, { x: 50, y, size: 9, font });
+	        page.drawText(r.class_code, { x: 130, y, size: 9, font });
+	        
+	        // Color code the status
+	        let color = rgb(0, 0, 0);
+	        if (r.attendance_status === 'PRESENT') color = rgb(0.06, 0.45, 0.31); // Green
+	        if (r.attendance_status === 'EXCUSED') color = rgb(0.2, 0.4, 0.7);   // Blue
+	        
+	        page.drawText(r.attendance_status, { x: 250, y, size: 9, font, color });
+	        page.drawText(timeStr, { x: 330, y, size: 9, font });
+	        page.drawText(r.reason ? r.reason.substring(0, 20) + '...' : '-', { x: 450, y, size: 8, font });
+	    });
+	
+	    const pdfBase64 = await pdfDoc.saveAsBase64();
+	    return res.json({ ok: true, pdfBase64 });
+	  }
+
 	  // --- DROPDOWNS (For Officer Reports) ---
       case 'get_dropdowns': {
 		const semInfo = await getCurrentSemConfig();
@@ -1023,8 +1086,8 @@ const initDb = async () => {
     INSERT INTO config (config_key, config_value, description) VALUES ('sem2_adjustment_start', '2026-02-09', 'Adjustment period start (Sem 2)') ON CONFLICT DO NOTHING;
     INSERT INTO config (config_key, config_value, description) VALUES ('sem2_adjustment_end', '2026-03-06', 'Adjustment period end (Sem 2)') ON CONFLICT DO NOTHING;
     INSERT INTO config (config_key, config_value, description) VALUES ('checkin_window_minutes', '10', 'Minutes before class check-in opens') ON CONFLICT DO NOTHING;
-    INSERT INTO config (config_key, config_value, description) VALUES ('late_window_minutes', '5', 'Minutes after class start considered “late”') ON CONFLICT DO NOTHING;
-    INSERT INTO config (config_key, config_value, description) VALUES ('absent_window_minutes', '20', 'Minutes after class start considered “absent”') ON CONFLICT DO NOTHING;
+	INSERT INTO config (config_key, config_value, description) VALUES ('late_window_minutes', '15', 'Minutes after class start considered “late”') ON CONFLICT DO NOTHING;
+    INSERT INTO config (config_key, config_value, description) VALUES ('absent_window_minutes', '30', 'Minutes after class start considered “absent”') ON CONFLICT DO NOTHING;
     INSERT INTO config (config_key, config_value, description) VALUES ('current_sem', 'auto', 'Use “auto” for automatic semester detection') ON CONFLICT DO NOTHING;
     INSERT INTO config (config_key, config_value, description) VALUES ('checkout_window_minutes', '10', 'Minutes before end of class, check-out opens') ON CONFLICT DO NOTHING;
         
