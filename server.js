@@ -258,7 +258,7 @@ app.post('/api', async (req, res) => {
 		
 		return res.json({ 
 			ok: true, 
-			isRegularDay,
+			is_regular_day: isRegularDay,
 			is_makeup_session: isMakeup,
 			stats: stats.rows, 
 			roster: roster.rows
