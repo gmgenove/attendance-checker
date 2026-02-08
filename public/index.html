@@ -144,16 +144,13 @@
                         <div class="card" style="border-top: 4px solid #10b981; margin-top: 15px;">
                             <h4>Make-up Class Scheduler</h4>
                             <p class="small muted" style="margin-top:5px;">This allows students to check in on the selected date.</p>
-                            <div class="grid">
-                                <select id="makeupClassCode" required>
-                                    <option value="">Loading Classes...</option>
-                                </select>
-                                <input type="date" id="makeupDate" style="width: 55%;" required />
-                                <button onclick="handleMakeUpClass()" style="background:#10b981; color:white; border:none; margin-top:5px; width:200px;">
-                                    Authorize Make-up Session
-                                </button>
-                            </div>
-                            
+                            <select id="makeupClassCode" required>
+                                <option value="">Loading Classes...</option>
+                            </select>
+                            <input type="date" id="makeupDate" required />
+                            <button onclick="handleMakeUpClass()" style="background:#10b981; color:white; border:none; margin-top:5px;">
+                                Authorize Make-up Session
+                            </button>                       
                         </div>
                     </div>
     
