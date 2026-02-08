@@ -832,7 +832,7 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
 		const excusedSessions = (c.H || 0) + (c.S || 0) + (c.D || 0);
 
 		// Subtracting excused/holiday/dropped days from the denominator
-		const totalPossible = sortedDates.length - excused;
+		const totalPossible = sortedDates.length - excusedSessions;
 		const perc = totalPossible > 0 ? Math.round((presentTotal / totalPossible) * 100) : 0;
 
 		// Draw Totals for the Subject Row
