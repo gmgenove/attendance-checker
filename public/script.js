@@ -730,6 +730,35 @@ function signout() {
 }
 document.getElementById('signoutBtn').onclick = signout;
 
+document.getElementById('viewMyAttendance').onclick = async () => {
+    const btn = document.getElementById('viewMyAttendance');
+    const output = document.getElementById('myAttendanceOutput');
+    
+    btn.disabled = true;
+    btn.textContent = "Generating PDF...";
+    output.innerHTML = '<p class="small muted">Preparing your attendance history...</p>';
+
+    try {
+        const res = await api('generate_student_report', { student_id: currentUser.id });
+        if (res.ok && res.pdfBase64) {
+            // Create a download link
+            const link = document.createElement('a');
+            link.href = `data:application/pdf;base64,${res.pdfBase64}`;
+            link.download = `Attendance_Report_${currentUser.name.replace(/\s+/g, '_')}.pdf`;
+            link.click();
+            
+            output.innerHTML = '<p class="small" style="color: #10b981;">✅ Report downloaded successfully.</p>';
+        } else {
+            output.innerHTML = `<p class="small" style="color: #ef4444;">❌ Error: ${res.error}</p>`;
+        }
+    } catch (err) {
+        output.innerHTML = '<p class="small" style="color: #ef4444;">❌ Failed to connect to server.</p>';
+    } finally {
+        btn.disabled = false;
+        btn.textContent = "Download My Attendance PDF";
+    }
+};
+
 function parseTimeString(timeStr) {
     const [time, modifier] = timeStr.split(' ');
     let [hours, minutes] = time.split(':');
