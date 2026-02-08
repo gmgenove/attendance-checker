@@ -75,12 +75,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
+        if (isSignup && passwordInput.value.trim().length < 12) {
+            errorMsg.textContent = "Password must be at least 12 characters.";
+            submitBtn.disabled = false;
+            return;
+        }
+
         const authMsg = document.getElementById('authMsg');
         if (authMsg) authMsg.textContent = isSignup ? "Signing up..." : "Signing in...";
         
         try {
             const data = await api(isSignup ? "signup" : "signin", {
-                id: idInput.value.trim(),
+                id: idInput.value.trim().toUpperCase(),
                 password: passwordInput.value.trim(),
                 role: roleSelect.value
             });
@@ -777,7 +783,7 @@ window.bulkStatusUpdate = async (studentId, type) => {
 
 window.handleStatusChange = async () => {
     const classCode = document.getElementById('suspendClassCode').value;
-    const reason = document.getElementById('suspendReason').value;
+    const reason = document.getElementById('suspendReason').value.trim();
     const type = document.getElementById('statusType').value; // CANCELLED or SUSPENDED
     
     if (!reason || reason.length < 5) return alert("Please provide a detailed reason.");
@@ -856,9 +862,9 @@ window.toggleProfSummary = () => {
 document.getElementById('changePasswordForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const msg = document.getElementById('settingsMsg');
-    const current = document.getElementById('currentPw').value;
-    const next = document.getElementById('newPw').value;
-    const confirmNext = document.getElementById('confirmNewPw').value;
+    const current = document.getElementById('currentPw').value.trim();
+    const next = document.getElementById('newPw').value.trim();
+    const confirmNext = document.getElementById('confirmNewPw').value.trim();
 
     if (next !== confirmNext) {
         msg.style.color = 'red';
