@@ -452,7 +452,7 @@ app.post('/api', async (req, res) => {
           return res.json({ ok: true, ...dropdownCache.data, cached: true });
         }
         const classes = await pool.query('SELECT class_code as code, class_name as name FROM schedules WHERE semester = $1 AND academic_year = $2', [semInfo.sem, semInfo.year]);
-        const students = await pool.query('SELECT user_id, user_name FROM sys_users WHERE (user_role = 'student' OR user_role = 'officer') AND user_status = TRUE');
+        const students = await pool.query('SELECT user_id, user_name FROM sys_users WHERE user_role IN ('student', 'officer') AND user_status = TRUE');
 		const data = { classes: classes.rows, students: students.rows };
         dropdownCache = { key: cacheKey, data, expiresAt: Date.now() + DROPDOWN_CACHE_TTL_MS };
 
