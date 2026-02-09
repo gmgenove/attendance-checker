@@ -360,6 +360,28 @@ async function loadProfessorDashboard() {
     }
 }
 
+function updateRosterRowStatus(studentId, statusLabel) {
+    const rowButton = document.querySelector(`.roster-action-btn[data-student-id="${studentId}"]`);
+    if (!rowButton) return;
+
+    const row = rowButton.closest('li');
+    const statusBadge = row?.querySelector('span[style*="font-size:9px"]');
+    if (!statusBadge) return;
+
+    const colorMap = {
+        PRESENT: '#10b981',
+        LATE: '#f59e0b',
+        ABSENT: '#ef4444',
+        INCOMPLETE: '#ef4444',
+        CREDITED: '#064e3b',
+        DROPPED: '#ef4444',
+        EXCUSED: '#3b82f6'
+    };
+
+    statusBadge.textContent = statusLabel;
+    statusBadge.style.color = colorMap[statusLabel] || '#475569';
+}
+
 async function loadTodaySchedule() {
     clearUiTimers();
     const list = document.getElementById('scheduleList');
@@ -869,6 +891,7 @@ window.bulkStatusUpdate = async (studentId, type) => {
         });
         alert(res.message);
         loadProfessorDashboard();
+        updateRosterRowStatus(studentId, type);
     }
 };
 
