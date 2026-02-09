@@ -857,7 +857,7 @@ window.handleMakeUpClass = async () => {
     if (!code || !date) return alert("Select both class and date.");
 
     // Quick Holiday Conflict Check
-    const holidayRes = await api('check_holiday_by_date', { date: date });
+    const holidayRes = await api('check_holiday', { date: date });
     if (holidayRes.isHoliday) {
         if (!confirm(`Warning: ${date} is marked as ${holidayRes.holidayName}. Are you sure you want a make-up class on a holiday?`)) {
             return;
