@@ -544,6 +544,27 @@ app.post('/api', async (req, res) => {
 		return res.json({ ok: true, isHoliday: false });
 	  }
 
+	  case 'check_holiday_by_date': {
+		const { date } = payload;
+		if (!date) return res.json({ ok: false, error: 'Date is required.' });
+
+		const result = await pool.query(
+		  'SELECT holiday_name, holiday_type FROM holidays WHERE holiday_date = $1::date',
+		  [date]
+		);
+
+		if (result.rows.length > 0) {
+			return res.json({
+				ok: true,
+				isHoliday: true,
+				holidayName: result.rows[0].holiday_name,
+				holidayType: result.rows[0].holiday_type
+			});
+		}
+
+		return res.json({ ok: true, isHoliday: false });
+	  }
+
       case 'credit_attendance': {
 		  const { class_code, student_id, type } = payload; // type: 'CREDITED' or 'DROPPED'
 		  const now = getManilaNow();
