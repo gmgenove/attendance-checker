@@ -2,9 +2,6 @@ const API_BASE = '/api'; // Optimized for same-domain hosting
 let currentUser = null;
 let isSignup = false;
 let currentScheduleData = [];
-let activeUiTimers = [];
-let dropdownCache = { data: null, fetchedAt: 0 };
-const DROPDOWN_CACHE_TTL_MS = 5 * 60 * 1000;
 
 // API Helper
 async function api(action, payload = {}) {
@@ -25,28 +22,6 @@ async function api(action, payload = {}) {
     } finally {
         setTimeout(() => bar.style.width = '0%', 500);
     }
-}
-
-function registerUiTimer(timerId) {
-    activeUiTimers.push(timerId);
-}
-
-function clearUiTimers() {
-    activeUiTimers.forEach(clearInterval);
-    activeUiTimers = [];
-}
-
-async function getDropdownData(forceRefresh = false) {
-    const now = Date.now();
-    if (!forceRefresh && dropdownCache.data && (now - dropdownCache.fetchedAt) < DROPDOWN_CACHE_TTL_MS) {
-        return dropdownCache.data;
-    }
-
-    const data = await api('get_dropdowns');
-    if (data.ok) {
-        dropdownCache = { data, fetchedAt: now };
-    }
-    return data;
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -215,21 +190,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Check health 2 seconds after load (to let DB server wake up)
     setTimeout(checkHealth, 2000);
-    
-    const dashboard = document.getElementById('profDashboardOutput');
-    dashboard.addEventListener('click', async (e) => {
-        const btn = e.target.closest('.roster-action-btn');
-        if (!btn) return;
-
-        const { actionType, studentId } = btn.dataset;
-        if (actionType === 'reset') {
-            await window.reset_single_password(studentId);
-            return;
-        }
-
-        if (actionType === 'credit') await window.bulkStatusUpdate(studentId, 'CREDITED');
-        if (actionType === 'drop') await window.bulkStatusUpdate(studentId, 'DROPPED');
-    });
 });
 
 function showApp() {
@@ -339,13 +299,13 @@ async function loadProfessorDashboard() {
                         </span>
         
                         <div style="display:flex; gap:4px; align-items:center;">
-                            <button class="roster-action-btn" data-action-type="credit" data-student-id="${r.user_id}" title="Credit Rest of Semester" style="background:#064e3b; color:white; border:none; padding:4px 8px; font-size:10px; border-radius:4px;">
+                            <button onclick="bulkStatusUpdate('${r.user_id}', 'CREDITED')" title="Credit Rest of Semester" style="background:#064e3b; color:white; border:none; padding:4px 8px; font-size:10px; border-radius:4px;">
                                 Credit
                             </button>
-                            <button class="roster-action-btn" data-action-type="drop" data-student-id="${r.user_id}" title="Mark as Dropped" style="background:none; color:#ef4444; border:1px solid #ef4444; padding:4px 8px; font-size:10px; border-radius:4px;">
+                            <button onclick="bulkStatusUpdate('${r.user_id}', 'DROPPED')" title="Mark as Dropped" style="background:none; color:#ef4444; border:1px solid #ef4444; padding:4px 8px; font-size:10px; border-radius:4px;">
                                 Drop
                             </button>
-                            <button class="roster-action-btn" data-action-type="reset" data-student-id="${r.user_id}" title="Reset Password" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; padding:4px 8px; font-size:10px; border-radius:4px;">
+                            <button onclick="reset_single_password('${r.user_id}')" title="Reset Password" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; padding:4px 8px; font-size:10px; border-radius:4px;">
                                 <i class="fa fa-key"></i>
                             </button>
                         </div>
@@ -360,30 +320,7 @@ async function loadProfessorDashboard() {
     }
 }
 
-function updateRosterRowStatus(studentId, statusLabel) {
-    const rowButton = document.querySelector(`.roster-action-btn[data-student-id="${studentId}"]`);
-    if (!rowButton) return;
-
-    const row = rowButton.closest('li');
-    const statusBadge = row?.querySelector('span[style*="font-size:9px"]');
-    if (!statusBadge) return;
-
-    const colorMap = {
-        PRESENT: '#10b981',
-        LATE: '#f59e0b',
-        ABSENT: '#ef4444',
-        INCOMPLETE: '#ef4444',
-        CREDITED: '#064e3b',
-        DROPPED: '#ef4444',
-        EXCUSED: '#3b82f6'
-    };
-
-    statusBadge.textContent = statusLabel;
-    statusBadge.style.color = colorMap[statusLabel] || '#475569';
-}
-
 async function loadTodaySchedule() {
-    clearUiTimers();
     const list = document.getElementById('scheduleList');
     list.innerHTML = '<div class="small muted">Checking for classes...</div>';
     
@@ -609,7 +546,7 @@ async function updateCheckinUI(cls) {
                 btnContainer.appendChild(reminder);
             }
     
-            registerUiTimer(setInterval(updateOutTimer, 30000));
+            setInterval(updateOutTimer, 30000);
             updateOutTimer();
         }
     }
@@ -647,7 +584,6 @@ async function updateCheckinUI(cls) {
 
     // Run immediately and then every 30 seconds
     const timer = setInterval(updateCountdown, 30000);
-    registerUiTimer(timer);
     updateCountdown();
 
     // 3. Handle the Click
@@ -707,7 +643,7 @@ document.getElementById('reportType').onchange = async (e) => {
     if (!type) return container.innerHTML = '';
     
     container.innerHTML = 'Loading options...';
-    const data = await getDropdownData();
+    const data = await api('get_dropdowns');
     
     if (type === 'class') {
         container.innerHTML = `<select id="paramId"><option value="">Select Class</option>${data.classes.map(c => `<option value="${c.code}">${c.name} (${c.code})</option>`).join('')}</select>`;
@@ -844,13 +780,6 @@ async function handleBulkReset() {
     }
 }
 
-window.reset_single_password = async (studentId) => {
-    if (!confirm(`Reset password for ${studentId} to default password1234?`)) return;
-
-    const res = await api('reset_single_password', { target_user_id: studentId });
-    alert(res.ok ? res.message : `Error: ${res.error}`);
-};
-
 async function checkGlobalStatus() {
     const res = await api('get_today_status');
     const alertBox = document.getElementById('statusAlert');
@@ -891,7 +820,6 @@ window.bulkStatusUpdate = async (studentId, type) => {
         });
         alert(res.message);
         loadProfessorDashboard();
-        updateRosterRowStatus(studentId, type);
     }
 };
 
@@ -929,7 +857,7 @@ window.handleMakeUpClass = async () => {
     if (!code || !date) return alert("Select both class and date.");
 
     // Quick Holiday Conflict Check
-    const holidayRes = await api('check_holiday', { date: date });
+    const holidayRes = await api('check_holiday_by_date', { date: date });
     if (holidayRes.isHoliday) {
         if (!confirm(`Warning: ${date} is marked as ${holidayRes.holidayName}. Are you sure you want a make-up class on a holiday?`)) {
             return;
@@ -1011,7 +939,7 @@ async function populateClassDropdowns() {
     const suspend = document.getElementById('suspendClassCode');
     const makeup = document.getElementById('makeupClassCode');
     
-    const res = await getDropdownData();
+    const res = await api('get_dropdowns');
     
     if (res.ok && res.classes) {
         const options = res.classes.map(c => 
