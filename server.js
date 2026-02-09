@@ -18,8 +18,6 @@ const pool = new Pool({
 });
 
 const TIMEZONE = "Asia/Manila";
-const DROPDOWN_CACHE_TTL_MS = 5 * 60 * 1000;
-let dropdownCache = { key: null, expiresAt: 0, data: null };
 
 // --- HELPERS ---
 const getManilaNow = () => DateTime.now().setZone(TIMEZONE);
@@ -123,8 +121,8 @@ app.post('/api', async (req, res) => {
 			  start_time: DateTime.fromFormat(row.start_time, 'HH:mm:ss').toFormat('hh:mm a'),
               end_time: DateTime.fromFormat(row.end_time, 'HH:mm:ss').toFormat('hh:mm a')
 			}));
-
-			return res.json({ ok: true, schedule });
+		
+			return res.json({ ok: true, schedule: result.rows });
 		  } catch (err) {
 			return res.json({ ok: false, error: err.message });
 		  }
@@ -252,7 +250,7 @@ app.post('/api', async (req, res) => {
 				COALESCE(a.attendance_status, 'NOT YET ARRIVED') as status
 			FROM sys_users u
 			LEFT JOIN attendance a ON u.user_id = a.student_id AND a.class_code = $1 AND a.class_date = $2::date
-			WHERE u. AND u.user_status = TRUE
+			WHERE u.user_role IN ('student', 'officer') AND u.user_status = TRUE
 			ORDER BY 
 				CASE WHEN a.attendance_status IS NULL THEN 1 ELSE 0 END,
 				a.time_in DESC, 
@@ -308,7 +306,7 @@ app.post('/api', async (req, res) => {
 	            curr = curr.plus({ days: 1 });
 	        }
 	
-			const attendance = await pool.query(`SELECT a.*, u.user_name FROM sys_users u LEFT JOIN attendance a ON u.user_id = a.student_id AND a.class_code = $1 AND a.class_date BETWEEN $2::date AND $3::date WHERE u.user_role IN ('student', 'officer')  AND u.user_status = TRUE ORDER BY u.user_name ASC`, [class_code, semConfig.start.toISODate(), semConfig.end.toISODate()]);
+	        const attendance = await pool.query(`SELECT a.*, u.user_name FROM sys_users u LEFT JOIN attendance a ON u.user_id = a.student_id AND u.user_status = TRUE AND a.class_code = $1 WHERE u.user_role IN ('student', 'officer') ORDER BY u.user_name ASC`, [class_code]);
 	        
 	        const roster = {};
 	        attendance.rows.forEach(r => {
@@ -446,17 +444,9 @@ app.post('/api', async (req, res) => {
 	  // --- DROPDOWNS (For Officer Reports) ---
       case 'get_dropdowns': {
 		const semInfo = await getCurrentSemConfig();
-		const cacheKey = `${semInfo.sem}-${semInfo.year}`;
-
-        if (dropdownCache.data && dropdownCache.key === cacheKey && dropdownCache.expiresAt > Date.now()) {
-          return res.json({ ok: true, ...dropdownCache.data, cached: true });
-        }
         const classes = await pool.query('SELECT class_code as code, class_name as name FROM schedules WHERE semester = $1 AND academic_year = $2', [semInfo.sem, semInfo.year]);
-        const students = await pool.query(`SELECT user_id, user_name FROM sys_users WHERE user_role IN ('student', 'officer') AND user_status = TRUE`);
-		const data = { classes: classes.rows, students: students.rows };
-        dropdownCache = { key: cacheKey, data, expiresAt: Date.now() + DROPDOWN_CACHE_TTL_MS };
-
-        return res.json({ ok: true, ...data, cached: false });
+        const students = await pool.query('SELECT user_id, user_name FROM sys_users WHERE (user_role = \'student\' OR user_role = \'officer\') AND user_status = TRUE');
+        return res.json({ ok: true, classes: classes.rows, students: students.rows });
       }
 
 	  case 'change_password': {
@@ -499,7 +489,7 @@ app.post('/api', async (req, res) => {
 	    try {
 	        // Reset all students in the sys_users table
 	        const result = await pool.query(
-	            "UPDATE sys_users SET password_hash = $1 WHERE  AND user_status = TRUE",
+	            "UPDATE sys_users SET password_hash = $1 WHERE user_role IN ('student', 'officer') AND user_status = TRUE",
 	            [hashedDefault]
 	        );
 	
@@ -540,18 +530,17 @@ app.post('/api', async (req, res) => {
       }
 
 	  case 'check_holiday': {
-		const targetDate = payload.date || getManilaNow().toISODate();
-		const result = await pool.query('SELECT holiday_name, holiday_type FROM holidays WHERE holiday_date = $1::date', [targetDate]);
+		const today = getManilaNow().toISODate();
+		const result = await pool.query('SELECT holiday_name, holiday_type FROM holidays WHERE holiday_date = $1::date', [today]);
 		
 		if (result.rows.length > 0) {
-			return res.json({
-				ok: true,
-				isHoliday: true,
-				holidayName: result.rows[0].holiday_name,
-				holidayType: result.rows[0].holiday_type
+			return res.json({ 
+				ok: true, 
+				isHoliday: true, 
+				holidayName: result.rows[0].holiday_name, 
+				holidayType: result.rows[0].holiday_type 
 			});
 		}
-
 		return res.json({ ok: true, isHoliday: false });
 	  }
 
@@ -647,7 +636,7 @@ app.post('/api', async (req, res) => {
 	            INSERT INTO attendance (class_date, class_code, student_id, attendance_status, reason, time_in)
 	            SELECT $1, $2, user_id, $4, $3, '00:00:00'
 	            FROM sys_users
-	            WHERE  AND user_status = TRUE
+	            WHERE user_role IN ('student', 'officer') AND user_status = TRUE
 	            ON CONFLICT (class_date, class_code, student_id) 
 	            DO UPDATE SET attendance_status = $4, reason = $3
 	        `, [targetDate, class_code, reason.trim(), statusType]);
@@ -685,7 +674,7 @@ app.post('/api', async (req, res) => {
 		await pool.query(`
 			INSERT INTO attendance (class_date, class_code, student_id, attendance_status, time_in)
 			SELECT $1, $2, user_id, 'PENDING', '00:00:00'
-			FROM sys_users WHERE  AND user_status = TRUE
+			FROM sys_users WHERE user_role IN ('student', 'officer') AND user_status = TRUE
 			ON CONFLICT DO NOTHING
 		`, [date, class_code]);
 		return res.json({ ok: true, message: `Make-up session authorized for ${date}` });
@@ -1174,7 +1163,7 @@ const autoTagAbsentees = async () => {
           INSERT INTO attendance (class_date, class_code, student_id, attendance_status, reason, time_in)
           SELECT $1, $2, u.user_id, 'HOLIDAY', $3, '00:00:00'
           FROM sys_users u
-          WHERE u. AND u.user_status = TRUE
+          WHERE u.user_role IN ('student', 'officer') AND u.user_status = TRUE
           AND NOT EXISTS (
             SELECT 1 FROM attendance a 
             WHERE a.class_date = $1::date AND a.class_code = $2 AND a.student_id = u.user_id AND u.user_status = TRUE
@@ -1191,7 +1180,7 @@ const autoTagAbsentees = async () => {
           INSERT INTO attendance (class_date, class_code, student_id, attendance_status, time_in)
           SELECT $1, $2, u.user_id, 'ABSENT', '00:00:00'
           FROM sys_users u
-          WHERE u. AND u.user_status = TRUE
+          WHERE u.user_role IN ('student', 'officer') AND u.user_status = TRUE
           AND NOT EXISTS (
             SELECT 1 FROM attendance a 
             WHERE a.class_date = $1::date AND a.class_code = $2 AND a.student_id = u.user_id AND u.user_status = TRUE
