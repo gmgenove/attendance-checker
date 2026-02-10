@@ -417,13 +417,13 @@ async function loadTodaySchedule() {
             </div>
             <div class="class-actions-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px;">
                 <button class="checkin-btn" id="btn-${cls.class_code.replace(/\s+/g, '-')}" disabled 
-                    style="width: 100%; margin: 0; padding: 10px; font-size: 12px;">
+                    style="width: 100%; margin: 0; padding: 10px; font-size: 11px;">
                     <i class="fa fa-map-marker"></i> Check In
                 </button>
                 
                 <button class="excuse-btn" id="excuse-link-${cls.class_code.replace(/\s+/g, '-')}" 
                     onclick="toggleExcuse(event, '${cls.class_code}')"
-                    style="width: 100%; margin: 0; padding: 10px; font-size: 12px; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 6px;">
+                    style="width: 100%; margin: 0; padding: 10px; font-size: 11px; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 6px;">
                     <i class="fa fa-paper-plane"></i> File Excuse
                 </button>
         
@@ -558,14 +558,14 @@ async function updateCheckinUI(cls) {
             if (isWithinAdjustment) {
                 const creditBtn = document.createElement('button');
                 creditBtn.innerHTML = '<i class="fa fa-certificate"></i> Credit';
-                creditBtn.style.cssText = "padding: 6px; font-size: 11px; background: #e1f5f7; color: #17a2b8; border: 1px solid #dc3545; border-radius: 6px; cursor: pointer;";
+                creditBtn.style.cssText = "padding: 6px; font-size: 10px; background: #e1f5f7; color: #17a2b8; border: 1px solid #dc3545; border-radius: 6px; cursor: pointer;";
                 creditBtn.onclick = () => window.handleStudentSelfUpdate(cls.class_code, 'CREDITED');
                 selfServiceContainer.appendChild(creditBtn);
             }
             // Drop Button
             const dropBtn = document.createElement('button');
             dropBtn.innerHTML = '<i class="fa fa-trash"></i> Drop';
-            dropBtn.style.cssText = "padding: 6px; font-size: 11px; background: #fff1f2; color: #9f1239; border: 1px solid #fecdd3; border-radius: 6px; cursor: pointer;";
+            dropBtn.style.cssText = "padding: 6px; font-size: 10px; background: #fff1f2; color: #9f1239; border: 1px solid #fecdd3; border-radius: 6px; cursor: pointer;";
             if (!isWithinAdjustment) dropBtn.style.gridColumn = "span 2"; // Take full width if Credit is hidden
             dropBtn.onclick = () => window.handleStudentSelfUpdate(cls.class_code, 'DROPPED');
             selfServiceContainer.appendChild(dropBtn);
