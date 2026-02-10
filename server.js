@@ -571,7 +571,12 @@ app.post('/api', async (req, res) => {
 		  const semConfig = await getCurrentSemConfig();
 		
 		  if (semConfig.sem === "None") return res.json({ ok: false, error: "No active semester." });
-		
+		  if (type === 'CREDITED') {
+	        const adjustmentEnd = semConfig.adjEnd; // From our helper
+	        if (now > adjustmentEnd) {
+	            return res.json({ ok: false, error: "Adjustment period has ended. You can no longer credit this course." });
+	        }
+	      }
 		  try {
 		    // 1. Fetch Class Schedule to find valid meeting days
 		    const schedRes = await pool.query("SELECT days FROM schedules WHERE class_code = $1 AND semester = $2 AND academic_year = $3", [class_code, semConfig.sem, semConfig.year]);
