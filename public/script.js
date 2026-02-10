@@ -464,7 +464,6 @@ async function updateCheckinUI(cls) {
     const btnContainer = document.getElementById(`btn-${safeCode}`).parentElement;
     const statusSpan = document.getElementById(`status-${safeCode}`);
     const excuseLink = document.getElementById(`excuse-link-${safeCode}`);
-    
 
     // 1. If student already has a special status, remove the prompts
     const specialStatuses = ['EXCUSED', 'SUSPENDED', 'CANCELLED', 'HOLIDAY'];
@@ -502,16 +501,60 @@ async function updateCheckinUI(cls) {
 
     const configData = await api('getConfig');
     const config = configData.config;
+    const adjustmentEnd = new Date(config.adjustment_end);
+    const now = new Date();
+    const isWithinAdjustment = now <= adjustmentEnd;
     
     // 1. Initial status check from server
     const res = await api('get_attendance', { class_code: cls.class_code, student_id: currentUser.id });
     const record = res.record;
     
-    if (record && record.status && record.status !== 'not_recorded') {
+    if (!record || record.status === 'not_recorded') {
         statusSpan.textContent = `Status: ${record.status}`;
         btn.style.display = 'none';
         // Even if already checked in, check if we need to show the Check-out button logic
+        
+        const selfServiceDiv = document.createElement('div');
+        selfServiceDiv.style.marginTop = '10px';
+        selfServiceDiv.style.display = 'flex';
+        selfServiceDiv.style.gap = '5px';
+    
+        // Credit Button (Gated by Adjustment Period)
+        if (isWithinAdjustment) {
+            const creditBtn = document.createElement('button');
+            creditBtn.textContent = "Credit Course";
+            creditBtn.className = "small";
+            creditBtn.style.background = "#064e3b";
+            creditBtn.style.color = "white";
+            creditBtn.onclick = () => window.handleStudentSelfUpdate(cls.class_code, 'CREDITED');
+            selfServiceDiv.appendChild(creditBtn);
+        }
+    
+        // Drop Button (Available anytime)
+        const dropBtn = document.createElement('button');
+        dropBtn.textContent = "Drop Course";
+        dropBtn.className = "small danger";
+        dropBtn.onclick = () => window.handleStudentSelfUpdate(cls.class_code, 'DROPPED');
+        selfServiceDiv.appendChild(dropBtn);
+    
+        btnContainer.appendChild(selfServiceDiv);
     }
+
+    // Handler for the clicks
+    window.handleStudentSelfUpdate = async (classCode, type) => {
+        const actionText = type === 'CREDITED' ? 'Credit' : 'Drop';
+        const msg = `Are you sure you want to ${actionText} this course? This will mark all remaining sessions for the semester. This action is permanent.`;
+        
+        if (confirm(msg)) {
+            const res = await api('credit_attendance', { 
+                class_code: classCode, 
+                student_id: currentUser.id, 
+                type: type 
+            });
+            alert(res.message);
+            loadTodaySchedule();
+        }
+    };
     
     // --- RENDER CHECK-OUT BUTTON ---
     if (record && record.status !== 'not_recorded' && !record.time_out) {
