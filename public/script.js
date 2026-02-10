@@ -156,12 +156,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('studentSearch').addEventListener('input', (e) => {
         const term = e.target.value.toLowerCase();
         const listItems = document.querySelectorAll('#recentCheckinList li');
-        
+        let found = false;
+    
         listItems.forEach(item => {
             const name = item.textContent.toLowerCase();
-            // Hide items that don't match the search term
-            item.style.display = name.includes(term) ? 'block' : 'none';
+            const matches = name.includes(term);
+            item.style.display = matches ? 'block' : 'none';
+            if (matches) found = true;
         });
+    
+        // Optional: Log a message if nothing is found
+        // console.log(found ? "Results found" : "No matching students");
     });
 
     // --- Automatic Session Restore ---
@@ -223,8 +228,11 @@ function showApp() {
     document.getElementById('officerControls').style.display = (currentUser.role === 'officer') ? 'block' : 'none';
     document.getElementById('studentControls').style.display = (currentUser.role === 'student' || currentUser.role === 'officer') ? 'block' : 'none';
 
-    loadTodaySchedule();
-    checkGlobalStatus();
+    // Fetch Data (Parallelized for speed). We run these at the same time but wait for ALL to finish
+    await Promise.all([
+        loadTodaySchedule(),  // Hydrates currentScheduleData
+        checkGlobalStatus()   // Renders the alert banner
+    ]);
     
     // Show both the Live Monitor and Summary to Professors AND Officers
     document.getElementById('profControls').style.display = isElevated ? 'block' : 'none';
@@ -246,7 +254,8 @@ async function loadProfessorDashboard() {
     if (!currentScheduleData || currentScheduleData.length === 0) {
         container.innerHTML = `
             <div style="text-align:center; padding: 20px; background: #f8fafc; border-radius: 8px; border: 1px dashed #cbd5e1;">
-                <p style="margin:0;">No classes found in today's schedule.</p>
+                <p style="margin:0;">No active class session for <strong>${classCode}</strong> today.</p>
+                <span class="small muted">Live stats will appear once the class starts.</span>
             </div>`;
         if (searchWrapper) searchWrapper.style.display = 'none'; // Hide if no data
         return;
@@ -474,6 +483,7 @@ async function loadTodaySchedule() {
         
         updateCheckinUI(cls);
     });
+    return res; // Helpful for the caller to know it's done
 }
 
 async function updateCheckinUI(cls) {
