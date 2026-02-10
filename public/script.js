@@ -634,7 +634,7 @@ function renderCheckinCountdown(cls, btn, statusSpan, config) {
     // Store timer in a dynamic global variable to prevent memory leaks or overlaps
     const timerId = `timer_${cls.class_code.replace(/\s+/g, '_')}`;
     if (window[timerId]) clearInterval(window[timerId]);
-    window[timerId] = setInterval(update, 30000);
+    window[timerId] = setInterval(updateInTimer, 30000);
     
     updateInTimer();
 }
