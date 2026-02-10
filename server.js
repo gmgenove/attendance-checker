@@ -100,13 +100,11 @@ app.post('/api', async (req, res) => {
 			const query = `
 			  SELECT s.*, u.user_name as professor_name, a.attendance_status as my_status, a.time_in, a.reason 
 			  FROM schedules s
+			  LEFT JOIN sys_users u ON s.professor_id = u.user_id AND u.user_status = TRUE
 			  LEFT JOIN attendance a ON s.class_code = a.class_code 
-                AND a.student_id = $1 
-                AND a.class_date = $2::date
-			  WHERE ($3 = ANY(s.days)
-				  AND s.semester = $4 
-	              AND s.academic_year = $5
-				  AND u.user_status = TRUE) 
+				    AND a.student_id = $1 
+				    AND a.class_date = $2::date
+			  WHERE (($3 = ANY(s.days) AND s.semester = $4 AND s.academic_year = $5))
 				  OR EXISTS (
 			        SELECT 1 FROM attendance ma 
 			        WHERE ma.class_code = s.class_code 
