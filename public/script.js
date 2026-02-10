@@ -415,10 +415,19 @@ async function loadTodaySchedule() {
                     <button onclick="submitExcuse('${cls.class_code}')" style="font-size:11px; padding:5px 10px; background:#64748b; color:white; border:none;">Submit Excuse</button>
                 </div>
             </div>
-            <div class="class-actions" style="text-align:right">
-                <button class="checkin-btn" id="btn-${cls.class_code.replace(/\s+/g, '-')}" disabled>Check In</button>
-                <div style="margin-top:8px">
-                    <button onclick="toggleExcuse(event, '${cls.class_code}')" class="excuse-btn" id="excuse-link-${cls.class_code.replace(/\s+/g, '-')}" disabled>File for Excuse</button>
+            <div class="class-actions-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px;">
+                <button class="checkin-btn" id="btn-${cls.class_code.replace(/\s+/g, '-')}" disabled 
+                    style="width: 100%; margin: 0; padding: 10px; font-size: 12px;">
+                    <i class="fa fa-map-marker"></i> Check In
+                </button>
+                
+                <button class="excuse-btn" id="excuse-link-${cls.class_code.replace(/\s+/g, '-')}" 
+                    onclick="toggleExcuse(event, '${cls.class_code}')"
+                    style="width: 100%; margin: 0; padding: 10px; font-size: 12px; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 6px;">
+                    <i class="fa fa-paper-plane"></i> File Excuse
+                </button>
+        
+                <div id="self-service-container-${cls.class_code.replace(/\s+/g, '-')}" style="grid-column: span 2; display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
                 </div>
             </div>
         `;
@@ -514,6 +523,10 @@ async function updateCheckinUI(cls) {
             if (excuseLink) excuseLink.style.display = 'none';
             const timeLabel = cls.time_in && cls.time_in !== '00:00:00' ? `at ${cls.time_in}` : '';
 
+            // Hide the entire action grid to keep the UI clean
+            const actionGrid = document.querySelector(`#btn-${safeCode}`).parentElement;
+            if (actionGrid) actionGrid.style.display = 'none';
+
             statusSpan.innerHTML = `<div style="color: #64748b;"><i class="fa fa-check-circle"></i> Registered as <strong>${finalStatus}</strong> ${timeLabel}`
                 if (cls.my_status === "EXCUSED") {
                 statusSpan.innerHTML += `<div style="margin-top: 4px;">
@@ -538,30 +551,24 @@ async function updateCheckinUI(cls) {
         }
     
         // 3. Handle Self-Service (Credit/Drop)
+        const selfServiceContainer = document.getElementById(`self-service-container-${safeCode}`);
         if (!record || record.status === 'not_recorded') {
-            // Remove old self-service div if it exists to prevent duplication
-            const existingDiv = document.querySelector(`.self-service-${safeCode}`);
-            if (existingDiv) existingDiv.remove();
-
-            const selfServiceDiv = document.createElement('div');
-            selfServiceDiv.className = `self-service-${safeCode}`;
-            selfServiceDiv.style.cssText = "margin-top:10px; display:flex; gap:5px;";
-        
+            selfServiceContainer.innerHTML = ''; // Clear previous
+            // Credit Button
             if (isWithinAdjustment) {
                 const creditBtn = document.createElement('button');
-                creditBtn.innerHTML = "Credit";
-                creditBtn.className = "small credit-btn";
+                creditBtn.innerHTML = '<i class="fa fa-certificate"></i> Credit';
+                creditBtn.style.cssText = "padding: 6px; font-size: 11px; background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 6px; cursor: pointer;";
                 creditBtn.onclick = () => window.handleStudentSelfUpdate(cls.class_code, 'CREDITED');
-                selfServiceDiv.appendChild(creditBtn);
+                selfServiceContainer.appendChild(creditBtn);
             }
-        
+            // Drop Button
             const dropBtn = document.createElement('button');
-            dropBtn.innerHTML = "Drop";
-            dropBtn.className = "small danger drop-btn";
+            dropBtn.innerHTML = '<i class="fa fa-times-circle"></i> Drop';
+            dropBtn.style.cssText = "padding: 6px; font-size: 11px; background: #fff1f2; color: #9f1239; border: 1px solid #fecdd3; border-radius: 6px; cursor: pointer;";
+            if (!isWithinAdjustment) dropBtn.style.gridColumn = "span 2"; // Take full width if Credit is hidden
             dropBtn.onclick = () => window.handleStudentSelfUpdate(cls.class_code, 'DROPPED');
-            selfServiceDiv.appendChild(dropBtn);
-        
-            btnContainer.appendChild(selfServiceDiv);
+            selfServiceContainer.appendChild(dropBtn);
 
             // Handler for the clicks
             window.handleStudentSelfUpdate = async (classCode, type) => {
