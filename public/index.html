@@ -88,7 +88,7 @@
                         <div class="small muted" id="roleBadge"></div>
                     </div>
                     <div style="display:flex; gap:8px">
-                        <button onclick="toggleSettings()" class="small"><i class="fa fa-cog"></i></button>
+                        <button onclick="toggleSettings()" class="small" title="Settings"><i class="fa fa-cog"></i></button>
                         <button id="signoutBtn" class="small danger">Sign out</button>
                     </div>
                 </div>
@@ -187,17 +187,17 @@
                     <form id="changePasswordForm">
                         <div style="margin-bottom:10px;">
                             <label class="small" for="currentPw">Current Password</label><br>
-                            <input type="password" id="currentPw" required style="width:100%" />
+                            <input type="password" id="currentPw" required style="width:90%" />
                         </div>
                         <div style="margin-bottom:10px;">
                             <label class="small" for="newPw">New Password</label><br>
-                            <input type="password" id="newPw" required style="width:100%" minlength="12" />
+                            <input type="password" id="newPw" required style="width:90%" minlength="12" />
                         </div>
                         <div style="margin-bottom:15px;">
                             <label class="small" for="confirmNewPw">Confirm New Password</label><br>
-                            <input type="password" id="confirmNewPw" required style="width:100%" minlength="12" />
+                            <input type="password" id="confirmNewPw" required style="width:90%" minlength="12" />
                         </div>
-                        <button type="submit" style="background:#3b82f6; color:white; border:none; width:100%">Update Password</button>
+                        <button type="submit" style="background:#3b82f6; color:white; border:none;">Update Password</button>
                     </form>
                     <div id="settingsMsg" class="small" style="margin-top:10px; text-align:center;"></div>
                 </div>
