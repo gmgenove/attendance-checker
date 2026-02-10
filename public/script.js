@@ -330,9 +330,16 @@ function renderLiveDashboard(container, res, classCode) {
                         </div>
                         <div class="small muted">${r.time_in ? 'In at ' + r.time_in : 'No time recorded'}</div>
                     </span>
-                    <div style="display:flex; gap:4px;">
-                         <button onclick="bulkStatusUpdate('${r.user_id}', 'CREDITED')" title="Credit" style="background:#064e3b; color:white; border:none; padding:4px; font-size:10px; border-radius:4px;"><i class="fa fa-certificate"></i></button>
-                         <button onclick="reset_single_password('${r.user_id}')" title="Reset PW" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; padding:4px; font-size:10px; border-radius:4px;"><i class="fa fa-key"></i></button>
+                    <div style="display:flex; gap:4px; align-items:center;">
+                        <button onclick="bulkStatusUpdate('${r.user_id}', 'CREDITED')" title="Credit Rest of Semester" style="background:#064e3b; color:white; border:none; padding:4px 8px; font-size:10px; border-radius:4px;">
+                            Credit
+                        </button>
+                        <button onclick="bulkStatusUpdate('${r.user_id}', 'DROPPED')" title="Mark as Dropped" style="background:none; color:#ef4444; border:1px solid #ef4444; padding:4px 8px; font-size:10px; border-radius:4px;">
+                            Drop
+                        </button>
+                        <button onclick="reset_single_password('${r.user_id}')" title="Reset Password" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; padding:4px 8px; font-size:10px; border-radius:4px;">
+                            <i class="fa fa-key"></i>
+                        </button>
                     </div>
                 </div>
             </li>`;
