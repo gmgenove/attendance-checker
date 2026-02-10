@@ -418,7 +418,7 @@ async function loadTodaySchedule() {
             <div class="class-actions" style="text-align:right">
                 <button class="checkin-btn" id="btn-${cls.class_code.replace(/\s+/g, '-')}" disabled>Check In</button>
                 <div style="margin-top:8px">
-                    <a href="#" id="excuse-link-${cls.class_code.replace(/\s+/g, '-')}" onclick="toggleExcuse(event, '${cls.class_code}')" class="small muted" style="margin-left:10px; color:#64748b; text-decoration:none;">File for Excuse</a>
+                    <button onclick="toggleExcuse(event, '${cls.class_code}')" class="excuse-btn" id="excuse-link-${cls.class_code.replace(/\s+/g, '-')}" disabled>File for Excuse</button>
                 </div>
             </div>
         `;
@@ -550,15 +550,14 @@ async function updateCheckinUI(cls) {
             if (isWithinAdjustment) {
                 const creditBtn = document.createElement('button');
                 creditBtn.innerHTML = "Credit Course";
-                creditBtn.className = "small";
-                creditBtn.style.cssText = "background:#064e3b; color:white;";
+                creditBtn.className = "small credit-btn";
                 creditBtn.onclick = () => window.handleStudentSelfUpdate(cls.class_code, 'CREDITED');
                 selfServiceDiv.appendChild(creditBtn);
             }
         
             const dropBtn = document.createElement('button');
             dropBtn.innerHTML = "Drop Course";
-            dropBtn.className = "small danger";
+            dropBtn.className = "small danger drop-btn";
             dropBtn.onclick = () => window.handleStudentSelfUpdate(cls.class_code, 'DROPPED');
             selfServiceDiv.appendChild(dropBtn);
         
@@ -598,6 +597,7 @@ async function updateCheckinUI(cls) {
 
 // Helper for Countdown to keep main function clean
 function renderCheckinCountdown(cls, btn, statusSpan, config) {
+    const safeCode = cls.class_code.replace(/\s+/g, '-');
     const updateInTimer = () => {
         const now = new Date();
         const startParts = parseTimeString(cls.start_time);
@@ -661,11 +661,10 @@ function renderCheckinCountdown(cls, btn, statusSpan, config) {
     };
 
     // Store timer in a dynamic global variable to prevent memory leaks or overlaps
-    const timerId = `timer_${cls.class_code.replace(/\s+/g, '_')}`;
-    if (window[timerId]) clearInterval(window[timerId]);
-    window[timerId] = setInterval(updateInTimer, 30000);
-    
-    updateInTimer();
+    const intervalKey = `timer_${safeCode}`;    // Use a unique ID for the interval so classes don't fight over the same timer
+    if (window[intervalKey]) clearInterval(window[intervalKey]);
+    updateInTimer();     // Execute IMMEDIATELY
+    window[intervalKey] = setInterval(updateInTimer, 30000);    // Then set the interval
 }
 
 function renderCheckoutLogic(cls, safeCode, record, config, btnContainer, statusSpan) {
