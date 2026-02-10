@@ -18,6 +18,8 @@ const pool = new Pool({
 });
 
 const TIMEZONE = "Asia/Manila";
+const DROPDOWN_CACHE_TTL_MS = 5 * 60 * 1000;
+let dropdownCache = { key: null, expiresAt: 0, data: null };
 
 // --- HELPERS ---
 const getManilaNow = () => DateTime.now().setZone(TIMEZONE);
@@ -122,7 +124,7 @@ app.post('/api', async (req, res) => {
               end_time: DateTime.fromFormat(row.end_time, 'HH:mm:ss').toFormat('hh:mm a')
 			}));
 		
-			return res.json({ ok: true, schedule: result.rows });
+			return res.json({ ok: true, schedule });
 		  } catch (err) {
 			return res.json({ ok: false, error: err.message });
 		  }
@@ -306,8 +308,17 @@ app.post('/api', async (req, res) => {
 	            curr = curr.plus({ days: 1 });
 	        }
 	
-	        const attendance = await pool.query(`SELECT a.*, u.user_name FROM sys_users u LEFT JOIN attendance a ON u.user_id = a.student_id AND u.user_status = TRUE AND a.class_code = $1 WHERE u.user_role IN ('student', 'officer') ORDER BY u.user_name ASC`, [class_code]);
-	        
+	        const attendance = await pool.query(`
+	          SELECT a.*, u.user_name
+	          FROM sys_users u
+	          LEFT JOIN attendance a ON u.user_id = a.student_id
+	            AND a.class_code = $1
+	            AND a.class_date BETWEEN $2::date AND $3::date
+	          WHERE u.user_status = TRUE
+	            AND u.user_role IN ('student', 'officer')
+	          ORDER BY u.user_name ASC
+	        `, [class_code, semConfig.start.toISODate(), semConfig.end.toISODate()]);
+
 	        const roster = {};
 	        attendance.rows.forEach(r => {
 	          if (!roster[r.student_id]) roster[r.student_id] = { name: r.user_name, records: {}, counts: { P: 0, L: 0, A: 0, E: 0, C: 0, H: 0, S: 0, D: 0 } };
@@ -444,9 +455,18 @@ app.post('/api', async (req, res) => {
 	  // --- DROPDOWNS (For Officer Reports) ---
       case 'get_dropdowns': {
 		const semInfo = await getCurrentSemConfig();
+		const cacheKey = `${semInfo.sem}-${semInfo.year}`;
+
+        if (dropdownCache.data && dropdownCache.key === cacheKey && dropdownCache.expiresAt > Date.now()) {
+          return res.json({ ok: true, ...dropdownCache.data, cached: true });
+        }
+
         const classes = await pool.query('SELECT class_code as code, class_name as name FROM schedules WHERE semester = $1 AND academic_year = $2', [semInfo.sem, semInfo.year]);
-        const students = await pool.query('SELECT user_id, user_name FROM sys_users WHERE (user_role = \'student\' OR user_role = \'officer\') AND user_status = TRUE');
-        return res.json({ ok: true, classes: classes.rows, students: students.rows });
+        const students = await pool.query("SELECT user_id, user_name FROM sys_users WHERE (user_role = 'student' OR user_role = 'officer') AND user_status = TRUE");
+        const data = { classes: classes.rows, students: students.rows };
+        dropdownCache = { key: cacheKey, data, expiresAt: Date.now() + DROPDOWN_CACHE_TTL_MS };
+
+        return res.json({ ok: true, ...data, cached: false });
       }
 
 	  case 'change_password': {
