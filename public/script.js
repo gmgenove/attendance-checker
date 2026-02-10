@@ -241,12 +241,14 @@ function showApp() {
 
 async function loadProfessorDashboard() {
     const container = document.getElementById('profDashboardOutput');
+    const searchWrapper = document.getElementById('searchWrapper');
     // 1. Check if we have any classes loaded in our global state
     if (!currentScheduleData || currentScheduleData.length === 0) {
         container.innerHTML = `
             <div style="text-align:center; padding: 20px; background: #f8fafc; border-radius: 8px; border: 1px dashed #cbd5e1;">
                 <p style="margin:0;">No classes found in today's schedule.</p>
             </div>`;
+        if (searchWrapper) searchWrapper.style.display = 'none'; // Hide if no data
         return;
     } 
     // 2. Automatically pull the code from the current schedule
@@ -266,8 +268,11 @@ async function loadProfessorDashboard() {
                     <p style="margin:0;">No active class session for <strong>${classCode}</strong> today.</p>
                     <span class="small muted">Live stats will appear once the class starts.</span>
                 </div>`;
+            if (searchWrapper) searchWrapper.style.display = 'none'; // Hide if no session
             return;
         }
+        // Show search wrapper now that we have a roster to search through
+        if (searchWrapper) searchWrapper.style.display = 'block';
 
         // 4. Render the Live Dashboard
         renderLiveDashboard(container, res, classCode);
