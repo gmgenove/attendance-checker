@@ -2,6 +2,8 @@ const API_BASE = '/api'; // Optimized for same-domain hosting
 let currentUser = null;
 let isSignup = false;
 let currentScheduleData = [];
+let dropdownCache = { data: null, fetchedAt: 0 };
+const DROPDOWN_CACHE_TTL_MS = 5 * 60 * 1000;
 
 // API Helper
 async function api(action, payload = {}) {
@@ -22,6 +24,19 @@ async function api(action, payload = {}) {
     } finally {
         setTimeout(() => bar.style.width = '0%', 500);
     }
+}
+
+async function getDropdownData(forceRefresh = false) {
+    const now = Date.now();
+    if (!forceRefresh && dropdownCache.data && (now - dropdownCache.fetchedAt) < DROPDOWN_CACHE_TTL_MS) {
+        return dropdownCache.data;
+    }
+
+    const data = await api('get_dropdowns');
+    if (data.ok) {
+        dropdownCache = { data, fetchedAt: now };
+    }
+    return data;
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -643,7 +658,7 @@ document.getElementById('reportType').onchange = async (e) => {
     if (!type) return container.innerHTML = '';
     
     container.innerHTML = 'Loading options...';
-    const data = await api('get_dropdowns');
+    const data = await getDropdownData();
     
     if (type === 'class') {
         container.innerHTML = `<select id="paramId"><option value="">Select Class</option>${data.classes.map(c => `<option value="${c.code}">${c.name} (${c.code})</option>`).join('')}</select>`;
@@ -857,7 +872,7 @@ window.handleMakeUpClass = async () => {
     if (!code || !date) return alert("Select both class and date.");
 
     // Quick Holiday Conflict Check
-    const holidayRes = await api('check_holiday_by_date', { date: date });
+    const holidayRes = await api('check_holiday', { date: date });
     if (holidayRes.isHoliday) {
         if (!confirm(`Warning: ${date} is marked as ${holidayRes.holidayName}. Are you sure you want a make-up class on a holiday?`)) {
             return;
@@ -939,8 +954,7 @@ async function populateClassDropdowns() {
     const suspend = document.getElementById('suspendClassCode');
     const makeup = document.getElementById('makeupClassCode');
     
-    const res = await api('get_dropdowns');
-    
+    const res = await getDropdownData();    
     if (res.ok && res.classes) {
         const options = res.classes.map(c => 
             `<option value="${c.code}">${c.name} (${c.code})</option>`
