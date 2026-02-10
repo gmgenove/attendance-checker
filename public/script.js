@@ -468,7 +468,7 @@ async function updateCheckinUI(cls) {
     // 1. If student already has a special status, remove the prompts
     const specialStatuses = ['EXCUSED', 'SUSPENDED', 'CANCELLED', 'HOLIDAY'];
     
-    if (specialStatuses.includes(cls.my_status)) {
+    if (specialStatuses.includes(cls.my_status) || (record && specialStatuses.includes(record.status))) {
         if (btn) btn.style.display = 'none';
         if (excuseLink) excuseLink.style.display = 'none';
 
@@ -511,33 +511,35 @@ async function updateCheckinUI(cls) {
     
     if (!record || record.status === 'not_recorded') {
         statusSpan.textContent = `Status: ${record.status}`;
-        btn.style.display = 'none';
+        btn.style.display = 'block';
         // Even if already checked in, check if we need to show the Check-out button logic
         
-        const selfServiceDiv = document.createElement('div');
-        selfServiceDiv.style.marginTop = '10px';
-        selfServiceDiv.style.display = 'flex';
-        selfServiceDiv.style.gap = '5px';
-    
-        // Credit Button (Gated by Adjustment Period)
-        if (isWithinAdjustment) {
-            const creditBtn = document.createElement('button');
-            creditBtn.textContent = "Credit Course";
-            creditBtn.className = "small";
-            creditBtn.style.background = "#064e3b";
-            creditBtn.style.color = "white";
-            creditBtn.onclick = () => window.handleStudentSelfUpdate(cls.class_code, 'CREDITED');
-            selfServiceDiv.appendChild(creditBtn);
+        if (!document.querySelector(`.self-service-${safeCode}`)) {
+            const selfServiceDiv = document.createElement('div');
+            selfServiceDiv.style.marginTop = '10px';
+            selfServiceDiv.style.display = 'flex';
+            selfServiceDiv.style.gap = '5px';
+        
+            // Credit Button (Gated by Adjustment Period)
+            if (isWithinAdjustment) {
+                const creditBtn = document.createElement('button');
+                creditBtn.textContent = "Credit Course";
+                creditBtn.className = "small";
+                creditBtn.style.background = "#064e3b";
+                creditBtn.style.color = "white";
+                creditBtn.onclick = () => window.handleStudentSelfUpdate(cls.class_code, 'CREDITED');
+                selfServiceDiv.appendChild(creditBtn);
+            }
+        
+            // Drop Button (Available anytime)
+            const dropBtn = document.createElement('button');
+            dropBtn.textContent = "Drop Course";
+            dropBtn.className = "small danger";
+            dropBtn.onclick = () => window.handleStudentSelfUpdate(cls.class_code, 'DROPPED');
+            selfServiceDiv.appendChild(dropBtn);
+        
+            btnContainer.appendChild(selfServiceDiv);
         }
-    
-        // Drop Button (Available anytime)
-        const dropBtn = document.createElement('button');
-        dropBtn.textContent = "Drop Course";
-        dropBtn.className = "small danger";
-        dropBtn.onclick = () => window.handleStudentSelfUpdate(cls.class_code, 'DROPPED');
-        selfServiceDiv.appendChild(dropBtn);
-    
-        btnContainer.appendChild(selfServiceDiv);
     }
 
     // Handler for the clicks
