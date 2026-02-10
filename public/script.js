@@ -212,7 +212,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setTimeout(checkHealth, 2000);
 });
 
-function showApp() {
+async function showApp() {
     document.getElementById('auth').style.display = 'none';
     document.getElementById('app').style.display = 'block';
     
