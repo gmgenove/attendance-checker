@@ -507,7 +507,7 @@ async function updateCheckinUI(cls) {
         const adjustmentEnd = new Date(config.adjustment_end);
         const isWithinAdjustment = now <= adjustmentEnd;
         // 2. Handle Terminal Statuses (Excused, Holiday, Credited, etc.)
-        const specialStatuses = ['EXCUSED', 'SUSPENDED', 'CANCELLED', 'HOLIDAY', 'CREDITED', 'DROPPED'];
+        const specialStatuses = ['EXCUSED', 'SUSPENDED', 'CANCELLED', 'HOLIDAY', 'ABSENT', 'INCOMPLETE', 'CREDITED', 'DROPPED'];
         if (specialStatuses.includes(cls.my_status) || (record && specialStatuses.includes(record.status))) {
             const finalStatus = record?.status || cls.my_status;
             if (btn) btn.style.display = 'none';
