@@ -375,7 +375,7 @@ async function loadTodaySchedule() {
         card.innerHTML = `
             <div style="flex:1">
                 <div style="display:flex; align-items:center; gap:8px;">
-                    <strong>${cls.class_name} (${cls.class_code})</strong>
+                    <strong>${cls.class_name} [${cls.class_code}]</strong>
                     ${isConflict ? `<span style="background:#fee2e2; color:#b91c1c; border:1px solid #fecaca; font-size:9px; padding:1px 6px; border-radius:4px; font-weight:bold;">CONFLICT</span>` : ''}
                 </div>
                 <span class="small muted">${cls.start_time} - ${cls.end_time}</span>
@@ -716,9 +716,9 @@ document.getElementById('reportType').onchange = async (e) => {
     const data = await getDropdownData();
     
     if (type === 'class') {
-        container.innerHTML = `<select id="paramId"><option value="">Select Class</option>${data.classes.map(c => `<option value="${c.code}">${c.name} (${c.code})</option>`).join('')}</select>`;
+        container.innerHTML = `<select id="paramId"><option value="">Select Class</option>${data.classes.map(c => `<option value="${c.code}">${c.name} [${c.code}]</option>`).join('')}</select>`;
     } else {
-        container.innerHTML = `<select id="paramId"><option value="">Select Student</option>${data.students.map(s => `<option value="${s.user_id}">${s.user_name} (${s.user_id})</option>`).join('')}</select>`;
+        container.innerHTML = `<select id="paramId"><option value="">Select Student</option>${data.students.map(s => `<option value="${s.user_id}">${s.user_name} [${s.user_id}]</option>`).join('')}</select>`;
     }
 };
 
@@ -1012,7 +1012,7 @@ async function populateClassDropdowns() {
     const res = await getDropdownData();    
     if (res.ok && res.classes) {
         const options = res.classes.map(c => 
-            `<option value="${c.code}">${c.name} (${c.code})</option>`
+            `<option value="${c.code}">${c.name} [${c.code}]</option>`
         ).join('');
         
         const placeholder = '<option value="">Select Class</option>';
