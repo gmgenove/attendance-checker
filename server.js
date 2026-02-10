@@ -326,11 +326,11 @@ app.post('/api', async (req, res) => {
 			    const dStr = DateTime.fromJSDate(r.class_date).toISODate();
 			    
 			    // FIX: Character priority logic
-			    let statusChar = r.attendance_status === 'HOLIDAY' ? 'H' : 
+				let statusChar = r.attendance_status === 'HOLIDAY' ? 'H' : 
                  r.attendance_status === 'SUSPENDED' ? 'S' : 
                  r.attendance_status === 'CANCELLED' ? 'C' : 
-				 r.attendance_status === 'DROPPED' ? 'D' :
-                 r.attendance_status[0].toUpperCase();	// Default (P, L, A, E)
+                 r.attendance_status === 'DROPPED' ? 'D' :
+                 (r.attendance_status === 'EXCUSED' ? 'E' : r.attendance_status[0].toUpperCase());		// Default (P, L, A, E)
 			
 			    roster[r.student_id].records[dStr] = statusChar;
 			    
