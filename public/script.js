@@ -558,14 +558,14 @@ async function updateCheckinUI(cls) {
             if (isWithinAdjustment) {
                 const creditBtn = document.createElement('button');
                 creditBtn.innerHTML = '<i class="fa fa-certificate"></i> Credit';
-                creditBtn.style.cssText = "padding: 6px; font-size: 10px; background: #e1f5f7; color: #17a2b8; border: 1px solid #dc3545; border-radius: 6px; cursor: pointer;";
+                creditBtn.style.cssText = "padding: 6px; font-size: 10px; background: #e1f5f7; color: #17a2b8; border: 1px solid #17a2b8; border-radius: 6px; cursor: pointer;";
                 creditBtn.onclick = () => window.handleStudentSelfUpdate(cls.class_code, 'CREDITED');
                 selfServiceContainer.appendChild(creditBtn);
             }
             // Drop Button
             const dropBtn = document.createElement('button');
             dropBtn.innerHTML = '<i class="fa fa-trash"></i> Drop';
-            dropBtn.style.cssText = "padding: 6px; font-size: 10px; background: #fff1f2; color: #9f1239; border: 1px solid #fecdd3; border-radius: 6px; cursor: pointer;";
+            dropBtn.style.cssText = "padding: 6px; font-size: 10px; background: #fff1f2; color: #9f1239; border: 1px solid #9f1239; border-radius: 6px; cursor: pointer;";
             if (!isWithinAdjustment) dropBtn.style.gridColumn = "span 2"; // Take full width if Credit is hidden
             dropBtn.onclick = () => window.handleStudentSelfUpdate(cls.class_code, 'DROPPED');
             selfServiceContainer.appendChild(dropBtn);
