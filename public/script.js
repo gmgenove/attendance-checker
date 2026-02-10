@@ -543,8 +543,8 @@ async function updateCheckinUI(cls) {
     // Handler for the clicks
     window.handleStudentSelfUpdate = async (classCode, type) => {
         const actionText = type === 'CREDITED' ? 'Credit' : 'Drop';
-        const msg = `Are you sure you want to ${actionText} this course? This will mark all remaining sessions for the semester. This action is permanent.`;
-        
+        const msg = `Are you sure you want to ${actionText} this course? This will mark all remaining sessions for this class for the entire semester. This action is permanent.`;
+
         if (confirm(msg)) {
             const res = await api('credit_attendance', { 
                 class_code: classCode, 
@@ -669,29 +669,6 @@ async function updateCheckinUI(cls) {
             updateCountdown();
         }
     };
-
-    // Use the dynamic adjustment end from the database
-    const adjustmentEnd = new Date(config.adjustment_end);
-    const now = new Date();
-
-    if (new Date() <= adjustmentEnd && (!record || record.attendance_status === 'not_recorded')) {
-        const creditBtn = document.createElement('button');
-        creditBtn.textContent = "Claim Attendance Credit";
-        creditBtn.className = "small muted";
-        creditBtn.onclick = () => api('credit_attendance', { class_code: cls.class_code, student_id: currentUser.id });
-        btnContainer.appendChild(creditBtn);
-
-        creditBtn.onclick = async () => {
-            if (confirm("This will mark you as CREDITED for ALL remaining sessions of this class for the entire semester. Proceed?")) {
-                const res = await api('credit_attendance', { 
-                    class_code: cls.class_code, 
-                    student_id: currentUser.id 
-                });
-                alert(res.message);
-                loadTodaySchedule();
-            }
-        };
-    }
 }
 
 // Optimized Report Handler
