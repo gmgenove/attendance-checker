@@ -411,11 +411,11 @@ async function loadTodaySchedule() {
                 <div id="status-${cls.class_code.replace(/\s+/g, '-')}" class="small" style="margin:5px 0">Checking status...</div>
                 
                 <div id="excuse-area-${cls.class_code.replace(/\s+/g, '-')}" style="display:none; margin-top:10px; background:#f1f5f9; padding:8px; border-radius:8px;">
-                    <input type="text" id="reason-${cls.class_code.replace(/\s+/g, '-')}" placeholder="Reason for excuse..." style="width:100%; font-size:12px; margin-bottom:5px;" minlength="5" required>
+                    <input type="text" id="reason-${cls.class_code.replace(/\s+/g, '-')}" placeholder="Reason for excuse..." style="width:97%; font-size:12px; margin-bottom:5px;" minlength="5" required>
                     <button onclick="submitExcuse('${cls.class_code}')" style="font-size:11px; padding:5px 10px; background:#64748b; color:white; border:none;">Submit Excuse</button>
                 </div>
             </div>
-            <div class="class-actions-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px;">
+            <div class="class-actions-grid" style="display: block; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px;">
                 <button class="checkin-btn" id="btn-${cls.class_code.replace(/\s+/g, '-')}" disabled 
                     style="width: 100%; margin: 0; padding: 10px; font-size: 11px;">
                     <i class="fa fa-map-marker"></i> Check In
@@ -423,7 +423,7 @@ async function loadTodaySchedule() {
                 
                 <button class="excuse-btn" id="excuse-link-${cls.class_code.replace(/\s+/g, '-')}" 
                     onclick="toggleExcuse(event, '${cls.class_code}')"
-                    style="width: 100%; margin: 0; padding: 10px; font-size: 11px; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 6px;">
+                    style="width: 100%; margin: 8px 0; padding: 10px; font-size: 11px; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 6px;">
                     <i class="fa fa-paper-plane"></i> File Excuse
                 </button>
         
