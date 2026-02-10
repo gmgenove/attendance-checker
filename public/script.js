@@ -241,11 +241,22 @@ function showApp() {
 
 async function loadProfessorDashboard() {
     const container = document.getElementById('profDashboardOutput');
-    const classCode = "BPAOUMN-1B"; 
-    
+    // 1. Check if we have any classes loaded in our global state
+    if (!currentScheduleData || currentScheduleData.length === 0) {
+        container.innerHTML = `
+            <div style="text-align:center; padding: 20px; background: #f8fafc; border-radius: 8px; border: 1px dashed #cbd5e1;">
+                <p style="margin:0;">No classes found in today's schedule.</p>
+            </div>`;
+        return;
+    } 
+    // 2. Automatically pull the code from the current schedule
+    // Since there are no simultaneous classes, index 0 is the current target
+    const activeClass = currentScheduleData[0];
+    const classCode = activeClass.class_code;
+
     const res = await api('prof_dashboard', { class_code: classCode });
     if (res.ok) {
-        // 1. Determine if there is an active class session
+        // 3. Logic check: Is this session currently active? 
         // A class is "Active" if it's a regular day OR an authorized makeup
         const hasActiveSession = res.is_makeup_session || res.is_regular_day;
         // IF NO CLASS: Show a simple placeholder message
@@ -258,81 +269,77 @@ async function loadProfessorDashboard() {
             return;
         }
 
-        // Calculate total students in the roster
-        const totalStudents = res.roster.length;
-        // IF THERE IS A CLASS: Populate the existing container with the dashboard
-        let html = `
-            <div class="grid">
-                ${res.stats.map(s => `
-                    <div class="card" style="border-left: 4px solid ${s.status === 'PRESENT' ? '#10b981' : '#f59e0b'}; padding: 10px;">
-                        <div class="small muted">${s.status}</div>
-                        <strong>${s.count}</strong>
-                    </div>
-                `).join('')}
-            </div>
-            
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:20px; margin-bottom:10px;">
-                <h5 style="margin:0; display:flex; align-items:center; gap:8px;">
-                    Live Roster 
-                    <span style="background:#e2e8f0; color:#475569; padding:2px 8px; border-radius:10px; font-size:10px;">
-                        ${totalStudents} Students
-                    </span>
-                    ${res.is_makeup_session ? `
-                        <span style="background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:bold;">
-                            <i class="fa fa-star"></i> MAKE-UP SESSION
-                        </span>` : ''}
-                </h5>
-                <div class="small" style="color:#10b981; font-size:10px; font-weight:bold;">
-                    <i class="fa fa-circle pulse" style="font-size:8px; vertical-align:middle;"></i> LIVE
-                </div>
-            </div>
-            
-            <ul id="recentCheckinList" class="small" style="list-style: none; padding: 0;">
-        `;
-        // Now populate the actual list rows
-        res.roster.forEach(r => {
-            let statusColor = "#94a3b8"; // Default Grey for NOT YET ARRIVED
-            let opacity = r.status === 'NOT YET ARRIVED' ? "0.6" : "1";
-            const isMakeup = r.status === 'PENDING' || r.is_makeup_session; // Check if it's the authorized makeup day
-
-            if (r.status === 'PRESENT') statusColor = "#10b981";
-            if (r.status === 'LATE') statusColor = "#f59e0b";
-            if (r.status === 'ABSENT' || r.status === 'INCOMPLETE') statusColor = "#ef4444";
-            if (r.status === 'HOLIDAY') statusColor = "#3b82f6";
-            if (r.status === 'SUSPENDED') statusColor = "#7c3aed";
-
-            html += `
-                <li style="padding: 12px 0; border-bottom: 1px solid #f1f5f9; opacity: ${opacity};">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span style="flex: 1;">
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <strong>${r.user_name}</strong>
-                                ${isMakeup ? `<span style="font-size:8px; background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; padding:1px 4px; border-radius:4px;">MAKE-UP</span>` : ''}
-                                <span style="font-size:9px; padding:2px 6px; border-radius:10px; background:#f1f5f9; color:${statusColor}; font-weight:bold; border: 1px solid">${r.status}</span>
-                            </div>
-                            <div class="small muted">${r.time_in ? 'In at ' + r.time_in : isMakeup ? 'Pending Make-up' : 'No time recorded'}</div>
-                        </span>
-        
-                        <div style="display:flex; gap:4px; align-items:center;">
-                            <button onclick="bulkStatusUpdate('${r.user_id}', 'CREDITED')" title="Credit Rest of Semester" style="background:#064e3b; color:white; border:none; padding:4px 8px; font-size:10px; border-radius:4px;">
-                                Credit
-                            </button>
-                            <button onclick="bulkStatusUpdate('${r.user_id}', 'DROPPED')" title="Mark as Dropped" style="background:none; color:#ef4444; border:1px solid #ef4444; padding:4px 8px; font-size:10px; border-radius:4px;">
-                                Drop
-                            </button>
-                            <button onclick="reset_single_password('${r.user_id}')" title="Reset Password" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; padding:4px 8px; font-size:10px; border-radius:4px;">
-                                <i class="fa fa-key"></i>
-                            </button>
-                        </div>
-                    </div>
-                </li>`;
-        });
-        html += `</ul>`;
-        container.innerHTML = html;
-        
-        // Ensure search filter still works on the new list
+        // 4. Render the Live Dashboard
+        renderLiveDashboard(container, res, classCode);
+        // Ensure search filter works after re-rendering
         document.getElementById('studentSearch').dispatchEvent(new Event('input'));
     }
+}
+
+function renderLiveDashboard(container, res, classCode) {
+    // Calculate total students in the roster
+    const totalStudents = res.roster.length;
+
+    // Generate HTML for the Stats Cards
+    let html = `
+        <div style="margin-bottom: 10px; font-weight: bold; color: #1e293b;">
+            Monitoring: ${classCode}
+        </div>
+        <div class="grid">
+            ${res.stats.map(s => `
+                <div class="card" style="border-left: 4px solid ${s.status === 'PRESENT' ? '#10b981' : '#f59e0b'}; padding: 10px; margin: 0;">
+                    <div class="small muted">${s.status}</div>
+                    <strong style="font-size: 1.2rem;">${s.count}</strong>
+                </div>
+            `).join('')}
+        </div>
+        
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:20px; margin-bottom:10px;">
+            <h5 style="margin:0; display:flex; align-items:center; gap:8px;">
+                Live Roster 
+                <span style="background:#e2e8f0; color:#475569; padding:2px 8px; border-radius:10px; font-size:10px;">
+                    ${totalStudents} Students
+                </span>
+            </h5>
+            <div class="small" style="color:#10b981; font-size:10px; font-weight:bold;">
+                <i class="fa fa-circle fa-circle-pulse" style="font-size:8px; vertical-align:middle;"></i> LIVE
+            </div>
+        </div>
+        
+        <ul id="recentCheckinList" class="small" style="list-style: none; padding: 0;">
+    `;
+
+    // Populate the list rows
+    res.roster.forEach(r => {
+        let statusColor = "#94a3b8"; 
+        let opacity = r.status === 'NOT YET ARRIVED' ? "0.6" : "1";
+        const isMakeup = r.status === 'PENDING' || r.is_makeup_session;
+
+        if (r.status === 'PRESENT') statusColor = "#10b981";
+        if (r.status === 'LATE') statusColor = "#f59e0b";
+        if (r.status === 'ABSENT' || r.status === 'INCOMPLETE') statusColor = "#ef4444";
+        if (r.status === 'EXCUSED') statusColor = "#3b82f6";
+
+        html += `
+            <li style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; opacity: ${opacity};">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="flex: 1;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <strong>${r.user_name}</strong>
+                            <span style="font-size:9px; padding:2px 6px; border-radius:10px; background:#f1f5f9; color:${statusColor}; font-weight:bold; border: 1px solid">${r.status}</span>
+                        </div>
+                        <div class="small muted">${r.time_in ? 'In at ' + r.time_in : 'No time recorded'}</div>
+                    </span>
+                    <div style="display:flex; gap:4px;">
+                         <button onclick="bulkStatusUpdate('${r.user_id}', 'CREDITED')" title="Credit" style="background:#064e3b; color:white; border:none; padding:4px; font-size:10px; border-radius:4px;"><i class="fa fa-certificate"></i></button>
+                         <button onclick="reset_single_password('${r.user_id}')" title="Reset PW" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; padding:4px; font-size:10px; border-radius:4px;"><i class="fa fa-key"></i></button>
+                    </div>
+                </div>
+            </li>`;
+    });
+
+    html += `</ul>`;
+    container.innerHTML = html;
 }
 
 async function loadTodaySchedule() {
