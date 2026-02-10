@@ -549,14 +549,14 @@ async function updateCheckinUI(cls) {
         
             if (isWithinAdjustment) {
                 const creditBtn = document.createElement('button');
-                creditBtn.innerHTML = "Credit Course";
+                creditBtn.innerHTML = "Credit";
                 creditBtn.className = "small credit-btn";
                 creditBtn.onclick = () => window.handleStudentSelfUpdate(cls.class_code, 'CREDITED');
                 selfServiceDiv.appendChild(creditBtn);
             }
         
             const dropBtn = document.createElement('button');
-            dropBtn.innerHTML = "Drop Course";
+            dropBtn.innerHTML = "Drop";
             dropBtn.className = "small danger drop-btn";
             dropBtn.onclick = () => window.handleStudentSelfUpdate(cls.class_code, 'DROPPED');
             selfServiceDiv.appendChild(dropBtn);
