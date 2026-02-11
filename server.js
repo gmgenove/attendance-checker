@@ -178,38 +178,12 @@ app.post('/api', async (req, res) => {
 		  }
 	  }
 
-	  case 'checkout': {
-		const { class_code, student_id } = payload;
-		const now = getManilaNow();
-		const dateStr = now.toISODate();
-		const timeStr = now.toFormat('HH:mm:ss');
-		
-		// Updated columns: class_date instead of date, attendance_status instead of status
-		const current = await pool.query(
-			"SELECT attendance_status FROM attendance WHERE class_date = $1::date AND class_code = $2 AND student_id = $3",
-			[getManilaNow().toISODate(), class_code, student_id]
-		);
-
-		if (current.rows.length > 0 && current.rows[0].attendance_status === 'EXCUSED') {
-	        return res.json({ ok: false, error: "Cannot check out: You are currently marked as Excused." });
-	    } else if (current.rows.length === 0) { 
-			return res.json({ ok: false, error: "You must check in before checking out." }); 
-		}
-		
-		await pool.query(
-			"UPDATE attendance SET time_out = $1 WHERE class_date = $2::date AND class_code = $3 AND student_id = $4",
-			[timeStr, dateStr, class_code, student_id]
-		);
-		
-		return res.json({ ok: true, time_out: timeStr });
-	  }
-
       // --- GET ATTENDANCE (For UI status check) ---
       case 'get_attendance': {
         const { class_code, student_id } = payload;
         const date = DateTime.now().setZone(TIMEZONE).toISODate();
         const result = await pool.query(
-          'SELECT attendance_status as status, time_in, time_out FROM attendance WHERE class_date = $1::date AND class_code = $2 AND student_id = $3',
+          'SELECT attendance_status as status, time_in FROM attendance WHERE class_date = $1::date AND class_code = $2 AND student_id = $3',
           [date, class_code, student_id]
         );
         return res.json({ ok: true, record: result.rows[0] || { status: 'not_recorded' } });
@@ -429,7 +403,7 @@ app.post('/api', async (req, res) => {
 	        }
 	
 	        const dateStr = r.class_date.toISOString().split('T')[0];
-	        const timeStr = `${r.time_in || '--'} / ${r.time_out || '--'}`;
+	        const timeStr = `${r.time_in || '--'}`;
 	        
 	        page.drawText(dateStr, { x: 50, y, size: 9, font });
 	        page.drawText(r.class_code, { x: 130, y, size: 9, font });
@@ -534,7 +508,6 @@ app.post('/api', async (req, res) => {
 		        checkin_window_minutes: parseInt(dbConfig.checkin_window_minutes) || 10,
 		        late_window_minutes: parseInt(dbConfig.late_window_minutes) || 5,
 		        absent_window_minutes: parseInt(dbConfig.absent_window_minutes) || 10,
-		        checkout_window_minutes: parseInt(dbConfig.checkout_window_minutes) || 10,
 		        // Dynamically set based on the current semester detected
 		        adjustment_end: semInfo.adjEnd ? semInfo.adjEnd.toISODate() : '2099-12-31',
 		        current_sem: semInfo.sem
@@ -1099,7 +1072,6 @@ const initDb = async () => {
       student_id TEXT REFERENCES sys_users(user_id), 
       attendance_status TEXT, 
       time_in TIME, 
-      time_out TIME,
       reason TEXT,
       PRIMARY KEY (class_date, class_code, student_id)
     );
@@ -1128,7 +1100,6 @@ const initDb = async () => {
 	INSERT INTO config (config_key, config_value, description) VALUES ('late_window_minutes', '15', 'Minutes after class start considered “late”') ON CONFLICT DO NOTHING;
     INSERT INTO config (config_key, config_value, description) VALUES ('absent_window_minutes', '30', 'Minutes after class start considered “absent”') ON CONFLICT DO NOTHING;
     INSERT INTO config (config_key, config_value, description) VALUES ('current_sem', 'auto', 'Use “auto” for automatic semester detection') ON CONFLICT DO NOTHING;
-    INSERT INTO config (config_key, config_value, description) VALUES ('checkout_window_minutes', '10', 'Minutes before end of class, check-out opens') ON CONFLICT DO NOTHING;
         
     INSERT INTO holidays (holiday_date, holiday_name, holiday_type) VALUES ('2026-01-01', 'New Years Day', 'Regular Holiday') ON CONFLICT DO NOTHING;
     INSERT INTO holidays (holiday_date, holiday_name, holiday_type) VALUES ('2026-04-02', 'Maundy Thursday', 'Regular Holiday') ON CONFLICT DO NOTHING;
@@ -1226,7 +1197,7 @@ const autoTagAbsentees = async () => {
           UPDATE attendance 
           SET attendance_status = 'INCOMPLETE'
           WHERE class_date = $1::date AND class_code = $2 
-          AND time_out IS NULL AND attendance_status IN ('PRESENT', 'LATE')
+          AND attendance_status IN ('PRESENT', 'LATE')
         `, [dateStr, sched.class_code]);
       }
     }
