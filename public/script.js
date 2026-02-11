@@ -332,7 +332,7 @@ function renderLiveDashboard(container, res, classCode) {
 
         if (r.status === 'PRESENT') statusColor = "#10b981";
         if (r.status === 'LATE') statusColor = "#f59e0b";
-        if (r.status === 'ABSENT' || r.status === 'INCOMPLETE') statusColor = "#ef4444";
+        if (r.status === 'ABSENT') statusColor = "#ef4444";
         if (r.status === 'EXCUSED') statusColor = "#3b82f6";
 
         html += `
@@ -517,7 +517,7 @@ async function updateCheckinUI(cls) {
         const adjustmentEnd = new Date(config.adjustment_end);
         const isWithinAdjustment = now <= adjustmentEnd;
         // 2. Handle Terminal Statuses (Excused, Holiday, Credited, etc.)
-        const specialStatuses = ['EXCUSED', 'SUSPENDED', 'CANCELLED', 'HOLIDAY', 'ABSENT', 'INCOMPLETE', 'ASYNCHRONOUS', 'CREDITED', 'DROPPED'];
+        const specialStatuses = ['EXCUSED', 'SUSPENDED', 'CANCELLED', 'HOLIDAY', 'ABSENT', 'ASYNCHRONOUS', 'CREDITED', 'DROPPED'];
         if (specialStatuses.includes(cls.my_status) || (record && specialStatuses.includes(record.status))) {
             const finalStatus = record?.status || cls.my_status;
             if (btn) btn.style.display = 'none';
@@ -641,7 +641,7 @@ function renderCheckinCountdown(cls, btn, statusSpan, config) {
                     statusSpan.style.color = "#10b981";
                     btn.style.display = 'none';
                     
-                    alert(`Confirmed! You are marked as ${checkRes.status}.\n\n⚠️ IMPORTANT: Remember to Check Out 10 minutes before the class ends, otherwise your record will be marked as INCOMPLETE.`);
+                    alert(`Confirmed! You are marked as ${checkRes.status}.`);
                     
                     // Immediately transition the UI to the Check-out state
                     updateCheckinUI(cls); 
@@ -744,7 +744,6 @@ async function loadAttendanceSummary() {
                     <td style="padding: 8px; border: 1px solid #e2e8f0;">${row.present_count}</td>
                     <td style="padding: 8px; border: 1px solid #e2e8f0;">${row.late_count}</td>
                     <td style="padding: 8px; border: 1px solid #e2e8f0;">${row.absent_count}</td>
-                    <td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: ${row.incomplete_count > 0 ? 'bold' : 'normal'}">${row.incomplete_count}</td>
                 </tr>
             `;
         });
