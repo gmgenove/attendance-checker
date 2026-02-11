@@ -516,7 +516,7 @@ async function updateCheckinUI(cls) {
         const adjustmentEnd = new Date(config.adjustment_end);
         const isWithinAdjustment = now <= adjustmentEnd;
         // 2. Handle Terminal Statuses (Excused, Holiday, Credited, etc.)
-        const specialStatuses = ['EXCUSED', 'SUSPENDED', 'CANCELLED', 'HOLIDAY', 'ABSENT', 'INCOMPLETE', 'CREDITED', 'DROPPED'];
+        const specialStatuses = ['EXCUSED', 'SUSPENDED', 'CANCELLED', 'HOLIDAY', 'ABSENT', 'INCOMPLETE', 'ASYNCHRONOUS', 'CREDITED', 'DROPPED'];
         if (specialStatuses.includes(cls.my_status) || (record && specialStatuses.includes(record.status))) {
             const finalStatus = record?.status || cls.my_status;
             if (btn) btn.style.display = 'none';
@@ -528,13 +528,24 @@ async function updateCheckinUI(cls) {
             if (actionGrid) actionGrid.style.display = 'none';
 
             statusSpan.innerHTML = `<div style="color: #64748b;"><i class="fa fa-check-circle"></i> Registered as <strong>${finalStatus}</strong> ${timeLabel}`
-                if (cls.my_status === "EXCUSED") {
+            if (cls.my_status === "EXCUSED") {
                 statusSpan.innerHTML += `<div style="margin-top: 4px;">
                     <a href="#" onclick="toggleReasonPreview(event, '${safeCode}')" style="font-size: 10px; color: #3b82f6; text-decoration: underline;">View Filed Reason</a>
                 </div>
                 <div id="reason-preview-${safeCode}" style="display: none; margin-top: 8px; padding: 8px; background: #f8fafc; border-left: 3px solid #cbd5e1; font-style: italic; font-size: 11px;">
                     "${cls.reason || 'No reason details available.'}"
                 </div>`;
+            } else if (cls.my_status === "ASYNCHRONOUS") {
+                statusSpan.innerHTML = `
+                    <div style="background: #e0f2fe; padding: 12px; border-radius: 8px; border: 1px solid #0369a1; text-align: center;">
+                        <span style="color: #0369a1; font-weight: bold;">
+                            <i class="fa fa-laptop"></i> ${finalStatus}
+                        </span>
+                        <div class="small" style="margin-top: 5px; color: #0369a1;">
+                            ${cls?.reason || 'Follow professor instructions.'}
+                        </div>
+                    </div>
+                `;
             }
             statusSpan.innerHTML += `</div>`;
 
@@ -636,7 +647,7 @@ function renderCheckinCountdown(cls, btn, statusSpan, config) {
                     statusSpan.style.color = "#10b981";
                     btn.style.display = 'none';
                     
-                    alert(`Success! You are marked as ${checkRes.status}.\n\n⚠️ IMPORTANT: Remember to Check Out 10 minutes before the class ends, otherwise your record will be marked as INCOMPLETE.`);
+                    alert(`Confirmed! You are marked as ${checkRes.status}.\n\n⚠️ IMPORTANT: Remember to Check Out 10 minutes before the class ends, otherwise your record will be marked as INCOMPLETE.`);
                     
                     // Immediately transition the UI to the Check-out state
                     updateCheckinUI(cls); 
@@ -933,15 +944,16 @@ window.handleStatusChange = async () => {
     const reason = document.getElementById('suspendReason').value.trim();
     const type = document.getElementById('statusType').value; // CANCELLED or SUSPENDED
     
-    if (!reason || reason.length < 5) return alert("Please provide a detailed reason.");
+    if ((!reason || reason.length < 5) && (type == 'CANCELLED' || type == 'SUSPENDED')) return alert("Please provide a detailed reason.");
 
-    const confirmMsg = `Declare ${type.toLowerCase()} for ${classCode}?\nReason: ${reason}. This marks the entire roster.`;
+    let confirmMsg = `Declare ${type.toLowerCase()} for ${classCode}?\nReason: ${reason}. This marks the entire roster.`;
+    if (type == 'CANCELLED' || type == 'SUSPENDED') confirmMsg += `\nReason: ${reason}. This marks the entire roster.`;
     if (!confirm(confirmMsg)) return;
 
-    const res = await api('suspend_class', { 
+    const res = await api('update_class_status', { 
         class_code: classCode, 
         reason: reason, 
-        statusType: type 
+        status: type 
     });
 
     if (res.ok) {
