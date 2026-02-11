@@ -403,7 +403,7 @@ app.post('/api', async (req, res) => {
 	        }
 	
 	        const dateStr = r.class_date.toISOString().split('T')[0];
-	        const timeStr = `${r.time_in || '--'}`;
+	        const timeStr = `${DateTime.fromFormat(r.time_in, 'HH:mm:ss').toFormat('hh:mm a') || '--'}`;
 	        
 	        page.drawText(dateStr, { x: 50, y, size: 9, font });
 	        page.drawText(r.class_code, { x: 130, y, size: 9, font });
