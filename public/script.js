@@ -250,6 +250,8 @@ async function showApp() {
 async function loadProfessorDashboard() {
     const container = document.getElementById('profDashboardOutput');
     const searchWrapper = document.getElementById('searchWrapper');
+    const classCode = 'BPAOUMN-1B';
+    
     // 1. Check if we have any classes loaded in our global state
     if (!currentScheduleData || currentScheduleData.length === 0) {
         container.innerHTML = `
@@ -259,11 +261,10 @@ async function loadProfessorDashboard() {
             </div>`;
         if (searchWrapper) searchWrapper.style.display = 'none'; // Hide if no data
         return;
-    } 
-    // 2. Automatically pull the code from the current schedule
-    // Since there are no simultaneous classes, index 0 is the current target
-    const activeClass = currentScheduleData[0];
-    const classCode = activeClass.class_code;
+    }
+    // 2. Automatically pull the code from the current schedule. Since there are no simultaneous classes, index 0 is the current target
+    const activeClass = currentScheduleData?.[0];
+    classCode = activeClass?.class_code;
 
     const res = await api('prof_dashboard', { class_code: classCode });
     if (res.ok) {
@@ -946,11 +947,11 @@ window.handleStatusChange = async () => {
     
     if ((!reason || reason.length < 5) && (type == 'CANCELLED' || type == 'SUSPENDED')) return alert("Please provide a detailed reason.");
 
-    let confirmMsg = `Declare ${type.toLowerCase()} for ${classCode}?\nReason: ${reason}. This marks the entire roster.`;
+    const confirmMsg = `Declare ${type.toLowerCase()} for ${classCode}?\nReason: ${reason}. This marks the entire roster.`;
     if (type == 'CANCELLED' || type == 'SUSPENDED') confirmMsg += `\nReason: ${reason}. This marks the entire roster.`;
     if (!confirm(confirmMsg)) return;
 
-    const res = await api('update_class_status', { 
+    const res = await api('update_class_status', {
         class_code: classCode, 
         reason: reason, 
         status: type 
