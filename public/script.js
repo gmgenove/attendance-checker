@@ -943,6 +943,7 @@ window.bulkStatusUpdate = async (studentId, type) => {
 window.handleStatusChange = async () => {
     const classCode = document.getElementById('suspendClassCode').value;
     const reason = document.getElementById('suspendReason').value.trim();
+    const date = document.getElementById('suspendDate').value;
     const type = document.getElementById('statusType').value; // CANCELLED or SUSPENDED
     
     if ((!reason || reason.length < 5) && (type == 'CANCELLED' || type == 'SUSPENDED')) return alert("Please provide a detailed reason.");
@@ -954,7 +955,8 @@ window.handleStatusChange = async () => {
     const res = await api('update_class_status', {
         class_code: classCode, 
         reason: reason, 
-        status: type 
+        status: type,
+        date: date
     });
 
     if (res.ok) {
