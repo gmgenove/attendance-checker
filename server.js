@@ -646,8 +646,8 @@ app.post('/api', async (req, res) => {
 	  }
 
 	  case 'update_class_status': {
-	    const { class_code, status, reason } = payload;	 // statusType: 'SUSPENDED' or 'CANCELLED', "ASYNCHRONOUS"
-	    const today = getManilaNow().toISODate();
+	    const { class_code, reason, status, date } = payload;	 // statusType: 'SUSPENDED' or 'CANCELLED', "ASYNCHRONOUS"
+	    const today = date || getManilaNow().toISODate();
 	
 	    // 1. Validate the status to prevent database corruption
 	    const validStatuses = ['SUSPENDED', 'CANCELLED', 'ASYNCHRONOUS', 'NORMAL'];
