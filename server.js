@@ -245,8 +245,7 @@ app.post('/api', async (req, res) => {
 		        u.user_name,
 		        COUNT(CASE WHEN a.attendance_status = 'PRESENT' THEN 1 END) as present_count,
 		        COUNT(CASE WHEN a.attendance_status = 'LATE' THEN 1 END) as late_count,
-		        COUNT(CASE WHEN a.attendance_status = 'ABSENT' THEN 1 END) as absent_count,
-		        COUNT(CASE WHEN a.attendance_status = 'INCOMPLETE' THEN 1 END) as incomplete_count
+		        COUNT(CASE WHEN a.attendance_status = 'ABSENT' THEN 1 END) as absent_count
 		    FROM sys_users u
 		    LEFT JOIN attendance a ON u.user_id = a.student_id AND a.class_code = $1
 		    WHERE u.user_role IN ('student', 'officer') AND u.user_status = TRUE
@@ -606,7 +605,7 @@ app.post('/api', async (req, res) => {
 	        return res.json({ ok: false, error: "Please provide a valid reason (min 5 characters)." });
 	    }
 	
-	    // This updates an existing record (Late/Absent/Incomplete) 
+	    // This updates an existing record (Late/Absent) 
 	    // or creates a new one marked as 'EXCUSED'
 	    await pool.query(`
 	        INSERT INTO attendance (class_date, class_code, student_id, attendance_status, reason, time_in)
@@ -1190,14 +1189,6 @@ const autoTagAbsentees = async () => {
             SELECT 1 FROM attendance a 
             WHERE a.class_date = $1::date AND a.class_code = $2 AND a.student_id = u.user_id AND u.user_status = TRUE
           )
-        `, [dateStr, sched.class_code]);
-
-        // Mark forgetful students as INCOMPLETE
-        await pool.query(`
-          UPDATE attendance 
-          SET attendance_status = 'INCOMPLETE'
-          WHERE class_date = $1::date AND class_code = $2 
-          AND attendance_status IN ('PRESENT', 'LATE')
         `, [dateStr, sched.class_code]);
       }
     }
