@@ -645,28 +645,40 @@ app.post('/api', async (req, res) => {
 	    return res.json({ ok: true, message: "Excuse filed successfully.", filedAt: timestamp });
 	  }
 
-	  case 'suspend_class': {
-	    const { class_code, reason, date, statusType } = payload; // statusType: 'SUSPENDED' or 'CANCELLED'
-	    const targetDate = date || getManilaNow().toISODate();
+	  case 'update_class_status': {
+	    const { class_code, status, reason } = payload;	 // statusType: 'SUSPENDED' or 'CANCELLED', "ASYNCHRONOUS"
+	    const today = getManilaNow().toISODate();
 	
-	    if (!reason || reason.trim().length < 5) {
-	        return res.json({ ok: false, error: "Please provide a specific reason." });
+	    // 1. Validate the status to prevent database corruption
+	    const validStatuses = ['SUSPENDED', 'CANCELLED', 'ASYNCHRONOUS', 'NORMAL'];
+	    if (!validStatuses.includes(status)) {
+	        return res.json({ ok: false, error: "Invalid status type." });
 	    }
 	
-	    try {
+	    // 2. If 'NORMAL', we just delete the override records so students can check in again
+	    if (status === 'NORMAL') {
+	        await pool.query(
+	            "DELETE FROM attendance WHERE class_date = $1 AND class_code = $2 AND time_in = '00:00:00'",
+	            [today, class_code]
+	        );
+	        return res.json({ ok: true, message: "Class status reset to Normal." });
+	    }
+	
+	    // 3. Otherwise, fetch all active students and upsert the new status
+	    const students = await pool.query(
+	        "SELECT user_id FROM sys_users WHERE user_role IN ('student', 'officer') AND user_status = TRUE"
+	    );
+	
+	    for (const student of students.rows) {
 	        await pool.query(`
 	            INSERT INTO attendance (class_date, class_code, student_id, attendance_status, reason, time_in)
-	            SELECT $1, $2, user_id, $4, $3, '00:00:00'
-	            FROM sys_users
-	            WHERE user_role IN ('student', 'officer') AND user_status = TRUE
+	            VALUES ($1, $2, $3, $4, $5, '00:00:00')
 	            ON CONFLICT (class_date, class_code, student_id) 
-	            DO UPDATE SET attendance_status = $4, reason = $3
-	        `, [targetDate, class_code, reason.trim(), statusType]);
-	
-	        return res.json({ ok: true, message: `Class marked as ${statusType.toLowerCase()}.` });
-	    } catch (err) {
-	        return res.status(500).json({ ok: false, error: err.message });
+	            DO UPDATE SET attendance_status = $4, reason = $5
+	        `, [today, class_code, student.user_id, status, reason]);
 	    }
+	
+	    return res.json({ ok: true, message: `Class successfully marked as ${status}.` });
 	  }
 
 	  case 'authorize_makeup': {
@@ -704,14 +716,14 @@ app.post('/api', async (req, res) => {
 
 	  case 'get_today_status': {
 		  const now = getManilaNow();
-		  const dateStr = now.toISODate();
+		  const today = now.toISODate();
 		  
 		  // 1. Check for Holiday
-		  const holiday = await pool.query('SELECT holiday_name, holiday_type FROM holidays WHERE holiday_date = $1::date', [dateStr]);
+		  const holiday = await pool.query('SELECT holiday_name, holiday_type FROM holidays WHERE holiday_date = $1::date', [today]);
 		  
 		  // 2. Check for Suspensions (Checking if any class today is marked SUSPENDED)
 		  const suspensions = await pool.query(
-		    'SELECT DISTINCT reason FROM attendance WHERE class_date = $1::date AND attendance_status = \'SUSPENDED\'', [dateStr]
+		    'SELECT DISTINCT reason FROM attendance WHERE class_date = $1::date AND attendance_status = \'SUSPENDED\'', [today]
 		  );
 		
 		  return res.json({
