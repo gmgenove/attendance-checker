@@ -388,7 +388,7 @@ app.post('/api', async (req, res) => {
 	    page.drawText('Date', { x: 50, y, size: 10, font: bold });
 	    page.drawText('Class Code', { x: 130, y, size: 10, font: bold });
 	    page.drawText('Status', { x: 250, y, size: 10, font: bold });
-	    page.drawText('Time In/Out', { x: 330, y, size: 10, font: bold });
+	    page.drawText('Time In', { x: 330, y, size: 10, font: bold });
 	    page.drawText('Reason/Remarks', { x: 450, y, size: 10, font: bold });
 	    
 	    y -= 15;
