@@ -871,10 +871,12 @@ window.handleStatusChange = async () => {
     const reason = document.getElementById('suspendReason').value.trim();
     const date = document.getElementById('suspendDate').value;
     const type = document.getElementById('statusType').value; // CANCELLED or SUSPENDED
-    
+
+    if ((!type) return alert("Please provide a class status.");
+    if ((!classCode) return alert("Please select a class.");
     if ((!reason || reason.length < 5) && (type == 'CANCELLED' || type == 'SUSPENDED')) return alert("Please provide a detailed reason.");
 
-    const confirmMsg = `Declare ${type.toLowerCase()} for ${classCode}?\nReason: ${reason}. This marks the entire roster.`;
+    const confirmMsg = `Declare ${type.toLowerCase()} for ${classCode}?`;
     if (type == 'CANCELLED' || type == 'SUSPENDED') confirmMsg += `\nReason: ${reason}. This marks the entire roster.`;
     if (!confirm(confirmMsg)) return;
 
