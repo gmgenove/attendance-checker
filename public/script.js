@@ -398,13 +398,18 @@ async function loadTodaySchedule() {
         timeMap[timeKey].push(cls.class_code);
         
         const isConflict = timeMap[timeKey].length > 1;
+
+        const cycleBadge = cls.cycle_name ? 
+            `<span style="background: #f1f5f9; color: #475569; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; border: 1px solid #cbd5e1; margin-left: 8px;">
+                ${cls.cycle_name}
+            </span>` : '';
             
         const card = document.createElement('div');
         card.className = 'class-card';
         card.innerHTML = `
             <div style="flex:1">
                 <div style="display:flex; align-items:center; gap:8px;">
-                    <strong>${cls.class_name} [${cls.class_code}]</strong>
+                    <strong>${cls.class_name} [${cls.class_code}] ${cycleBadge}</strong>
                     ${isConflict ? `<span style="background:#fee2e2; color:#b91c1c; border:1px solid #fecaca; font-size:9px; padding:1px 6px; border-radius:4px; font-weight:bold;">CONFLICT</span>` : ''}
                 </div>
                 <span class="small muted">${cls.start_time} - ${cls.end_time}</span>
@@ -494,6 +499,120 @@ async function loadTodaySchedule() {
         updateCheckinUI(cls);
     });
     return res; // Helpful for the caller to know it's done
+}
+
+async function saveCycle() {
+    const name = document.getElementById('cycleName').value;
+    const start = document.getElementById('cycleStart').value;
+    const end = document.getElementById('cycleEnd').value;
+
+    // Basic Validation
+    if (!name || !start || !end) {
+        alert("Please fill in all cycle details (Name, Start Date, and End Date).");
+        return;
+    }
+
+    if (new Date(start) > new Date(end)) {
+        alert("Start date cannot be after the end date.");
+        return;
+    }
+
+    // Call your API
+    const res = await api('add_academic_cycle', {
+        name: name,
+        start_date: start,
+        end_date: end,
+        semester: currentSemester, // Assumes you have these globals set
+        academic_year: currentYear
+    });
+
+    if (res.ok) {
+        alert(`${name} has been defined from ${start} to ${end}.`);
+        // Clear fields
+        document.getElementById('cycleName').value = '';
+        document.getElementById('cycleStart').value = '';
+        document.getElementById('cycleEnd').value = '';
+        
+        // Optional: Refresh the view if you have a list of cycles showing
+        if (typeof loadCycleList === 'function') loadCycleList();
+    } else {
+        alert("Error saving cycle: " + res.error);
+    }
+}
+
+async function populateCycleDropdown() {
+    const dropdown = document.getElementById('schedCycleId');
+    const res = await api('get_cycles'); // You'll need this backend route
+    
+    if (res.ok) {
+        // Keep the "Full Semester" option and add the rest
+        dropdown.innerHTML = '<option value="">Full Semester / Regular</option>';
+        res.cycles.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.cycle_id;
+            opt.textContent = `${c.cycle_name} (${c.start_date} to ${c.end_date})`;
+            dropdown.appendChild(opt);
+        });
+    }
+}
+
+async function submitNewSchedule() {
+    // Collect checked days
+    const days = Array.from(document.querySelectorAll('#dayCheckboxes input:checked')).map(cb => cb.value);
+    
+    const payload = {
+        class_code: document.getElementById('schedCode').value,
+        course_title: document.getElementById('schedTitle').value,
+        professor_id: document.getElementById('schedProfId').value,
+        cycle_id: document.getElementById('schedCycleId').value || null,
+        start_time: document.getElementById('schedStartTime').value,
+        end_time: document.getElementById('schedEndTime').value,
+        days: days,
+        semester: currentSemester,
+        academic_year: currentYear
+    };
+
+    if (!payload.class_code || days.length === 0) {
+        alert("Please provide at least a Class Code and select at least one day.");
+        return;
+    }
+
+    const res = await api('add_schedule', payload);
+    if (res.ok) {
+        alert("Schedule added successfully.");
+        hideModal('scheduleModal');
+        // Refresh your list or dashboard
+        if (currentUser.role === 'professor' || currentUser.role === 'officer') {
+            loadProfessorDashboard();
+        }
+    }
+}
+
+async function populateProfessors() {
+    const dropdown = document.getElementById('schedProfId');
+    // We assume your 'get_users' or a new 'get_profs' route exists
+    const res = await api('get_profs'); 
+    
+    if (res.ok) {
+        dropdown.innerHTML = '<option value="">Select Professor...</option>';
+        res.profs.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.user_id;
+            opt.textContent = `${p.user_name} (${p.user_id})`;
+            dropdown.appendChild(opt);
+        });
+    }
+}
+
+async function openScheduleModal() {
+    // Show the modal
+    document.getElementById('scheduleModal').style.display = 'block';
+    
+    // Fill the dropdowns in parallel
+    await Promise.all([
+        populateProfessors(),
+        populateCycleDropdown()
+    ]);
 }
 
 async function updateCheckinUI(cls) {
