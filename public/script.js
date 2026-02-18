@@ -245,6 +245,10 @@ async function showApp() {
         loadProfessorDashboard();
         populateClassDropdowns();
     }
+    // Call this function when the Officer view loads
+    if (currentUser.role === 'officer') {
+        loadScheduleList();
+    }
 }
 
 async function loadProfessorDashboard() {
@@ -663,11 +667,6 @@ async function loadScheduleList() {
             </tr>
         `).join('');
     }
-}
-
-// Call this function when the Officer view loads
-if (currentUser.role === 'officer') {
-    loadScheduleList();
 }
 
 async function updateCheckinUI(cls) {
