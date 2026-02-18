@@ -96,16 +96,22 @@ app.post('/api', async (req, res) => {
 	            return res.json({ ok: true, schedule: [], message: "No active semester found." });
 	        }
 
-			// 2. Filter query by Day, Semester, and Academic Year
+			// 2. Filter query by Day, Semester, Cycle and Academic Year
 			const query = `
-			  SELECT s.*, u.user_name as professor_name, a.attendance_status as my_status, a.time_in, a.reason 
-			  FROM schedules s
-			  LEFT JOIN sys_users u ON s.professor_id = u.user_id AND u.user_status = TRUE
-			  LEFT JOIN attendance a ON s.class_code = a.class_code 
-				    AND a.student_id = $1 
-				    AND a.class_date = $2::date
-			  WHERE (($3 = ANY(s.days) AND s.semester = $4 AND s.academic_year = $5))
-				  OR EXISTS (
+			    SELECT s.*, u.user_name as professor_name, a.attendance_status as my_status, a.time_in, a.reason
+			    FROM schedules s
+			    LEFT JOIN academic_cycles c ON s.cycle_id = c.cycle_id
+			    LEFT JOIN sys_users u ON s.professor_id = u.user_id AND u.user_status = TRUE
+			    LEFT JOIN attendance a ON s.class_code = a.class_code 
+			        AND a.student_id = $1 AND a.class_date = $2::date
+			    WHERE 
+			        ($3 = ANY(s.days) -- Matches 'Tue', 'Fri', etc.
+			        AND s.semester = $4 
+			        AND s.academic_year = $5
+			        AND (
+			            s.cycle_id IS NULL -- Shows classes that run all semester
+			            OR ($2::date BETWEEN c.start_date AND c.end_date) -- Shows classes in active cycle
+			        )) OR EXISTS (
 			        SELECT 1 FROM attendance ma 
 			        WHERE ma.class_code = s.class_code 
 			        AND ma.class_date = $2::date 
