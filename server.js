@@ -694,6 +694,9 @@ app.post('/api', async (req, res) => {
 
 	  case 'add_academic_cycle': {
 	    const { name, start_date, end_date, semester, academic_year } = payload;
+		const semInfo = await getCurrentSemConfig();
+		const semester = semInfo.sem; 
+		const academic_year = semInfo.year; 
 	
 	    try {
 	        await pool.query(`
@@ -719,9 +722,11 @@ app.post('/api', async (req, res) => {
 	  case 'add_schedule': {
 	    const { 
 	        class_code, course_title, professor_id, 
-	        cycle_id, start_time, end_time, days, 
-	        semester, academic_year 
+	        cycle_id, start_time, end_time, days
 	    } = payload;
+		const semInfo = await getCurrentSemConfig();
+		const semester = semInfo.sem; 
+		const academic_year = semInfo.year;
 	
 	    try {
 	        await pool.query(`
