@@ -42,6 +42,13 @@
             .alert-holiday { background: #dbeafe !important; color: #1e40af !important; border: 1px solid #bfdbfe !important; }
             .alert-suspended { background: #f3e8ff !important; color: #6b21a8 !important; border: 1px solid #e9d5ff !important; }
             .alert-cancelled { background: #fff7ed !important; color: #9a3412 !important; border: 1px solid #ffedd5 !important; }
+            /* Modal Overlay */
+            .modal {display: none; position: fixed; z-index: 2000; /* Ensure it is above everything */ left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black */backdrop-filter: blur(4px); /* Modern blur effect */}
+            /* Modal Content Box */
+            .modal-content { background-color: #ffffff; margin: 10% auto; padding: 25px; border-radius: 12px; width: 90%; max-width: 500px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); animation: slideIn 0.3s ease-out; }
+            @keyframes slideIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+            /* Cycle Badge Styling */
+            .badge-cycle { background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; border: 1px solid #bae6fd; }
         </style>
     </head>
     <body>
@@ -162,14 +169,52 @@
                             </button>                       
                         </div>
 
-                        <div class="card">
+                        <div class="card" style="border-top: 3px solid #6366f1;">
+                            <h4 style="color: #6366f1;"><i class="fa fa-calendar"></i> Schedule Management</h4>
+                            <p class="small muted">Manage semester cycles and class timings.</p>
+                            
+                            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                                <button onclick="openScheduleModal()" style="flex: 1; background: #6366f1; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer;">
+                                    <i class="fa fa-plus"></i> Add Schedule
+                                </button>
+                                
+                                <button onclick="showModal('cycleModal')" style="flex: 1; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 10px; border-radius: 6px; cursor: pointer;">
+                                    <i class="fa fa-sync"></i> Manage Cycles
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="card" style="margin-top: 20px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                <h4 style="margin: 0;"><i class="fa fa-list"></i> Existing Schedules</h4>
+                                <div class="small muted" id="scheduleCount">0 Classes Found</div>
+                            </div>
+                            
+                            <div style="overflow-x: auto;">
+                                <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                                    <thead style="background: #f8fafc; text-align: left;">
+                                        <tr>
+                                            <th style="padding: 10px; border-bottom: 2px solid #e2e8f0;">Class</th>
+                                            <th style="padding: 10px; border-bottom: 2px solid #e2e8f0;">Cycle</th>
+                                            <th style="padding: 10px; border-bottom: 2px solid #e2e8f0;">Schedule</th>
+                                            <th style="padding: 10px; border-bottom: 2px solid #e2e8f0;">Professor</th>
+                                            <th style="padding: 10px; border-bottom: 2px solid #e2e8f0; text-align: center;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="scheduleTableBody">
+                                        </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="card" class="modal" style="display:none;">
                             <h4><i class="fa fa-sync"></i> Cycle Manager</h4>
                             <div class="grid">
                                 <input type="text" id="cycleName" placeholder="Cycle Name (e.g. Cycle 1)">
                                 <input type="date" id="cycleStart">
                                 <input type="date" id="cycleEnd">
                             </div>
-                            <button onclick="saveCycle()" style="width:100%; margin-top:10px;">Define Cycle Period</button>
+                            <button onclick="saveCycle()" style="margin-top:10px;">Define Cycle Period</button>
                         </div>
 
                         <div id="scheduleModal" class="modal" style="display:none;">
