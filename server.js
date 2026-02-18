@@ -744,6 +744,10 @@ app.post('/api', async (req, res) => {
 
 	  case 'get_all_schedules': {
 	    try {
+	        // 1. Determine the active configuration internally
+	        const config = await getCurrentSemConfig();
+	
+	        // 2. Query schedules based on that configuration
 	        const result = await pool.query(`
 	            SELECT s.*, u.user_name as professor_name, c.cycle_name 
 	            FROM schedules s
@@ -751,11 +755,16 @@ app.post('/api', async (req, res) => {
 	            LEFT JOIN academic_cycles c ON s.cycle_id = c.cycle_id
 	            WHERE s.semester = $1 AND s.academic_year = $2
 	            ORDER BY c.cycle_name ASC, s.class_code ASC
-	        `, [payload.semester, payload.academic_year]);
+	        `, [config.sem, config.year]);
 	        
-	        return res.json({ ok: true, schedules: result.rows });
+	        return res.json({ 
+	            ok: true, 
+	            schedules: result.rows,
+	            meta: { semester: config.sem, year: config.year } // Optional: send for UI labels
+	        });
 	    } catch (err) {
-	        return res.json({ ok: false, error: err.message });
+	        console.error("Error fetching schedules:", err);
+	        return res.json({ ok: false, error: "Server-side configuration error." });
 	    }
 	  }
 
