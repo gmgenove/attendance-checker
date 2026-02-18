@@ -110,15 +110,19 @@
                     </div>
     
                     <div id="officerControls" style="display:none; margin-top: 15px;">
-                        <h3>Officer Reports</h3>
-                        <select id="reportType" required>
-                            <option value="">Select Report Type</option>
-                            <option value="class">Class Report</option>
-                            <option value="person">Student Report</option>
-                        </select>
-                        <div id="reportParams" style="margin: 10px 0"></div>
-                        <button id="generateReport" style="background:#064e3b; color:#e6f4ea; border:1px solid #ddd;">Generate PDF Report</button>
-                        <div id="reportOutput"></div>
+                        <h3><i class="fa fa-university"></i> Class Administration</h3>
+                        
+                        <div class="card" style="border-top: 4px solid #ef4444; margin-top: 15px;">
+                            <h4>Officer Reports</h4>
+                            <select id="reportType" required>
+                                <option value="">Select Report Type</option>
+                                <option value="class">Class Report</option>
+                                <option value="person">Student Report</option>
+                            </select>
+                            <div id="reportParams" style="margin: 10px 0"></div>
+                            <button id="generateReport" style="background:#064e3b; color:#e6f4ea; border:1px solid #ddd;">Generate PDF Report</button>
+                            <div id="reportOutput"></div>
+                        </div>
     
                         <!--div id="adminTools" class="card" style="border-top: 4px solid #ef4444; margin-top: 20px;">
                             <h4>System Maintenance</h4>
@@ -156,6 +160,63 @@
                             <button onclick="handleMakeUpClass()" style="background:#10b981; color:white; border:none; margin-top:5px;">
                                 Authorize Make-up Session
                             </button>                       
+                        </div>
+
+                        <div class="card">
+                            <h4><i class="fa fa-sync"></i> Cycle Manager</h4>
+                            <div class="grid">
+                                <input type="text" id="cycleName" placeholder="Cycle Name (e.g. Cycle 1)">
+                                <input type="date" id="cycleStart">
+                                <input type="date" id="cycleEnd">
+                            </div>
+                            <button onclick="saveCycle()" style="width:100%; margin-top:10px;">Define Cycle Period</button>
+                        </div>
+
+                        <div id="scheduleModal" class="modal" style="display:none;">
+                            <div class="modal-content">
+                                <h3><i class="fa fa-plus-circle"></i> Create New Schedule</h3>
+                                <hr>
+                                <div class="grid">
+                                    <input type="text" id="schedCode" placeholder="Class Code (e.g., GEED 004)">
+                                    <input type="text" id="schedTitle" placeholder="Course Title">
+                                </div>
+                                
+                                <div class="grid" style="margin-top:10px;">
+                                    <div>
+                                        <label class="small muted">Professor</label>
+                                        <select id="schedProfId" style="width:100%"></select>
+                                    </div>
+                                    <div>
+                                        <label class="small muted">Academic Cycle</label>
+                                        <select id="schedCycleId" style="width:100%">
+                                            <option value="">Full Semester / Regular</option>
+                                        </select>
+                                    </div>
+                                </div>
+                        
+                                <div class="grid" style="margin-top:10px;">
+                                    <input type="time" id="schedStartTime">
+                                    <input type="time" id="schedEndTime">
+                                </div>
+                        
+                                <div style="margin-top:10px;">
+                                    <label class="small muted">Days (Select all that apply)</label>
+                                    <div id="dayCheckboxes" style="display:flex; gap:10px; margin-top:5px;">
+                                        <label><input type="checkbox" value="Mon"> Mon</label>
+                                        <label><input type="checkbox" value="Tue"> Tue</label>
+                                        <label><input type="checkbox" value="Wed"> Wed</label>
+                                        <label><input type="checkbox" value="Thu"> Thu</label>
+                                        <label><input type="checkbox" value="Fri"> Fri</label>
+                                        <label><input type="checkbox" value="Sat"> Sat</label>
+                                        <label><input type="checkbox" value="Sun"> Sun</label>
+                                    </div>
+                                </div>
+                        
+                                <div style="margin-top:20px; display:flex; gap:10px;">
+                                    <button onclick="submitNewSchedule()" style="flex:1;">Save Schedule</button>
+                                    <button onclick="hideModal('scheduleModal')" style="flex:1; background:#f1f5f9; color:#475569;">Cancel</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
