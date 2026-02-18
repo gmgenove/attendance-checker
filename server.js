@@ -693,7 +693,7 @@ app.post('/api', async (req, res) => {
 	  }
 
 	  case 'add_academic_cycle': {
-	    const { name, start_date, end_date, semester, academic_year } = payload;
+	    const { name, start_date, end_date } = payload;
 		const semInfo = await getCurrentSemConfig();
 		const semester = semInfo.sem; 
 		const academic_year = semInfo.year; 
