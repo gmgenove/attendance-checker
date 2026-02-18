@@ -692,6 +692,62 @@ app.post('/api', async (req, res) => {
 		return res.json({ ok: true, message: `Make-up session authorized for ${date}` });
 	  }
 
+	  case 'add_academic_cycle': {
+	    const { name, start_date, end_date, semester, academic_year } = payload;
+	
+	    try {
+	        await pool.query(`
+	            INSERT INTO academic_cycles (cycle_name, start_date, end_date, semester, academic_year)
+	            VALUES ($1, $2, $3, $4, $5)
+	        `, [name, start_date, end_date, semester, academic_year]);
+	
+	        return res.json({ ok: true });
+	    } catch (err) {
+	        console.error("Cycle Save Error:", err);
+	        return res.json({ ok: false, error: "Database error while saving cycle." });
+	    }
+	  }
+
+	  case 'get_cycles': {
+	    const cycles = await pool.query(
+	        "SELECT * FROM academic_cycles WHERE semester = $1 AND academic_year = $2 ORDER BY start_date ASC",
+	        [payload.semester || currentSemester, payload.academic_year || currentYear]
+	    );
+	    return res.json({ ok: true, cycles: cycles.rows });
+	  }
+
+	  case 'add_schedule': {
+	    const { 
+	        class_code, course_title, professor_id, 
+	        cycle_id, start_time, end_time, days, 
+	        semester, academic_year 
+	    } = payload;
+	
+	    try {
+	        await pool.query(`
+	            INSERT INTO schedules 
+	            (class_code, course_title, professor_id, cycle_id, start_time, end_time, days, semester, academic_year)
+	            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	        `, [class_code, course_title, professor_id, cycle_id, start_time, end_time, days, semester, academic_year]);
+	
+	        return res.json({ ok: true });
+	    } catch (err) {
+	        console.error("Add Schedule Error:", err);
+	        return res.json({ ok: false, error: "Database error: Could not save schedule." });
+	    }
+	  }
+
+	  case 'get_profs': {
+	    try {
+	        const profs = await pool.query(
+	            "SELECT user_id, user_name FROM sys_users WHERE user_role = 'professor' AND user_status = TRUE ORDER BY user_name ASC"
+	        );
+	        return res.json({ ok: true, profs: profs.rows });
+	    } catch (err) {
+	        return res.json({ ok: false, error: "Could not fetch professors." });
+	    }
+	  }
+
 	  case 'get_today_status': {
 		  const now = getManilaNow();
 		  const today = now.toISODate();
