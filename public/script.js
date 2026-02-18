@@ -604,15 +604,70 @@ async function populateProfessors() {
     }
 }
 
+// Function to show any modal by ID
+function showModal(id) {
+    const modal = document.getElementById(id);
+    if (modal) modal.style.display = 'block';
+}
+
+// Function to hide any modal by ID
+function hideModal(id) {
+    const modal = document.getElementById(id);
+    if (modal) modal.style.display = 'none';
+}
+
+// Specialized function for the Schedule Creator to refresh data before opening
 async function openScheduleModal() {
-    // Show the modal
-    document.getElementById('scheduleModal').style.display = 'block';
+    showModal('scheduleModal');
     
-    // Fill the dropdowns in parallel
+    // Fetch fresh data for the dropdowns
+    // These are important for your LGU project to ensure no outdated IDs are used
     await Promise.all([
         populateProfessors(),
         populateCycleDropdown()
     ]);
+}
+
+async function loadScheduleList() {
+    const tbody = document.getElementById('scheduleTableBody');
+    const countLabel = document.getElementById('scheduleCount');
+    
+    const res = await api('get_all_schedules', { 
+        semester: currentSemester, 
+        academic_year: currentYear 
+    });
+
+    if (res.ok) {
+        countLabel.textContent = `${res.schedules.length} Classes Found`;
+        tbody.innerHTML = res.schedules.map(s => `
+            <tr style="border-bottom: 1px solid #f1f5f9;">
+                <td style="padding: 10px;">
+                    <strong>${s.class_code}</strong><br>
+                    <span class="small muted">${s.course_title}</span>
+                </td>
+                <td style="padding: 10px;">
+                    ${s.cycle_name ? `<span class="badge-cycle">${s.cycle_name}</span>` : '<span class="small muted">Full Sem</span>'}
+                </td>
+                <td style="padding: 10px;">
+                    <div class="small">${s.days.join(', ')}</div>
+                    <div class="small muted">${s.start_time} - ${s.end_time}</div>
+                </td>
+                <td style="padding: 10px;">
+                    <div class="small">${s.professor_name}</div>
+                </td>
+                <td style="padding: 10px; text-align: center;">
+                    <button onclick="deleteSchedule('${s.class_code}')" style="background:none; border:none; color:#ef4444; cursor:pointer;">
+                        <i class="fa fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+}
+
+// Call this function when the Officer view loads
+if (currentUser.role === 'officer') {
+    loadScheduleList();
 }
 
 async function updateCheckinUI(cls) {
