@@ -631,13 +631,13 @@ async function openScheduleModal() {
 async function loadScheduleList() {
     const tbody = document.getElementById('scheduleTableBody');
     const countLabel = document.getElementById('scheduleCount');
-    const res = await api('get_all_schedules', { 
-        semester: currentSemester, 
-        academic_year: currentYear 
-    });
+    
+    // No payload needed - the server knows the active semester
+    const res = await api('get_all_schedules');
 
     if (res.ok) {
-        countLabel.textContent = `${res.schedules.length} Classes Found`;
+        countLabel.textContent = `${res.schedules.length} Classes Found for ${res.meta.semester}`;
+        
         tbody.innerHTML = res.schedules.map(s => `
             <tr style="border-bottom: 1px solid #f1f5f9;">
                 <td style="padding: 10px;">
@@ -654,9 +654,12 @@ async function loadScheduleList() {
                 <td style="padding: 10px;">
                     <div class="small">${s.professor_name}</div>
                 </td>
-                <td style="padding: 10px; text-align: center;">
-                    <button onclick="deleteSchedule('${s.class_code}')" style="background:none; border:none; color:#ef4444; cursor:pointer;">
-                        <i class="fa fa-trash"></i>
+                <td style="padding: 10px; text-align: center; display: flex; gap: 10px; justify-content: center;">
+                    <button onclick="duplicateSchedule('${s.class_code}')" title="Duplicate" class="btn-icon">
+                        <i class="fa fa-copy" style="color:#6366f1;"></i>
+                    </button>
+                    <button onclick="deleteSchedule('${s.class_code}')" title="Delete" class="btn-icon">
+                        <i class="fa fa-trash" style="color:#ef4444;"></i>
                     </button>
                 </td>
             </tr>
