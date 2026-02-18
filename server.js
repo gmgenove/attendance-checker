@@ -737,6 +737,23 @@ app.post('/api', async (req, res) => {
 	    }
 	  }
 
+	  case 'get_all_schedules': {
+	    try {
+	        const result = await pool.query(`
+	            SELECT s.*, u.user_name as professor_name, c.cycle_name 
+	            FROM schedules s
+	            LEFT JOIN sys_users u ON s.professor_id = u.user_id
+	            LEFT JOIN academic_cycles c ON s.cycle_id = c.cycle_id
+	            WHERE s.semester = $1 AND s.academic_year = $2
+	            ORDER BY c.cycle_name ASC, s.class_code ASC
+	        `, [payload.semester, payload.academic_year]);
+	        
+	        return res.json({ ok: true, schedules: result.rows });
+	    } catch (err) {
+	        return res.json({ ok: false, error: err.message });
+	    }
+	  }
+
 	  case 'get_profs': {
 	    try {
 	        const profs = await pool.query(
