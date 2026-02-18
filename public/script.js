@@ -631,11 +631,6 @@ async function openScheduleModal() {
 async function loadScheduleList() {
     const tbody = document.getElementById('scheduleTableBody');
     const countLabel = document.getElementById('scheduleCount');
-    
-    const res = await api('get_all_schedules', { 
-        semester: currentSemester, 
-        academic_year: currentYear 
-    });
 
     if (res.ok) {
         countLabel.textContent = `${res.schedules.length} Classes Found`;
