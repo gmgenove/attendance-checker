@@ -525,9 +525,7 @@ async function saveCycle() {
     const res = await api('add_academic_cycle', {
         name: name,
         start_date: start,
-        end_date: end,
-        semester: currentSemester, // Assumes you have these globals set
-        academic_year: currentYear
+        end_date: end
     });
 
     if (res.ok) {
@@ -571,9 +569,7 @@ async function submitNewSchedule() {
         cycle_id: document.getElementById('schedCycleId').value || null,
         start_time: document.getElementById('schedStartTime').value,
         end_time: document.getElementById('schedEndTime').value,
-        days: days,
-        semester: currentSemester,
-        academic_year: currentYear
+        days: days
     };
 
     if (!payload.class_code || days.length === 0) {
