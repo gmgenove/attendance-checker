@@ -760,7 +760,7 @@ app.post('/api', async (req, res) => {
 	        return res.json({ 
 	            ok: true, 
 	            schedules: result.rows,
-	            meta: { semester: config.sem, year: config.year } // Optional: send for UI labels
+	            meta: { semester: config.name, year: config.year } // Optional: send for UI labels
 	        });
 	    } catch (err) {
 	        console.error("Error fetching schedules:", err);
