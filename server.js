@@ -1023,7 +1023,7 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
 async function appendExcuseLogPage(pdfDoc, title, excuses, font, bold, secondaryColName) {
   if (excuses.length === 0) return;
 
-  const page = pdfDoc.addPage([1008, 612]); // Legal Landscape
+  let page = pdfDoc.addPage([1008, 612]); // Legal Landscape
   let y = 550;
 
   page.drawText(title, { x: 40, y, size: 16, font: bold });
