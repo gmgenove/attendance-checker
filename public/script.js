@@ -254,7 +254,7 @@ async function showApp() {
 async function loadProfessorDashboard() {
     const container = document.getElementById('profDashboardOutput');
     const searchWrapper = document.getElementById('searchWrapper');
-    const classCode = 'BPAOUMN-1B';
+    let classCode = 'BPAOUMN-1B';
     
     // 1. Check if we have any classes loaded in our global state
     if (!currentScheduleData || currentScheduleData.length === 0) {
