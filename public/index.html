@@ -148,7 +148,7 @@
                         
                         <div id="classReports" class="modal">
                             <div class="modal-content">
-                                <button class="modal-close" onclick="hideModal('cycleModal')" title="Close">
+                                <button class="modal-close" onclick="hideModal('classReports')" title="Close">
                                     <i class="fa fa-times"></i>
                                 </button>
                                 <h4><i class="fa fa-file-pdf-o"></i> Officer Reports</h4>
@@ -173,7 +173,7 @@
     
                         <div id="classStatusModal" class="modal">
                             <div class="modal-content">
-                                <button class="modal-close" onclick="hideModal('cycleModal')" title="Close">
+                                <button class="modal-close" onclick="hideModal('classStatusModal')" title="Close">
                                     <i class="fa fa-times"></i>
                                 </button>
                                 <h4><i class="fa fa-bell"></i> Class Status Manager</h4>
@@ -197,7 +197,7 @@
 
                         <div id="makeupModal" class="modal">
                             <div class="modal-content">
-                                <button class="modal-close" onclick="hideModal('cycleModal')" title="Close">
+                                <button class="modal-close" onclick="hideModal('makeupModal')" title="Close">
                                     <i class="fa fa-times"></i>
                                 </button>
                                 <h4><i class="fa fa-calendar-plus"></i> Make-up Class Scheduler</h4>
@@ -344,27 +344,31 @@
                         </div>
                     </div>
                 </div>
-                <div class="card" id="settingsCard" style="display:none;">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
+
+                <div class="modal" id="settingsCard" style="display:none;">
+                    <div class="modal-content">
+                        <button class="modal-close" onclick="hideModal('settingsCard')" title="Close">
+                            <i class="fa fa-times"></i>
+                        </button>
                         <h3>Account Settings</h3>
-                        <button onclick="toggleSettings()" class="small muted">Close</button>
+                        <hr>
+                        <form id="changePasswordForm">
+                            <div style="margin-bottom:10px;">
+                                <label class="small" for="currentPw">Current Password</label><br>
+                                <input type="password" id="currentPw" required style="width:90%" />
+                            </div>
+                            <div style="margin-bottom:10px;">
+                                <label class="small" for="newPw">New Password</label><br>
+                                <input type="password" id="newPw" required style="width:90%" minlength="12" />
+                            </div>
+                            <div style="margin-bottom:15px;">
+                                <label class="small" for="confirmNewPw">Confirm New Password</label><br>
+                                <input type="password" id="confirmNewPw" required style="width:90%" minlength="12" />
+                            </div>
+                            <button type="submit" style="background:#3b82f6; color:white; border:none;">Update Password</button>
+                        </form>
+                        <div id="settingsMsg" class="small" style="margin-top:10px; text-align:center;"></div>
                     </div>
-                    <form id="changePasswordForm">
-                        <div style="margin-bottom:10px;">
-                            <label class="small" for="currentPw">Current Password</label><br>
-                            <input type="password" id="currentPw" required style="width:90%" />
-                        </div>
-                        <div style="margin-bottom:10px;">
-                            <label class="small" for="newPw">New Password</label><br>
-                            <input type="password" id="newPw" required style="width:90%" minlength="12" />
-                        </div>
-                        <div style="margin-bottom:15px;">
-                            <label class="small" for="confirmNewPw">Confirm New Password</label><br>
-                            <input type="password" id="confirmNewPw" required style="width:90%" minlength="12" />
-                        </div>
-                        <button type="submit" style="background:#3b82f6; color:white; border:none;">Update Password</button>
-                    </form>
-                    <div id="settingsMsg" class="small" style="margin-top:10px; text-align:center;"></div>
                 </div>
             </div>
             <div class="footer">
