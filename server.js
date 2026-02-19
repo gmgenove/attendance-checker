@@ -1084,7 +1084,7 @@ async function appendExcuseLogPage(pdfDoc, title, excuses, font, bold, secondary
       page.drawText(first.reason || "Scheduled Event", { x: 450, y, size: 9, font });
       y -= 20;
       page.drawLine({ start: { x: 40, y: y+5 }, end: { x: 970, y: y+5 }, thickness: 0.1 });
-	  y -= 20;
+	  y -= 15;
     } else {	// RENDER INDIVIDUAL STUDENT ROWS
 	  dayRows.forEach(e => {
         if (y < 50) { page = pdfDoc.addPage([1008, 612]); y = drawHeaders(page); }
@@ -1092,7 +1092,7 @@ async function appendExcuseLogPage(pdfDoc, title, excuses, font, bold, secondary
         page.drawText((e[secondaryColName] || "N/A").substring(0, 45), { x: 150, y, size: 9, font });
         page.drawText((e.reason || e.attendance_status).substring(0, 100), { x: 450, y, size: 9, font });
         y -= 15;
-        page.drawLine({ start: { x: 40, y: y+8 }, end: { x: 970, y: y+8 }, thickness: 0.1 });
+        page.drawLine({ start: { x: 40, y: y+9 }, end: { x: 970, y: y+9 }, thickness: 0.1 });
       });
     }
   }
