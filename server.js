@@ -316,16 +316,20 @@ app.post('/api', async (req, res) => {
 			});
 
 			const excuses = await pool.query(
-			    `SELECT a.class_date, u.user_name, a.reason 
-			     FROM attendance a 
-			     JOIN sys_users u ON a.student_id = u.user_id
-			     WHERE a.class_code = $1 AND (a.reason IS NOT NULL OR a.attendance_status = 'SUSPENDED') AND u.user_status = TRUE 
-			     ORDER BY a.class_date DESC`, [class_code]
+				`SELECT 
+				a.class_date, 
+				a.attendance_status, 
+				a.reason, 
+				u.user_name as student_name
+				FROM attendance a
+				JOIN sys_users u ON a.student_id = u.user_id
+				JOIN schedules s ON a.class_code = s.class_code 
+				WHERE a.class_code = $1 AND s.semester = $2 AND s.academic_year = $3
+				ORDER BY a.class_date DESC, u.user_name ASC`, [class_code, semConfig.sem, semConfig.year]
 			);
 	
 	        await generateClassMatrixPDF(pdfDoc, info, classDates, roster, semConfig, font, boldFont);
 	        await appendExcuseLogPage(pdfDoc, "CLASS EXCUSE LOG", excuses.rows, font, boldFont, "name");
-	        
 	    } else if (type === 'person') {
 	        const studentRes = await pool.query('SELECT user_name FROM sys_users WHERE user_id = $1 AND user_status = TRUE', [student_id]);
 	        const attendance = await pool.query(`SELECT a.*, s.class_name FROM attendance a JOIN schedules s ON a.class_code = s.class_code WHERE a.student_id = $1 AND s.semester = $2 AND s.academic_year = $3 ORDER BY s.class_name ASC`, [student_id, semConfig.sem, semConfig.year]);
@@ -1021,42 +1025,61 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
 }
 
 async function appendExcuseLogPage(pdfDoc, title, excuses, font, bold, secondaryColName) {
-  if (excuses.length === 0) return;
+  if (!excuses || excuses.length === 0) return;
 
   let page = pdfDoc.addPage([1008, 612]); // Legal Landscape
   let y = 550;
 
-  page.drawText(title, { x: 40, y, size: 16, font: bold });
-  y -= 30;
+  // Header Helper (for pagination)
+  const drawHeaders = (currentPage) => {
+    currentPage.drawText(title, { x: 40, y: 550, size: 16, font: bold });
+    currentPage.drawText('DATE', { x: 40, y: 520, size: 10, font: bold });
+    currentPage.drawText(secondaryColName === 'name' ? 'STUDENT NAME' : 'SUBJECT/CLASS', { x: 150, y: 520, size: 10, font: bold });
+    currentPage.drawText('REASON / JUSTIFICATION', { x: 450, y: 520, size: 10, font: bold });
+    currentPage.drawLine({ start: { x: 40, y: 510 }, end: { x: 970, y: 510 }, thickness: 1 });
+    return 490; // Returns new Y position
+  };
+  y = drawHeaders(page);
 
-  // Table Headers
-  page.drawText('DATE', { x: 40, y, size: 10, font: bold });
-  page.drawText(secondaryColName === 'name' ? 'STUDENT NAME' : 'SUBJECT/CLASS', { x: 150, y, size: 10, font: bold });
-  page.drawText('REASON / JUSTIFICATION', { x: 450, y, size: 10, font: bold });
-  
-  y -= 10;
-  page.drawLine({ start: { x: 40, y }, end: { x: 970, y }, thickness: 1 });
-  y -= 20;
-
-  excuses.forEach(e => {
-    if (y < 50) { // New page if near bottom
-        page = pdfDoc.addPage([1008, 612]);
-        y = 550;
-    }
-
-    const dateStr = DateTime.fromJSDate(e.class_date).toFormat('yyyy-MM-dd');
-    const secondaryVal = e[secondaryColName] || "N/A";
-    
-    page.drawText(dateStr, { x: 40, y, size: 9, font });
-    page.drawText(secondaryVal.substring(0, 45), { x: 150, y, size: 9, font });
-    
-    // Auto-wrap or truncate long reasons
-    const reasonSnippet = e.reason.substring(0, 100);
-    page.drawText(reasonSnippet, { x: 450, y, size: 9, font });
-
-    y -= 15;
-    page.drawLine({ start: { x: 40, y: y + 5 }, end: { x: 970, y: y + 5 }, thickness: 0.1, color: rgb(0.8,0.8,0.8) });
+  // 1. Group by Date
+  const groupedByDate = {};
+  excuses.forEach(row => {
+    const d = DateTime.fromJSDate(row.class_date).toFormat('yyyy-MM-dd');
+    if (!groupedByDate[d]) groupedByDate[d] = [];
+    groupedByDate[d].push(row);
   });
+
+  // 2. Iterate through groups
+  for (const dateStr in groupedByDate) {
+    const dayRows = groupedByDate[dateStr];
+    const first = dayRows[0];
+    const isClassWide = ['HOLIDAY', 'ASYNCHRONOUS', 'SUSPENDED', 'CANCELLED'].includes(first.attendance_status);
+
+    if (y < 60) { page = pdfDoc.addPage([1008, 612]); y = drawHeaders(page); }
+
+    if (isClassWide && title === "CLASS EXCUSE LOG") {
+      // RENDER SINGLE CLASS-WIDE ROW
+      page.drawText(dateStr, { x: 40, y, size: 9, font: bold });
+      page.drawText(`ALL STUDENTS: ${first.attendance_status}`, { x: 150, y, size: 9, font: bold });
+      page.drawText(first.reason || "No reason provided", { x: 450, y, size: 9, font });
+      
+      y -= 20;
+      page.drawLine({ start: { x: 40, y: y+5 }, end: { x: 970, y: y+5 }, thickness: 0.1 });
+    } else {
+      // RENDER INDIVIDUAL STUDENT ROWS
+      dayRows.forEach(e => {
+        if (y < 50) { page = pdfDoc.addPage([1008, 612]); y = drawHeaders(page); }
+
+        const secondaryVal = e[secondaryColName] || "N/A";
+        page.drawText(dateStr, { x: 40, y, size: 9, font });
+        page.drawText(secondaryVal.substring(0, 45), { x: 150, y, size: 9, font });
+        page.drawText((e.reason || "").substring(0, 100), { x: 450, y, size: 9, font });
+
+        y -= 15;
+        page.drawLine({ start: { x: 40, y: y+5 }, end: { x: 970, y: y+5 }, thickness: 0.1 });
+      });
+    }
+  }
 }
 
 const getCurrentSemConfig = async () => {
