@@ -19,7 +19,6 @@
             input,select,button{padding:10px;border-radius:8px;border:1px solid #e2e8f0}
             button{cursor:pointer; transition: opacity 0.2s}
             button:disabled{opacity: 0.5; cursor: not-allowed}
-            .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
             .small{font-size:0.9rem; color:#475569}
             .danger{background:#fff1f2; color:#7f1d1d; border: 1px solid #7f1d1d;}
             .muted{color:#94a3b8}
@@ -46,9 +45,16 @@
             .modal {display: none; position: fixed; z-index: 2000; /* Ensure it is above everything */ left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black */backdrop-filter: blur(4px); /* Modern blur effect */}
             /* Modal Content Box */
             .modal-content { background-color: #ffffff; margin: 10% auto; padding: 25px; border-radius: 12px; width: 90%; max-width: 500px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); animation: slideIn 0.3s ease-out; }
+            .modal-content input, .modal-content select, .modal-content textarea { width: 100%; margin-bottom: 15px; display: block; }
             @keyframes slideIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
             /* Cycle Badge Styling */
             .badge-cycle { background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; border: 1px solid #bae6fd; }
+            .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 15px; }
+            .btn-outline { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 15px 10px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; color: #475569; transition: all 0.2s; gap: 8px; }
+            .btn-outline i { font-size: 18px; }
+            .btn-outline:hover { background: #f1f5f9; border-color: #cbd5e1; }
+            /* Mobile Responsiveness */
+            @media (max-width: 480px) { .grid { grid-template-columns: 1fr; } .btn-outline { flex-direction: row; justify-content: flex-start; padding-left: 20px; } }
         </style>
     </head>
     <body>
@@ -117,18 +123,45 @@
                     </div>
     
                     <div id="officerControls" style="display:none; margin-top: 15px;">
+                        <div class="card">
+                            <h3><i class="fa fa-university"></i> Class Administration</h3>
+                            
+                            <div class="grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                <button onclick="showModal('classStatusModal')" class="btn-outline">
+                                    <i class="fa fa-bell"></i> Update Today's Status
+                                </button>
+                        
+                                <button onclick="showModal('makeupModal')" class="btn-outline">
+                                    <i class="fa fa-calendar-plus"></i> Schedule Make-up
+                                </button>
+                        
+                                <button onclick="openScheduleModal()" class="btn-outline" style="border-color: #6366f1; color: #6366f1;">
+                                    <i class="fa fa-calendar-plus"></i> Add New Schedule
+                                </button>
+                        
+                                <button onclick="showModal('cycleModal')" class="btn-outline">
+                                    <i class="fa fa-sync"></i> Manage Cycles
+                                </button>
+                        
+                                <button onclick="generateOfficerReport()" class="btn-outline" style="grid-column: span 2; background: #f8fafc;">
+                                    <i class="fa fa-file-pdf-o"></i> Generate Attendance Report (PDF)
+                                </button>
+                            </div>
+                        </div>
                         <h3><i class="fa fa-university"></i> Class Administration</h3>
                         
-                        <div class="card" style="border-top: 4px solid #ef4444; margin-top: 15px;">
-                            <h4>Officer Reports</h4>
-                            <select id="reportType" required>
-                                <option value="">Select Report Type</option>
-                                <option value="class">Class Report</option>
-                                <option value="person">Student Report</option>
-                            </select>
-                            <div id="reportParams" style="margin: 10px 0"></div>
-                            <button id="generateReport" style="background:#064e3b; color:#e6f4ea; border:1px solid #ddd;">Generate PDF Report</button>
-                            <div id="reportOutput"></div>
+                        <div id="classStatusModal" class="modal">
+                            <div class="modal-content">
+                                <h4>Officer Reports</h4>
+                                <select id="reportType" required>
+                                    <option value="">Select Report Type</option>
+                                    <option value="class">Class Report</option>
+                                    <option value="person">Student Report</option>
+                                </select>
+                                <div id="reportParams" style="margin: 10px 0"></div>
+                                <button id="generateReport" style="background:#064e3b; color:#e6f4ea; border:1px solid #ddd;">Generate PDF Report</button>
+                                <div id="reportOutput"></div>
+                            </div>
                         </div>
     
                         <!--div id="adminTools" class="card" style="border-top: 4px solid #ef4444; margin-top: 20px;">
@@ -139,34 +172,40 @@
                             </button>
                         </div-->
     
-                        <div class="card" style="border-top: 4px solid #7c3aed; margin-top: 15px;">
-                            <h4><i class="fa fa-bell"></i> Class Status Manager</h4>
-                            <select id="statusType" required>
-                                <option value="">Select Class Status</option>
-                                <option value="SUSPENDED">Suspended (Admin)</option>
-                                <option value="CANCELLED">Cancelled (Prof)</option>
-                                <option value="ASYNCHRONOUS">Asynchronous</option> </select>
-                            </select>
-                            <select id="suspendClassCode" required>
-                                <option value="">Loading Classes...</option>
-                            </select>
-                            <input type="date" id="suspendDate" required />
-                            <input type="text" id="suspendReason" placeholder="Reason (e.g., Professor on official business or Typhoon Karding)" style="width: 80%;" />
-                            <button onclick="handleStatusChange()" style="background:#7c3aed; color:white; border:none; margin-top:5px;">
-                                Update Class Status
-                            </button>
+                        <div id="classStatusModal" class="modal">
+                            <div class="modal-content">
+                                <h4><i class="fa fa-bell"></i> Class Status Manager</h4>
+                                <hr>
+                                <select id="statusType" required>
+                                    <option value="">Select Class Status</option>
+                                    <option value="SUSPENDED">Suspended (Admin)</option>
+                                    <option value="CANCELLED">Cancelled (Prof)</option>
+                                    <option value="ASYNCHRONOUS">Asynchronous</option> </select>
+                                </select>
+                                <select id="suspendClassCode" required>
+                                    <option value="">Loading Classes...</option>
+                                </select>
+                                <input type="date" id="suspendDate" required />
+                                <input type="text" id="suspendReason" placeholder="Reason (e.g., Professor on official business or Typhoon Karding)" style="width: 80%;" />
+                                <button onclick="handleStatusChange()" style="background:#7c3aed; color:white; border:none; margin-top:5px;">
+                                    Update Class Status
+                                </button>
+                            </div>
                         </div>
 
-                        <div class="card" style="border-top: 4px solid #10b981; margin-top: 15px;">
-                            <h4><i class="fa fa-calendar-plus"></i> Make-up Class Scheduler</h4>
-                            <p class="small muted" style="margin-top:5px;">This allows students to check in on the selected date.</p>
-                            <select id="makeupClassCode" required>
-                                <option value="">Loading Classes...</option>
-                            </select>
-                            <input type="date" id="makeupDate" required />
-                            <button onclick="handleMakeUpClass()" style="background:#10b981; color:white; border:none; margin-top:5px;">
-                                Authorize Make-up Session
-                            </button>                       
+                        <div id="makeupModal" class="modal">
+                            <div class="modal-content">
+                                <h4><i class="fa fa-calendar-plus"></i> Make-up Class Scheduler</h4>
+                                <hr>
+                                <p class="small muted" style="margin-top:5px;">This allows students to check in on the selected date.</p>
+                                <select id="makeupClassCode" required>
+                                    <option value="">Loading Classes...</option>
+                                </select>
+                                <input type="date" id="makeupDate" required />
+                                <button onclick="handleMakeUpClass()" style="background:#10b981; color:white; border:none; margin-top:5px;">
+                                    Authorize Make-up Session
+                                </button>                       
+                            </div>
                         </div>
 
                         <!--div class="card" style="border-top: 3px solid #6366f1;">
