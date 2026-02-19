@@ -246,9 +246,9 @@ async function showApp() {
         populateClassDropdowns();
     }
     // Call this function when the Officer view loads
-    if (currentUser.role === 'officer') {
+    /*if (currentUser.role === 'officer') {
         loadScheduleList();
-    }
+    }*/
 }
 
 async function loadProfessorDashboard() {
