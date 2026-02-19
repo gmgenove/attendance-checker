@@ -607,13 +607,29 @@ async function populateProfessors() {
 // Function to show any modal by ID
 function showModal(id) {
     const modal = document.getElementById(id);
-    if (modal) modal.style.display = 'block';
+    if (modal) {
+        modal.style.display = 'block';
+        // Optional: Disable body scroll when modal is open
+        document.body.style.overflow = 'hidden'; 
+    }
 }
 
 // Function to hide any modal by ID
 function hideModal(id) {
     const modal = document.getElementById(id);
-    if (modal) modal.style.display = 'none';
+    if (modal) {
+        modal.style.display = 'none';
+        // Re-enable body scroll
+        document.body.style.overflow = 'auto'; 
+    }
+}
+
+// Keep the outside-click listener as a backup
+window.onclick = function(event) {
+    if (event.target.classList.contains('modal')) {
+        event.target.style.display = "none";
+        document.body.style.overflow = 'auto';
+    }
 }
 
 // Specialized function for the Schedule Creator to refresh data before opening
@@ -1118,13 +1134,6 @@ window.toggleProfSummary = () => {
         btn.style.background = ''; // Revert to original CSS
     }
 };
-
-window.onclick = function(event) {
-    // If the user clicks on the .modal (the overlay) rather than the .modal-content
-    if (event.target.classList.contains('modal')) {
-        event.target.style.display = "none";
-    }
-}
 
 document.getElementById('changePasswordForm').addEventListener('submit', async (e) => {
     e.preventDefault();
