@@ -1073,7 +1073,7 @@ async function appendExcuseLogPage(pdfDoc, title, excuses, font, bold, secondary
 
     if (y < 60) { page = pdfDoc.addPage([1008, 612]); y = drawHeaders(page); }
 
-    if (isClassWide && title === "CLASS EXCUSE LOG") {	// RENDER SINGLE CLASS-WIDE ROW
+    if (isClassWide) {	// RENDER SINGLE CLASS-WIDE ROW
       page.drawText(dateStr, { x: 40, y, size: 9, font: bold });
       page.drawText(`CLASS-WIDE: ${first.attendance_status}`, { x: 150, y, size: 9, font: bold });
       page.drawText(first.reason || "Scheduled Event", { x: 450, y, size: 9, font });
