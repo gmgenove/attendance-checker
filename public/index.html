@@ -121,7 +121,7 @@
                 </div>
     
                 <div id="controls" class="card" style="display:none">
-                    <div id="studentControls" style="display:none">
+                    <div id="studentControls" class="card" style="display:none">
                         <h3>My Attendance Report</h3>
                         <button id="viewMyAttendance">Download My Attendance PDF</button>
                         <div id="myAttendanceOutput"></div>
@@ -149,7 +149,7 @@
                         <div id="classReports" class="modal" style="border-top: 4px solid #ef4444; margin-top: 15px;">
                             <div class="modal-content" >
                                 <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                                    <h3 style="margin: 0;"><i class="fa fa-file-pdf-o"></i> Officer Reports</h3>
+                                    <h4 style="margin: 0;"><i class="fa fa-file-pdf-o"></i> Officer Reports</h4>
                                     <button type="button" class="modal-close-inline" onclick="hideModal('classReports')" title="Close">
                                         <i class="fa fa-times"></i>
                                     </button>
@@ -177,7 +177,7 @@
                         <div id="classStatusModal" class="modal" style="border-top: 4px solid #7c3aed; margin-top: 15px;">
                             <div class="modal-content">
                                 <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                                    <h3 style="margin: 0;"><i class="fa fa-bell"></i> Class Status Manager</h3>
+                                    <h4 style="margin: 0;"><i class="fa fa-bell"></i> Class Status Manager</h4>
                                     <button type="button" class="modal-close-inline" onclick="hideModal('classStatusModal')" title="Close">
                                         <i class="fa fa-times"></i>
                                     </button>
@@ -203,7 +203,7 @@
                         <div id="makeupModal" class="modal" style="border-top: 4px solid #10b981; margin-top: 15px;">
                             <div class="modal-content">
                                 <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                                    <h3 style="margin: 0;"><i class="fa fa-calendar-plus"></i> Make-up Class Scheduler</h3>
+                                    <h4 style="margin: 0;"><i class="fa fa-calendar-plus"></i> Make-up Class Scheduler</h4>
                                     <button type="button" class="modal-close-inline" onclick="hideModal('makeupModal')" title="Close">
                                         <i class="fa fa-times"></i>
                                     </button>
@@ -334,9 +334,10 @@
                         </div-->
                     </div>
 
-                    <div id="profControls" style="display:none">
+                    <div id="profControls" class="card" style="display:none">
+                        <h3>Attendance Monitor</h3>
                         <div class="card">
-                            <h3>Live Attendance Monitor</h3>
+                            <h4>Live Attendance</h4>
     
                             <div id="searchWrapper" style="display: none; margin-bottom: 15px; position: relative;">
                                 <input type="text" id="studentSearch" placeholder="Search student name..." style="width: 100%; box-sizing: border-box; padding-left: 35px;" />
@@ -349,7 +350,7 @@
     
                         <div class="card">
                             <div style="display:flex; justify-content: space-between; align-items: center;">
-                                <h3>Attendance Overview</h3>
+                                <h4>Attendance Overview</h4>
                                 <button id="toggleTotalsBtn" onclick="toggleProfSummary()">View Totals</button>
                             </div>
                             <div id="profSummaryOutput" style="display: none; margin-top: 15px;"></div>
@@ -359,11 +360,13 @@
 
                 <div class="modal" id="settingsCard" style="display:none;">
                     <div class="modal-content">
-                        <button class="modal-close" onclick="hideModal('settingsCard')" title="Close">
-                            <i class="fa fa-times"></i>
-                        </button>
-                        <h3>Account Settings</h3>
-                        <hr>
+                        <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <h4 style="margin: 0;">Account Settings</h4>
+                            <button type="button" class="modal-close-inline" onclick="hideModal('settingsCard')" title="Close">
+                                <i class="fa fa-times"></i>
+                            </button>
+                        </div>
+                        <hr style="margin-bottom: 20px; border: 0; border-top: 1px solid #eee;">
                         <form id="changePasswordForm">
                             <div style="margin-bottom:10px;">
                                 <label class="small" for="currentPw">Current Password</label><br>
