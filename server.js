@@ -1035,21 +1035,37 @@ async function appendExcuseLogPage(pdfDoc, title, excuses, font, bold, secondary
     currentPage.drawText(title, { x: 40, y: 550, size: 16, font: bold });
     currentPage.drawText('DATE', { x: 40, y: 520, size: 10, font: bold });
     currentPage.drawText(secondaryColName === 'name' ? 'STUDENT NAME' : 'SUBJECT/CLASS', { x: 150, y: 520, size: 10, font: bold });
-    currentPage.drawText('REASON / JUSTIFICATION', { x: 450, y: 520, size: 10, font: bold });
+    currentPage.drawText('REASON / STATUS', { x: 450, y: 520, size: 10, font: bold });
     currentPage.drawLine({ start: { x: 40, y: 510 }, end: { x: 970, y: 510 }, thickness: 1 });
     return 490; // Returns new Y position
   };
   y = drawHeaders(page);
 
-  // 1. Group by Date
+  // 1. SEPARATE CREDITED STUDENTS
+  const creditedStudents = [...new Set(excuses
+    .filter(e => e.attendance_status === 'CREDITED')
+    .map(e => e.student_name))];
+
+  const activeExcuses = excuses.filter(e => e.attendance_status !== 'CREDITED');
+
+  // 2. RENDER CREDITED SUMMARY AT THE TOP
+  if (creditedStudents.length > 0) {
+    page.drawText("CREDITED / EXEMPTED STUDENTS:", { x: 40, y, size: 10, font: bold, color: rgb(0.1, 0.4, 0.7) });
+    y -= 15;
+    page.drawText(creditedStudents.join(', '), { x: 40, y, size: 9, font });
+    y -= 25;
+    page.drawLine({ start: { x: 40, y: y+5 }, end: { x: 970, y: y+5 }, thickness: 0.5, dashArray: [2, 2] });
+    y -= 20;
+  }
+
+  // 3. GROUP ACTIVE DATA BY DATE (Holiday Logic)
   const groupedByDate = {};
-  excuses.forEach(row => {
+  activeExcuses.forEach(row => {
     const d = DateTime.fromJSDate(row.class_date).toFormat('yyyy-MM-dd');
     if (!groupedByDate[d]) groupedByDate[d] = [];
     groupedByDate[d].push(row);
   });
 
-  // 2. Iterate through groups
   for (const dateStr in groupedByDate) {
     const dayRows = groupedByDate[dateStr];
     const first = dayRows[0];
@@ -1057,28 +1073,21 @@ async function appendExcuseLogPage(pdfDoc, title, excuses, font, bold, secondary
 
     if (y < 60) { page = pdfDoc.addPage([1008, 612]); y = drawHeaders(page); }
 
-    if (isClassWide && title === "CLASS EXCUSE LOG") {
-      // RENDER SINGLE CLASS-WIDE ROW
+    if (isClassWide) {
       page.drawText(dateStr, { x: 40, y, size: 9, font: bold });
-      page.drawText(`ALL STUDENTS: ${first.attendance_status}`, { x: 150, y, size: 9, font: bold });
-      page.drawText(first.reason || "No reason provided", { x: 450, y, size: 9, font });
-      
+      page.drawText(`CLASS-WIDE: ${first.attendance_status}`, { x: 150, y, size: 9, font: bold });
+      page.drawText(first.reason || "Scheduled Event", { x: 450, y, size: 9, font });
       y -= 20;
-      page.drawLine({ start: { x: 40, y: y+5 }, end: { x: 970, y: y+5 }, thickness: 0.1 });
     } else {
-      // RENDER INDIVIDUAL STUDENT ROWS
       dayRows.forEach(e => {
         if (y < 50) { page = pdfDoc.addPage([1008, 612]); y = drawHeaders(page); }
-
-        const secondaryVal = e[secondaryColName] || "N/A";
         page.drawText(dateStr, { x: 40, y, size: 9, font });
-        page.drawText(secondaryVal.substring(0, 45), { x: 150, y, size: 9, font });
-        page.drawText((e.reason || "").substring(0, 100), { x: 450, y, size: 9, font });
-
+        page.drawText((e[secondaryColName] || "N/A").substring(0, 45), { x: 150, y, size: 9, font });
+        page.drawText((e.reason || e.attendance_status).substring(0, 100), { x: 450, y, size: 9, font });
         y -= 15;
-        page.drawLine({ start: { x: 40, y: y+5 }, end: { x: 970, y: y+5 }, thickness: 0.1 });
       });
     }
+    page.drawLine({ start: { x: 40, y: y+5 }, end: { x: 970, y: y+5 }, thickness: 0.1 });
   }
 }
 
