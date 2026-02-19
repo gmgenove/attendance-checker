@@ -652,7 +652,7 @@ async function loadScheduleList() {
                     <div class="small muted">${s.start_time} - ${s.end_time}</div>
                 </td>
                 <td style="padding: 10px;">
-                    <div class="small">${cls.professor_name ? cls.professor_name : ''}</div>
+                    <div class="small">${s.professor_name ? s.professor_name : ''}</div>
                 </td>
                 <td style="padding: 10px; text-align: center; display: flex; gap: 10px; justify-content: center;">
                     <button onclick="duplicateSchedule('${s.class_code}')" title="Duplicate" class="btn-icon">
