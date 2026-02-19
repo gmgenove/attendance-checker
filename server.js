@@ -945,13 +945,13 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
 }
 
 async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, font, bold) {
-    const page = pdfDoc.addPage([1008, 612]);
+    const page = pdfDoc.addPage([1008, 612]); // Legal Landscape
     let y = 575;
 
-    // Header (Matches Excel StudentReport Tab)
+    // --- TOP INFO BLOCK ---
     page.drawText(`STUDENT ATTENDANCE REPORT`, { x: 40, y, size: 16, font: bold });
     const timestamp = getManilaNow().toFormat('yyyy-MM-dd HH:mm:ss');
-    page.drawText(`Generated: ${timestamp}`, { x: 800, y, size: 9, font: bold });
+    page.drawText(`Generated: ${timestamp}`, { x: 800, y, size: 9, font: bold, color: rgb(0.3, 0.3, 0.3) });
 
     y -= 25;
     page.drawText(`Student ID:`, { x: 40, y, size: 10, font: bold });
@@ -965,97 +965,121 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
     page.drawText(`Academic Year:`, { x: 400, y, size: 10, font: bold });
     page.drawText(`${sem.year}`, { x: 480, y, size: 10, font });
 
-    y -= 40;
+    y -= 50; 
 
-    // Table Headers
-    page.drawText('Subject Code', { x: 40, y, size: 8, font: bold });
-    page.drawText('Subject Title', { x: 120, y, size: 8, font: bold });
-    
-    // We use a generic D1-D35 header because subjects have different days
-    let startX = 350;
-    const colWidth = 16;
-	for (let i=1; i<=35; i++) {
-        page.drawText(`D${i}`, { x: startX + ((i-1) * colWidth), y, size: 7, font: bold });
-        // Note: We don't put dates in the global header here because 
-        // D1 for Math might be 02/10 while D1 for English is 02/11.
-    }
-    
-    const totalX = startX + (35 * colWidth) + 20;
-    page.drawText('Pres', { x: totalX, y, size: 8, font: bold });
-    page.drawText('%', { x: totalX + 40, y, size: 8, font: bold });
-
-    y -= 15;
-    page.drawLine({ start: { x: 40, y }, end: { x: 970, y }, thickness: 0.5 });
-
-    // Draw Subject Rows
-    Object.keys(subjects).forEach(code => {
-        y -= 25; // Increased spacing to accommodate dates under each row
-        if (y < 50) { /* Add Page logic here if needed */ }
-		
+    // 1. GROUP SUBJECTS BY UNIQUE SCHEDULES
+    const subjectGroups = {};
+    for (const code of Object.keys(subjects)) {
         const sub = subjects[code];
-		const isCredited = sub.isCredited || Object.values(sub.records).includes('CR');
-        page.drawText(code, { x: 40, y, size: 7, font });
-        page.drawText(sub.name.substring(0, 40), { x: 120, y, size: 7, font });
-
-        if (isCredited) {
-            page.drawText('--- COURSE CREDITED / EXEMPTED ---', { 
-                x: startX, y, size: 7, font: bold, color: rgb(0.1, 0.4, 0.7) 
-            });
-            page.drawText('100%', { x: 920, y, size: 7, font: bold });
-        } else {
-			// Since subjects have different dates, we list the statuses in order of occurrence
-            const sortedDates = Object.keys(sub.records).sort();
-            // Fetch makeup dates specifically for this subject
-            const makeupDateSet = await getMakeupDateSet(code);
-
-            sortedDates.slice(0, 35).forEach((dStr, i) => {
-                const xPos = startX + (i * colWidth);
-                const status = sub.records[dStr];
-                const isMakeup = makeupDateSet.has(dStr);
-                
-                // 1. Draw the Status
-                let statusColor = rgb(0, 0, 0); // Default Black
-				if (status === 'P') statusColor = rgb(0, 0.5, 0);     // Green
-				if (status === 'A') statusColor = rgb(0.8, 0, 0);     // Red
-				if (status === 'H') statusColor = rgb(0.2, 0.5, 0.8); // Blue (Holiday)
-				if (status === 'S') statusColor = rgb(0.5, 0.2, 0.7); // Purple (Suspension)
-				if (status === 'C') statusColor = rgb(0.4, 0.4, 0.4); // Dark Grey (Cancelled)
-				if (status === 'D') statusColor = rgb(0.5, 0.5, 0.5); // Gray (Dropped
-                page.drawText(status, { x: xPos, y, size: 7, font, color: statusColor });
-
-                // 2. Draw the Date and Makeup Indicator (*) below the status
-                const dateObj = DateTime.fromISO(dStr);
-                page.drawText(`${dateObj.toFormat('MM/dd')}${isMakeup ? '*' : ''}`, { 
-                    x: xPos, 
-                    y: y - 8, 
-                    size: 5, 
-                    font, 
-                    color: isMakeup ? rgb(0.9, 0.4, 0) : rgb(0.4, 0.4, 0.4) 
-                });
-            });
-
-            // 3. Totals for this specific subject
-            const c = sub.counts;
-            const presentTotal = (c.P || 0) + (c.L || 0) + (c.C || 0);
-            const excusedSessions = (c.H || 0) + (c.S || 0) + (c.D || 0);
-            // Subtracting excused/holiday/dropped days from the denominator
-			const totalPossible = sortedDates.length - excusedSessions;
-            const perc = totalPossible > 0 ? Math.round((presentTotal / totalPossible) * 100) : 0;
-			// Draw Totals for the Subject Row
-            page.drawText(`${presentTotal}`, { x: totalX, y, size: 7, font });
-            page.drawText(`${perc}%`, { x: 920, y, size: 7, font: bold });
-        }
-        
-        // Bottom border for the row
-        page.drawLine({ 
-            start: { x: 40, y: y - 12 }, 
-            end: { x: 970, y: y - 12 }, 
-            thickness: 0.1, 
-            color: rgb(0.8, 0.8, 0.8) 
-        });
+        // Create key based on dates so subjects with same schedule group together
+        const dateKey = Object.keys(sub.records).sort().join('|'); 
+        if (!subjectGroups[dateKey]) subjectGroups[dateKey] = [];
+        subjectGroups[dateKey].push({ code, ...sub });
     }
 
-    page.drawText(`Legend: P=Present, A=Absent, H=Holiday, S=Suspension, CR=Credited | * Denotes Make-up Session`, { x: 40, y: 20, size: 7, font });
+    // 2. ITERATE THROUGH SCHEDULE BLOCKS
+    for (const [dateKey, groupMembers] of Object.entries(subjectGroups)) {
+        if (y < 160) { /* Simplified: In a full app, trigger a new page here */ }
+
+        const sortedDates = dateKey.split('|');
+        const startX = 280;
+        const colWidth = 18;
+
+        // Fetch makeup dates for the entire group to flag headers
+        const groupMakeupDates = new Set();
+        for (const sub of groupMembers) {
+            const mDates = await getMakeupDateSet(sub.code);
+            mDates.forEach(d => groupMakeupDates.add(d));
+        }
+
+        // --- DRAW TABLE HEADER ---
+        page.drawText('No.', { x: 40, y, size: 8, font: bold });
+        page.drawText('Subject Code', { x: 60, y, size: 8, font: bold });
+        page.drawText('Subject Title', { x: 130, y, size: 8, font: bold });
+
+        sortedDates.slice(0, 35).forEach((dStr, i) => {
+            const xPos = startX + (i * colWidth);
+            const dateObj = DateTime.fromISO(dStr);
+            const isMakeup = groupMakeupDates.has(dStr);
+            
+            // Header D1, D2 with * if it's a makeup date
+            page.drawText(`D${i + 1}${isMakeup ? '*' : ''}`, { 
+                x: xPos, y, size: 7, font: bold, 
+                color: isMakeup ? rgb(0.8, 0.4, 0) : rgb(0, 0, 0) 
+            });
+            // Day Name (Tue, Wed, etc.)
+            page.drawText(dateObj.toFormat('ccc'), { x: xPos, y: y - 8, size: 6, font });
+            // Vertical Date (MM-dd)
+            page.drawText(dateObj.toFormat('MM-dd'), {
+                x: xPos + 5, y: y - 15, size: 6, font,
+                rotate: degrees(-90)
+            });
+        });
+
+        const totalX = startX + (Math.min(sortedDates.length, 35) * colWidth) + 10;
+        page.drawText('P', { x: totalX + 25, y, size: 7, font: bold });
+        page.drawText('L', { x: totalX + 40, y, size: 7, font: bold });
+        page.drawText('A', { x: totalX + 55, y, size: 7, font: bold });
+        page.drawText('%', { x: totalX + 75, y, size: 7, font: bold });
+
+        y -= 60; // Space for the rotated dates
+        page.drawLine({ start: { x: 40, y: y + 5 }, end: { x: 980, y: y + 5 }, thickness: 1 });
+
+        // 3. DRAW SUBJECT ROWS
+        groupMembers.forEach((sub, index) => {
+            y -= 15;
+            const isCredited = sub.isCredited || Object.values(sub.records).includes('CR');
+
+            page.drawText(`${index + 1}`, { x: 40, y, size: 7, font });
+            page.drawText(sub.code, { x: 60, y, size: 7, font: bold });
+            page.drawText(sub.name.substring(0, 30), { x: 130, y, size: 7, font });
+
+            if (isCredited) {
+                page.drawText('--- SUBJECT CREDITED / EXEMPTED ---', { 
+                    x: startX, y, size: 7, font: bold, color: rgb(0.1, 0.4, 0.7) 
+                });
+                page.drawText('100%', { x: totalX + 75, y, size: 7, font: bold });
+            } else {
+                sortedDates.slice(0, 35).forEach((dStr, i) => {
+                    const status = sub.records[dStr] || '';
+                    let color = rgb(0, 0, 0); // Default Black
+					if (status === 'P') color = rgb(0, 0.5, 0);     // Green
+					if (status === 'A') color = rgb(0.8, 0, 0);     // Red
+					if (status === 'H') color = rgb(0.2, 0.5, 0.8); // Blue (Holiday)
+					if (status === 'S') color = rgb(0.5, 0.2, 0.7); // Purple (Suspension)
+					if (status === 'C') color = rgb(0.4, 0.4, 0.4); // Dark Grey (Cancelled)
+					if (status === 'D') color = rgb(0.5, 0.5, 0.5); // Gray (Dropped
+					if (status === 'CR') color = rgb(0.1, 0.4, 0.7); // Credited
+
+                    page.drawText(status, { x: startX + (i * colWidth), y, size: 7, font, color });
+                });
+
+                // Calculate Totals
+                const c = sub.counts || {};
+                const presentTotal = (c.P || 0) + (c.L || 0) + (c.C || 0);
+                const excused = (c.H || 0) + (c.S || 0) + (c.D || 0);
+                const totalPossible = sortedDates.length - excused;
+                const perc = totalPossible > 0 ? Math.round((presentTotal / totalPossible) * 100) : 0;
+
+                page.drawText(`${c.P || 0}`, { x: totalX + 25, y, size: 7, font });
+                page.drawText(`${c.L || 0}`, { x: totalX + 40, y, size: 7, font });
+                page.drawText(`${c.A || 0}`, { x: totalX + 55, y, size: 7, font });
+                page.drawText(`${perc}%`, { x: totalX + 75, y, size: 7, font: bold });
+            }
+            page.drawLine({ start: { x: 40, y: y - 2 }, end: { x: 980, y: y - 2 }, thickness: 0.1, color: rgb(0.8, 0.8, 0.8) });
+        });
+        y -= 30; // Gap between different schedule blocks
+    }
+
+    // --- FOOTER SECTION ---
+    const footerY = 80;
+    page.drawText('LEGEND: P-Present | L-Late | A-Absent | H-Holiday | S-Suspended | CR-Credited | *-Make-up', { x: 40, y: footerY + 30, size: 7, font });
+    
+    page.drawLine({ start: { x: 40, y: footerY }, end: { x: 250, y: footerY }, thickness: 0.5 });
+    page.drawText('STUDENT SIGNATURE', { x: 85, y: footerY - 12, size: 8, font: bold });
+
+    page.drawLine({ start: { x: 730, y: footerY }, end: { x: 980, y: footerY }, thickness: 0.5 });
+    page.drawText('REGISTRAR / DEPARTMENT HEAD', { x: 760, y: footerY - 12, size: 8, font: bold });
 }
 
 async function appendExcuseLogPage(pdfDoc, title, excuses, font, bold, secondaryColName) {
@@ -1168,22 +1192,28 @@ const getCurrentSemConfig = async () => {
   }
 };
 
+const makeupCache = {}; // Prevents redundant DB hits during a single report run
 const getMakeupDateSet = async (classCode) => {
-	try {
-	    const result = await pool.query(`
-	      SELECT DISTINCT class_date
-	      FROM attendance
-	      WHERE class_code = $1
-	        AND attendance_status = 'PENDING'
-	    `, [classCode]);
-	
-	    return new Set(
-	      result.rows.map(r => DateTime.fromJSDate(r.class_date).toISODate())
-	    );
-	 } catch (err) {
-	    console.error("Error loading makeup dates:", err);
-	    return new Set();
-  	}
+    if (makeupCache[classCode]) return makeupCache[classCode];
+
+    try {
+        const result = await pool.query(`
+            SELECT DISTINCT class_date
+            FROM attendance
+            WHERE class_code = $1
+              AND attendance_status = 'PENDING'
+        `, [classCode]);
+
+        const dateSet = new Set(
+            result.rows.map(r => DateTime.fromJSDate(r.class_date).toISODate())
+        );
+        
+        makeupCache[classCode] = dateSet; // Cache the result
+        return dateSet;
+    } catch (err) {
+        console.error("Error loading makeup dates:", err);
+        return new Set();
+    }
 };
 
 const checkDateIfMakeup = async (date, classCode) => {
