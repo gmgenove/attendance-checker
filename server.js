@@ -1092,7 +1092,7 @@ async function appendExcuseLogPage(pdfDoc, title, excuses, font, bold, secondary
         page.drawText((e[secondaryColName] || "N/A").substring(0, 45), { x: 150, y, size: 9, font });
         page.drawText((e.reason || e.attendance_status).substring(0, 100), { x: 450, y, size: 9, font });
         y -= 15;
-        page.drawLine({ start: { x: 40, y: y+9 }, end: { x: 970, y: y+9 }, thickness: 0.1 });
+        page.drawLine({ start: { x: 40, y: y+10 }, end: { x: 970, y: y+10 }, thickness: 0.1 });
       });
     }
   }
