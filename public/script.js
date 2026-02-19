@@ -1119,6 +1119,13 @@ window.toggleProfSummary = () => {
     }
 };
 
+window.onclick = function(event) {
+    // If the user clicks on the .modal (the overlay) rather than the .modal-content
+    if (event.target.classList.contains('modal')) {
+        event.target.style.display = "none";
+    }
+}
+
 document.getElementById('changePasswordForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const msg = document.getElementById('settingsMsg');
