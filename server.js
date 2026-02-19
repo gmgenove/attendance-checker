@@ -909,7 +909,7 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
 	  if (status === 'A') statusColor = rgb(0.8, 0, 0);       // Red
 	  if (status === 'H') statusColor = rgb(0.2, 0.5, 0.8);   // Blue (Holiday)
 	  if (status === 'S') statusColor = rgb(0.5, 0.2, 0.7);   // Purple (Suspended)
-	  if (status === 'C') statusColor = rgb(0.4, 0.4, 0.4); // Dark Grey (Cancelled)
+	  if (status === 'C') statusColor = rgb(0.4, 0.4, 0.4); 	// Dark Grey (Cancelled)
 	  if (status === 'D') statusColor = rgb(0.5, 0.5, 0.5);   // Gray (Dropped)
 
 	  page.drawText(status, { 
@@ -974,9 +974,13 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
     // We use a generic D1-D35 header because subjects have different days
     let startX = 350;
     const colWidth = 16;
-    for(let i=1; i<=35; i++) {
-        page.drawText(`D${i}`, { x: startX + ((i-1) * colWidth), y, size: 7, font: bold });
-    }
+	const makeupDateSet = await getMakeupDateSet(student.class_code);
+	dates.slice(0, 35).forEach((d, i) => {
+		const xPos = startX + (i * colWidth);
+		const isMakeupDay = makeupDateSet.has(d.toISODate()); // Helper to check attendance table
+		page.drawText(`D${i+1}${isMakeupDay ? '*' : ''}`, { x: startX + ((i-1) * colWidth), y, size: 7, font: bold });
+		page.drawText(d.toFormat('MM/dd'), { x: xPos, y: y - 8, size: 5, font });
+	});
     
     const totalX = startX + (35 * colWidth) + 20;
     page.drawText('Pres', { x: totalX, y, size: 8, font: bold });
@@ -1002,6 +1006,7 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
 		    if (status === 'A') statusColor = rgb(0.8, 0, 0);     // Red
 		    if (status === 'H') statusColor = rgb(0.2, 0.5, 0.8); // Blue (Holiday)
 		    if (status === 'S') statusColor = rgb(0.5, 0.2, 0.7); // Purple (Suspension)
+			if (status === 'C') statusColor = rgb(0.4, 0.4, 0.4); // Dark Grey (Cancelled)
 		    if (status === 'D') statusColor = rgb(0.5, 0.5, 0.5); // Gray (Dropped)
 
 			page.drawText(status, { x: startX + (i * colWidth), y, size: 7, font, color: statusColor });
