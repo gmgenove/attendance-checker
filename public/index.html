@@ -123,7 +123,7 @@
                 <div id="controls" class="card" style="display:none">
                     <div id="studentControls" class="card" style="display:none">
                         <h3>My Attendance Report</h3>
-                        <button id="viewMyAttendance">Download My Attendance PDF</button>
+                        <button id="viewMyAttendance"><i class="fa fa-file-pdf-o"></i> Download My Attendance (PDF)</button>
                         <div id="myAttendanceOutput"></div>
                     </div>
     
@@ -137,7 +137,7 @@
                                 </button>
                         
                                 <button onclick="showModal('makeupModal')" class="btn-outline">
-                                    <i class="fa fa-calendar-plus"></i> Schedule Make-up
+                                    <i class="fa fa-calendar-check-o"></i> Schedule Make-up
                                 </button>
                         
                                 <button onclick="showModal('classReports')" class="btn-outline" style="grid-column: span 2; background: #f8fafc;">
@@ -203,7 +203,7 @@
                         <div id="makeupModal" class="modal">
                             <div class="modal-content" style="border-top: 4px solid #10b981;">
                                 <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                                    <h4 style="margin: 0;"><i class="fa fa-calendar-plus"></i> Make-up Class Scheduler</h4>
+                                    <h4 style="margin: 0;"><i class="fa fa-calendar-check-o"></i> Make-up Class Scheduler</h4>
                                     <button type="button" class="modal-close-inline" onclick="hideModal('makeupModal')" title="Close">
                                         <i class="fa fa-times"></i>
                                     </button>
@@ -226,11 +226,11 @@
                             
                             <div style="display: flex; gap: 10px; margin-top: 10px;">
                                 <button onclick="openScheduleModal()" style="flex: 1; background: #6366f1; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer;">
-                                    <i class="fa fa-plus"></i> Add Schedule
+                                    <i class="fa fa-plus-circle"></i> Add Schedule
                                 </button>
                                 
                                 <button onclick="showModal('cycleModal')" style="flex: 1; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 10px; border-radius: 6px; cursor: pointer;">
-                                    <i class="fa fa-sync"></i> Manage Cycles
+                                    <i class="fa fa-refresh"></i> Manage Cycles
                                 </button>
                             </div>
                         </div>
@@ -260,7 +260,7 @@
 
                         <div class="card" class="modal" style="display:none;">
                             <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                                <h3 style="margin: 0;"><i class="fa fa-sync"></i> Manage Cycles</h3>
+                                <h3 style="margin: 0;"><i class="fa fa-refresh"></i> Manage Cycles</h3>
                                 <button type="button" class="modal-close-inline" onclick="hideModal('cycleModal')" title="Close">
                                     <i class="fa fa-times"></i>
                                 </button>
@@ -335,9 +335,9 @@
                     </div>
 
                     <div id="profControls" class="card" style="display:none">
-                        <h3>Attendance Monitor</h3>
+                        <h3><i class="fa fa-bar-chart"></i> Attendance Monitor</h3>
                         <div class="card">
-                            <h4>Live Attendance</h4>
+                            <h4><i class="fa fa-line-chart"></i> Live Attendance</h4>
     
                             <div id="searchWrapper" style="display: none; margin-bottom: 15px; position: relative;">
                                 <input type="text" id="studentSearch" placeholder="Search student name..." style="width: 100%; box-sizing: border-box; padding-left: 35px;" />
@@ -350,7 +350,7 @@
     
                         <div class="card">
                             <div style="display:flex; justify-content: space-between; align-items: center;">
-                                <h4>Attendance Overview</h4>
+                                <h4><i class="fa fa-file-text-o"></i> Attendance Overview</h4>
                                 <button id="toggleTotalsBtn" onclick="toggleProfSummary()">View Totals</button>
                             </div>
                             <div id="profSummaryOutput" style="display: none; margin-top: 15px;"></div>
