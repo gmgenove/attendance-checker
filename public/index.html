@@ -145,7 +145,6 @@
                                 </button>
                             </div>
                         </div>
-                        <h3><i class="fa fa-university"></i> Class Administration</h3>
                         
                         <div id="classReports" class="modal">
                             <div class="modal-content">
@@ -324,23 +323,25 @@
                     </div>
 
                     <div id="profControls" style="display:none">
-                        <h3>Live Attendance Monitor</h3>
-
-                        <div id="searchWrapper" style="display: none; margin-bottom: 15px; position: relative;">
-                            <input type="text" id="studentSearch" placeholder="Search student name..." style="width: 100%; box-sizing: border-box; padding-left: 35px;" />
-                            <span class="fa fa-search" style="position: absolute; left: 12px; top: 13px; color: #94a3b8;"></span>
-                        </div>
-                    
-                        <div id="profDashboardOutput" class="small muted">Loading Live Stats...</div>
-                        <button onclick="loadProfessorDashboard()" style="margin-top:10px">Refresh Live Stats</button>
-                    </div>
+                        <div class="card">
+                            <h3>Live Attendance Monitor</h3>
     
-                    <div class="card">
-                        <div style="display:flex; justify-content: space-between; align-items: center;">
-                            <h3>Attendance Overview</h3>
-                            <button id="toggleTotalsBtn" onclick="toggleProfSummary()">View Totals</button>
+                            <div id="searchWrapper" style="display: none; margin-bottom: 15px; position: relative;">
+                                <input type="text" id="studentSearch" placeholder="Search student name..." style="width: 100%; box-sizing: border-box; padding-left: 35px;" />
+                                <span class="fa fa-search" style="position: absolute; left: 12px; top: 13px; color: #94a3b8;"></span>
+                            </div>
+                        
+                            <div id="profDashboardOutput" class="small muted">Loading Live Stats...</div>
+                            <button onclick="loadProfessorDashboard()" style="margin-top:10px">Refresh Live Stats</button>
                         </div>
-                        <div id="profSummaryOutput" style="display: none; margin-top: 15px;"></div>
+    
+                        <div class="card">
+                            <div style="display:flex; justify-content: space-between; align-items: center;">
+                                <h3>Attendance Overview</h3>
+                                <button id="toggleTotalsBtn" onclick="toggleProfSummary()">View Totals</button>
+                            </div>
+                            <div id="profSummaryOutput" style="display: none; margin-top: 15px;"></div>
+                        </div>
                     </div>
                 </div>
                 <div class="card" id="settingsCard" style="display:none;">
