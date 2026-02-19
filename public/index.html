@@ -46,6 +46,11 @@
             /* Modal Content Box */
             .modal-content { background-color: #ffffff; margin: 10% auto; padding: 25px; border-radius: 12px; width: 90%; max-width: 500px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); animation: slideIn 0.3s ease-out; }
             .modal-content input, .modal-content select, .modal-content textarea { width: 100%; margin-bottom: 15px; display: block; }
+            /* Close Button Positioning */
+            .modal-close { position: absolute; top: 15px; right: 15px; font-size: 20px; color: #94a3b8; background: none; border: none; cursor: pointer; transition: color 0.2s; line-height: 1; }
+            .modal-close:hover {color: #ef4444; } /* Turns red on hover to signal closing */
+            /* Ensure the modal content is the reference point for the absolute position */
+            .modal-content {position: relative; /* CRITICAL: Allows the close button to stay in the corner */ padding-top: 40px; /* Adds space for the button */ }
             @keyframes slideIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
             /* Cycle Badge Styling */
             .badge-cycle { background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; border: 1px solid #bae6fd; }
@@ -128,31 +133,26 @@
                             
                             <div class="grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                                 <button onclick="showModal('classStatusModal')" class="btn-outline">
-                                    <i class="fa fa-bell"></i> Update Today's Status
+                                    <i class="fa fa-bell"></i> Update Class Status
                                 </button>
                         
                                 <button onclick="showModal('makeupModal')" class="btn-outline">
                                     <i class="fa fa-calendar-plus"></i> Schedule Make-up
                                 </button>
                         
-                                <button onclick="openScheduleModal()" class="btn-outline" style="border-color: #6366f1; color: #6366f1;">
-                                    <i class="fa fa-calendar-plus"></i> Add New Schedule
-                                </button>
-                        
-                                <button onclick="showModal('cycleModal')" class="btn-outline">
-                                    <i class="fa fa-sync"></i> Manage Cycles
-                                </button>
-                        
-                                <button onclick="generateOfficerReport()" class="btn-outline" style="grid-column: span 2; background: #f8fafc;">
+                                <button onclick="showModal('classReports')" class="btn-outline" style="grid-column: span 2; background: #f8fafc;">
                                     <i class="fa fa-file-pdf-o"></i> Generate Attendance Report (PDF)
                                 </button>
                             </div>
                         </div>
                         <h3><i class="fa fa-university"></i> Class Administration</h3>
                         
-                        <div id="classStatusModal" class="modal">
+                        <div id="classReports" class="modal">
                             <div class="modal-content">
-                                <h4>Officer Reports</h4>
+                                <button class="modal-close" onclick="hideModal('cycleModal')" title="Close">
+                                    <i class="fa fa-times"></i>
+                                </button>
+                                <h4><i class="fa fa-file-pdf-o"></i> Officer Reports</h4>
                                 <select id="reportType" required>
                                     <option value="">Select Report Type</option>
                                     <option value="class">Class Report</option>
@@ -174,6 +174,9 @@
     
                         <div id="classStatusModal" class="modal">
                             <div class="modal-content">
+                                <button class="modal-close" onclick="hideModal('cycleModal')" title="Close">
+                                    <i class="fa fa-times"></i>
+                                </button>
                                 <h4><i class="fa fa-bell"></i> Class Status Manager</h4>
                                 <hr>
                                 <select id="statusType" required>
@@ -195,6 +198,9 @@
 
                         <div id="makeupModal" class="modal">
                             <div class="modal-content">
+                                <button class="modal-close" onclick="hideModal('cycleModal')" title="Close">
+                                    <i class="fa fa-times"></i>
+                                </button>
                                 <h4><i class="fa fa-calendar-plus"></i> Make-up Class Scheduler</h4>
                                 <hr>
                                 <p class="small muted" style="margin-top:5px;">This allows students to check in on the selected date.</p>
@@ -247,13 +253,26 @@
                         </div>
 
                         <div class="card" class="modal" style="display:none;">
-                            <h4><i class="fa fa-sync"></i> Cycle Manager</h4>
+                            <h3><i class="fa fa-sync"></i> Manage Cycles</h3>
+                            <hr>
+                            
+                            <label class="small muted">Cycle Name</label>
+                            <input type="text" id="cycleName" placeholder="e.g., Cycle 1">
+                            
                             <div class="grid">
-                                <input type="text" id="cycleName" placeholder="Cycle Name (e.g. Cycle 1)">
-                                <input type="date" id="cycleStart">
-                                <input type="date" id="cycleEnd">
+                                <div>
+                                    <label class="small muted">Start Date</label>
+                                    <input type="date" id="cycleStart">
+                                </div>
+                                <div>
+                                    <label class="small muted">End Date</label>
+                                    <input type="date" id="cycleEnd">
+                                </div>
                             </div>
-                            <button onclick="saveCycle()" style="margin-top:10px;">Define Cycle Period</button>
+                    
+                            <div style="margin-top: 20px;">
+                                <button onclick="saveCycle()" style="margin-top:10px;">Save Cycle Period</button>
+                            </div>
                         </div>
 
                         <div id="scheduleModal" class="modal" style="display:none;">
