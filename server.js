@@ -1257,7 +1257,7 @@ const initDb = async () => {
       semester TEXT,
       academic_year TEXT,
       professor_id TEXT,
-      cycle_id INTEGER REFERENCES academic_cycles(cycle_id)
+      cycle_name TEXT
     );
 
 	CREATE TABLE IF NOT EXISTS attendance (
@@ -1354,9 +1354,9 @@ const autoTagAbsentees = async () => {
 
     // 2. Find all classes scheduled for today + Authorized Make-up sessions
 	const schedules = await pool.query(`
-      SELECT s.*, ac.status as cycle_status 
+      SELECT s.*, ac.cycle_status 
       FROM schedules s
-      LEFT JOIN academic_cycles ac ON s.cycle_id = ac.cycle_id 
+      LEFT JOIN academic_cycles ac ON s.cycle_name = ac.cycle_name 
         AND $4::date BETWEEN ac.start_date AND ac.end_date
       WHERE ($1 = ANY(s.days) AND s.semester = $2 AND s.academic_year = $3) 
       OR EXISTS (
@@ -1402,7 +1402,7 @@ const autoTagAbsentees = async () => {
         continue; // Move to next class, don't mark as absent
       }
 
-      // C. REGULAR ABSENTEE MAINTENANCE (30 mins after class ends; Only if not a holiday)
+      // C. REGULAR ABSENTEE MAINTENANCE (Only if Synchronous or No Cycle Defined). Tag ABSENT if 30 minutes have passed since class ended
       if (now > classEnd.plus({ minutes: 30 })) {
         // Mark missing students as ABSENT
         await pool.query(`
