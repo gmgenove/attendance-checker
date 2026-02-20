@@ -1042,8 +1042,8 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
         page.drawText('L', { x: totalX + 15, y, size: 7, font: bold });
         page.drawText('A', { x: totalX + 30, y, size: 7, font: bold });
         page.drawText('%', { x: totalX + 45, y, size: 7, font: bold });
-		y -= 25; // Space for the rotated dates
-        page.drawLine({ start: { x: 5, y: y + 5 }, end: { x: 990, y: y + 5 }, thickness: 1 });
+		y -= 15; // Space for the rotated dates
+        page.drawLine({ start: { x: 20, y: y + 5 }, end: { x: 990, y: y + 5 }, thickness: 1 });
 
         // 3. DRAW SUBJECT ROWS
         groupMembers.forEach((sub, index) => {
@@ -1058,7 +1058,7 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
                 page.drawText('--- SUBJECT CREDITED / EXEMPTED ---', { 
                     x: startX, y, size: 7, font: bold, color: rgb(0.1, 0.4, 0.7) 
                 });
-                page.drawText('100%', { x: totalX + 45, y, size: 7, font: bold });
+                page.drawText('100%', { x: totalX + 15, y, size: 7, font: bold });
             } else {
                 sortedDates.slice(0, 35).forEach((dStr, i) => {
                     const status = sub.records[dStr] || '';
