@@ -733,7 +733,20 @@ async function updateCheckinUI(cls) {
         const now = new Date();
         const adjustmentEnd = new Date(config.adjustment_end);
         const isWithinAdjustment = now <= adjustmentEnd;
-        // 2. Handle Terminal Statuses (Excused, Holiday, Credited, etc.)
+        // 2. Handle already-recorded attendance first (PRESENT/LATE/etc.)
+        if (record && record.status && record.status !== 'not_recorded') {
+            if (btn) btn.style.display = 'none';
+            if (excuseLink) excuseLink.style.display = 'none';
+
+            const actionGrid = document.querySelector(`#btn-${safeCode}`)?.parentElement;
+            if (actionGrid) actionGrid.style.display = 'none';
+
+            const timeLabel = record.time_in && record.time_in !== '00:00:00' ? `at ${record.time_in}` : '';
+            statusSpan.innerHTML = `<div style="color: #64748b;"><i class="fa fa-check-circle"></i> Registered as <strong>${record.status}</strong> ${timeLabel}</div>`;
+            return;
+        }
+
+        // 3. Handle Terminal Statuses (Excused, Holiday, Credited, etc.)
         const specialStatuses = ['EXCUSED', 'SUSPENDED', 'CANCELLED', 'HOLIDAY', 'ABSENT', 'ASYNCHRONOUS', 'CREDITED', 'DROPPED'];
         if (specialStatuses.includes(cls.my_status) || (record && specialStatuses.includes(record.status))) {
             const finalStatus = record?.status || cls.my_status;
@@ -779,7 +792,7 @@ async function updateCheckinUI(cls) {
             return; 
         }
     
-        // 3. Handle Self-Service (Credit/Drop)
+        // 4. Handle Self-Service (Credit/Drop)
         const selfServiceContainer = document.getElementById(`self-service-container-${safeCode}`);
         if (!record || record.status === 'not_recorded') {
             selfServiceContainer.innerHTML = ''; // Clear previous
@@ -816,7 +829,7 @@ async function updateCheckinUI(cls) {
             };
         }
 
-        // 4. Handle Check-In Countdown
+        // 5. Handle Check-In Countdown
         renderCheckinCountdown(cls, btn, statusSpan, config);
     } catch (err) {
         console.error("UI Update Failed:", err);
