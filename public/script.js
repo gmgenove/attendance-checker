@@ -304,7 +304,7 @@ function renderLiveDashboard(container, res, classCode) {
         </div>
         <div class="grid">
             ${res.stats.map(s => `
-                <div class="card" style="border-left: 4px solid ${s.status === 'PRESENT' ? '#10b981' : s.status === 'CREDITED' ? '#f59e0b' : '#ef4444'}; padding: 10px; margin: 0;">
+                <div class="card" style="border-left: 4px solid ${s.status === 'PRESENT' ? '#10b981' : s.status === 'ABSENT' ? '#ef4444' : '#f59e0b'}; padding: 10px; margin: 0;">
                     <div class="small muted">${s.status}</div>
                     <strong style="font-size: 1.2rem;">${s.count}</strong>
                 </div>
