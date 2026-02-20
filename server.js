@@ -1128,11 +1128,21 @@ async function appendExcuseLogPage(pdfDoc, title, excuses, font, bold, secondary
   // 2. RENDER CREDITED SUMMARY AT THE TOP
   if (creditedStudents.length > 0) {
     page.drawText("CREDITED / EXEMPTED STUDENTS:", { x: 30, y, size: 10, font: bold, color: rgb(0.1, 0.4, 0.7) });
-    y -= 15;
-    page.drawText(creditedStudents.join(', '), { x: 30, y, size: 9, font });
-    y -= 25;
-    page.drawLine({ start: { x: 40, y: y+5 }, end: { x: 970, y: y+5 }, thickness: 0.5, dashArray: [2, 2] });
-    y -= 20;
+    y -= 18; // Move down for the list
+	// Loop through names to list them vertically or in columns
+	// If you have MANY students, you can do two columns, but here is a clean vertical list:
+	for (const name of creditedStudents) {
+		page.drawText(`• ${name}`, { x: 45, y, size: 9, font });
+		y -= 12; // Standard line spacing
+
+		if (y < 50) {	// Check if we are running out of page space (Optional safety)
+			// Logic to add a new page if needed, or simply stop
+			break; 
+		}
+	}
+	y -= 15; // Extra padding after the list
+	page.drawLine({ start: { x: 40, y: y + 10 }, end: { x: 970, y: y + 10 }, thickness: 0.5, dashArray: [2, 2], color: rgb(0.7, 0.7, 0.7) });
+	y -= 20;
   }
 
   // 3. GROUP ACTIVE DATA BY DATE (Holiday Logic)
