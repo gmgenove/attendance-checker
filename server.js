@@ -974,19 +974,19 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
     let y = 575;
 
     // --- TOP INFO BLOCK ---
-    page.drawText(`STUDENT ATTENDANCE REPORT`, { x: 30, y, size: 16, font: bold });
+    page.drawText(`STUDENT ATTENDANCE REPORT`, { x: 20, y, size: 16, font: bold });
     const timestamp = getManilaNow().toFormat('yyyy-MM-dd HH:mm:ss');
     page.drawText(`Generated: ${timestamp}`, { x: 800, y, size: 9, font: bold, color: rgb(0.3, 0.3, 0.3) });
 
     y -= 25;
-    page.drawText(`Student ID:`, { x: 30, y, size: 10, font: bold });
-    page.drawText(`${sid}`, { x: 100, y, size: 10, font });
+    page.drawText(`Student ID:`, { x: 20, y, size: 10, font: bold });
+    page.drawText(`${sid}`, { x: 80, y, size: 10, font });
     page.drawText(`Semester:`, { x: 400, y, size: 10, font: bold });
     page.drawText(`${sem.name}`, { x: 480, y, size: 10, font });
 
     y -= 15;
-    page.drawText(`Student Name:`, { x: 30, y, size: 10, font: bold });
-    page.drawText(`${student.user_name}`, { x: 100, y, size: 10, font });
+    page.drawText(`Student Name:`, { x: 20, y, size: 10, font: bold });
+    page.drawText(`${student.user_name}`, { x: 80, y, size: 10, font });
     page.drawText(`Academic Year:`, { x: 400, y, size: 10, font: bold });
     page.drawText(`${sem.year}`, { x: 480, y, size: 10, font });
 
@@ -1018,9 +1018,9 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
         }
 
         // --- DRAW TABLE HEADER ---
-        page.drawText('No.', { x: 30, y, size: 8, font: bold });
-        page.drawText('Subject Code', { x: 50, y, size: 8, font: bold });
-        page.drawText('Subject Title', { x: 100, y, size: 8, font: bold });
+        page.drawText('No.', { x: 20, y, size: 8, font: bold });
+        page.drawText('Subject Code', { x: 40, y, size: 8, font: bold });
+        page.drawText('Subject Title', { x: 80, y, size: 8, font: bold });
 
         sortedDates.slice(0, 35).forEach((dStr, i) => {
             const xPos = startX + (i * colWidth);
@@ -1050,9 +1050,9 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
             y -= 15;
             const isCredited = sub.isCredited || Object.values(sub.records).includes('CR');
 
-            page.drawText(`${index + 1}`, { x: 40, y, size: 7, font });
-            page.drawText(sub.code, { x: 60, y, size: 7, font: bold });
-            page.drawText(sub.name.substring(0, 30), { x: 130, y, size: 7, font });
+            page.drawText(`${index + 1}`, { x: 20, y, size: 7, font });
+            page.drawText(sub.code, { x: 40, y, size: 7, font: bold });
+            page.drawText(sub.name, { x: 80, y, size: 7, font });
 
             if (isCredited) {
                 page.drawText('--- SUBJECT CREDITED / EXEMPTED ---', { 
@@ -1086,13 +1086,13 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
                 page.drawText(`${c.A || 0}`, { x: totalX + 55, y, size: 7, font });
                 page.drawText(`${perc}%`, { x: totalX + 75, y, size: 7, font: bold });
             }
-            page.drawLine({ start: { x: 30, y: y - 2 }, end: { x: 980, y: y - 2 }, thickness: 0.1, color: rgb(0.8, 0.8, 0.8) });
+            page.drawLine({ start: { x: 20, y: y - 2 }, end: { x: 980, y: y - 2 }, thickness: 0.1, color: rgb(0.8, 0.8, 0.8) });
         });
         y -= 30; // Gap between different schedule blocks
     }
 
     // --- FOOTER SECTION ---
-	page.drawText('LEGEND: P-Present | L-Late | A-Absent | E-Excuse | H-Holiday | C-Cancelled | S-Suspended | D-Dropped | CR-Credited | AS-Asynchronous | *-Make-up Session', { x: 30, y: 30, size: 6, font })
+	page.drawText('LEGEND: P-Present | L-Late | A-Absent | E-Excuse | H-Holiday | C-Cancelled | S-Suspended | D-Dropped | CR-Credited | AS-Asynchronous | *-Make-up Session', { x: 20, y: 30, size: 6, font })
     /*const footerY = 80;
     page.drawText('LEGEND: P-Present | L-Late | A-Absent | H-Holiday | S-Suspended | CR-Credited | *-Make-up', { x: 40, y: footerY + 30, size: 7, font });
     page.drawLine({ start: { x: 40, y: footerY }, end: { x: 250, y: footerY }, thickness: 0.5 });
