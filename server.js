@@ -867,6 +867,7 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
 	
   page.drawText(`Academic Year:`, { x: 600, y, size: 10, font: bold });
   page.drawText(`${semConfig.year}`, { x: 700, y, size: 10, font });
+  page.drawText('LEGEND: P-Present | L-Late | A-Absent | H-Holiday | S-Suspended | CR-Credited | *-Make-up', { x: 800, y, size: 7, font });
 
   y -= 15;
   page.drawText(`Professor:`, { x: 40, y, size: 10, font: bold });
@@ -962,8 +963,6 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
 	// Footer Legend
 	page.drawText(`* Denotes authorized Make-up Session`, { x: 40, y: 30, size: 6, font });
   });
-  const footerY = 80;
-  page.drawText('LEGEND: P-Present | L-Late | A-Absent | H-Holiday | S-Suspended | CR-Credited | *-Make-up', { x: 40, y: footerY + 30, size: 7, font });
 }
 
 async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, font, bold) {
@@ -980,6 +979,7 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
     page.drawText(`${sid}`, { x: 130, y, size: 10, font });
     page.drawText(`Semester:`, { x: 400, y, size: 10, font: bold });
     page.drawText(`${sem.name}`, { x: 480, y, size: 10, font });
+	page.drawText('LEGEND: P-Present | L-Late | A-Absent | H-Holiday | S-Suspended | CR-Credited | *-Make-up', { x: 800, y, size: 7, font });
 
     y -= 15;
     page.drawText(`Student Name:`, { x: 40, y, size: 10, font: bold });
@@ -1090,9 +1090,9 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
     }
 
     // --- FOOTER SECTION ---
-    const footerY = 80;
+    /*const footerY = 80;
     page.drawText('LEGEND: P-Present | L-Late | A-Absent | H-Holiday | S-Suspended | CR-Credited | *-Make-up', { x: 40, y: footerY + 30, size: 7, font });
-    /*page.drawLine({ start: { x: 40, y: footerY }, end: { x: 250, y: footerY }, thickness: 0.5 });
+    page.drawLine({ start: { x: 40, y: footerY }, end: { x: 250, y: footerY }, thickness: 0.5 });
     page.drawText('STUDENT SIGNATURE', { x: 85, y: footerY - 12, size: 8, font: bold });
     page.drawLine({ start: { x: 730, y: footerY }, end: { x: 980, y: footerY }, thickness: 0.5 });
     page.drawText('REGISTRAR / DEPARTMENT HEAD', { x: 760, y: footerY - 12, size: 8, font: bold });*/
