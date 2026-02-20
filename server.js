@@ -856,16 +856,16 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
   let y = 575;
 
   // --- TOP INFO BLOCK (Matches Excel Rows 1-6) ---
-  page.drawText(`Class Code:`, { x: 40, y, size: 10, font: bold });
-  page.drawText(`${info.class_code}`, { x: 120, y, size: 10, font });
+  page.drawText(`Class Code:`, { x: 30, y, size: 10, font: bold });
+  page.drawText(`${info.class_code}`, { x: 100, y, size: 10, font });
   
   // SYSTEM GENERATED TIMESTAMP (Top Right)
   const timestamp = getManilaNow().toFormat('yyyy-MM-dd HH:mm:ss');
   page.drawText(`Generated: ${timestamp}`, { x: 800, y, size: 9, font: bold, color: rgb(0.3, 0.3, 0.3) });
 
   y -= 15;
-  page.drawText(`Class Name:`, { x: 40, y, size: 10, font: bold });
-  page.drawText(`${info.class_name}`, { x: 120, y, size: 10, font });
+  page.drawText(`Class Name:`, { x: 30, y, size: 10, font: bold });
+  page.drawText(`${info.class_name}`, { x: 100, y, size: 10, font });
   
   // SEMESTER INFO
   page.drawText(`Semester:`, { x: 400, y, size: 10, font: bold });
@@ -875,16 +875,16 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
   page.drawText(`${semConfig.year}`, { x: 700, y, size: 10, font });
 
   y -= 15;
-  page.drawText(`Professor:`, { x: 40, y, size: 10, font: bold });
-  page.drawText(`${info.professor_name || 'N/A'}`, { x: 120, y, size: 10, font });
+  page.drawText(`Professor:`, { x: 30, y, size: 10, font: bold });
+  page.drawText(`${info.professor_name || 'N/A'}`, { x: 100, y, size: 10, font });
   
   y -= 15;
-  page.drawText(`Schedule:`, { x: 40, y, size: 10, font: bold });
-  page.drawText(`${info.days.join('/')} | ${DateTime.fromFormat(info.start_time, 'HH:mm:ss').toFormat('hh:mm a')}-${DateTime.fromFormat(info.end_time, 'HH:mm:ss').toFormat('hh:mm a')}`, { x: 120, y, size: 10, font });
+  page.drawText(`Schedule:`, { x: 30, y, size: 10, font: bold });
+  page.drawText(`${info.days.join('/')} | ${DateTime.fromFormat(info.start_time, 'HH:mm:ss').toFormat('hh:mm a')}-${DateTime.fromFormat(info.end_time, 'HH:mm:ss').toFormat('hh:mm a')}`, { x: 100, y, size: 10, font });
   
   y -= 15;
-  page.drawText(`Section:`, { x: 40, y, size: 10, font: bold });
-  page.drawText(`BPAOUMN 1-B`, { x: 120, y, size: 10, font });
+  page.drawText(`Section:`, { x: 30, y, size: 10, font: bold });
+  page.drawText(`BPAOUMN 1-B`, { x: 100, y, size: 10, font });
 
   y -= 30; // Space before table
 
@@ -892,8 +892,8 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
   let startX = 280;
   const colWidth = 18;
   
-  page.drawText('Student ID', { x: 40, y, size: 8, font: bold });
-  page.drawText('Student Name', { x: 120, y, size: 8, font: bold });
+  page.drawText('Student ID', { x: 30, y, size: 8, font: bold });
+  page.drawText('Student Name', { x: 100, y, size: 8, font: bold });
 
   const makeupDateSet = await getMakeupDateSet(info.class_code);
   dates.slice(0, 35).forEach((d, i) => {
@@ -911,7 +911,7 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
   page.drawText('%', { x: totalX + 60, y, size: 8, font: bold });
 
   y -= 20;
-  page.drawLine({ start: { x: 40, y }, end: { x: 970, y }, thickness: 0.5 });
+  page.drawLine({ start: { x: 30, y }, end: { x: 990, y }, thickness: 0.5 });
   
   // --- STUDENT ROWS ---
   Object.keys(roster).forEach((sid) => {
@@ -919,7 +919,7 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
     if (y < 40) return; // Add page logic if needed for very large classes
 
     const student = roster[sid];
-    page.drawText(sid, { x: 40, y, size: 7, font });
+    page.drawText(sid, { x: 30, y, size: 7, font });
     page.drawText(student.name.substring(0, 25), { x: 100, y, size: 7, font });
 
     // Draw Status Grid
@@ -963,9 +963,9 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
 	page.drawText(`${perc}%`, { x: totalX + 60, y, size: 7, font: bold });
     
     // Horizontal row line
-    page.drawLine({ start: { x: 40, y: y - 2 }, end: { x: 970, y: y - 2 }, thickness: 0.1, color: rgb(0.8, 0.8, 0.8) });
+    page.drawLine({ start: { x: 30, y: y - 2 }, end: { x: 990, y: y - 2 }, thickness: 0.1, color: rgb(0.8, 0.8, 0.8) });
 	// Footer Legend
-    page.drawText('LEGEND: P-Present | L-Late | A-Absent | E-Excuse | H-Holiday | C-Cancelled | S-Suspended | D-Dropped | CR-Credited | AS-Asynchronous | *-Make-up Session', { x: 40, y: 30, size: 6, font })
+    page.drawText('LEGEND: P-Present | L-Late | A-Absent | E-Excuse | H-Holiday | C-Cancelled | S-Suspended | D-Dropped | CR-Credited | AS-Asynchronous | *-Make-up Session', { x: 30, y: 30, size: 6, font })
   });
 }
 
@@ -974,19 +974,19 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
     let y = 575;
 
     // --- TOP INFO BLOCK ---
-    page.drawText(`STUDENT ATTENDANCE REPORT`, { x: 40, y, size: 16, font: bold });
+    page.drawText(`STUDENT ATTENDANCE REPORT`, { x: 30, y, size: 16, font: bold });
     const timestamp = getManilaNow().toFormat('yyyy-MM-dd HH:mm:ss');
     page.drawText(`Generated: ${timestamp}`, { x: 800, y, size: 9, font: bold, color: rgb(0.3, 0.3, 0.3) });
 
     y -= 25;
-    page.drawText(`Student ID:`, { x: 40, y, size: 10, font: bold });
-    page.drawText(`${sid}`, { x: 130, y, size: 10, font });
+    page.drawText(`Student ID:`, { x: 30, y, size: 10, font: bold });
+    page.drawText(`${sid}`, { x: 100, y, size: 10, font });
     page.drawText(`Semester:`, { x: 400, y, size: 10, font: bold });
     page.drawText(`${sem.name}`, { x: 480, y, size: 10, font });
 
     y -= 15;
-    page.drawText(`Student Name:`, { x: 40, y, size: 10, font: bold });
-    page.drawText(`${student.user_name}`, { x: 130, y, size: 10, font });
+    page.drawText(`Student Name:`, { x: 30, y, size: 10, font: bold });
+    page.drawText(`${student.user_name}`, { x: 100, y, size: 10, font });
     page.drawText(`Academic Year:`, { x: 400, y, size: 10, font: bold });
     page.drawText(`${sem.year}`, { x: 480, y, size: 10, font });
 
@@ -1018,9 +1018,9 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
         }
 
         // --- DRAW TABLE HEADER ---
-        page.drawText('No.', { x: 40, y, size: 8, font: bold });
-        page.drawText('Subject Code', { x: 60, y, size: 8, font: bold });
-        page.drawText('Subject Title', { x: 130, y, size: 8, font: bold });
+        page.drawText('No.', { x: 30, y, size: 8, font: bold });
+        page.drawText('Subject Code', { x: 50, y, size: 8, font: bold });
+        page.drawText('Subject Title', { x: 100, y, size: 8, font: bold });
 
         sortedDates.slice(0, 35).forEach((dStr, i) => {
             const xPos = startX + (i * colWidth);
@@ -1043,7 +1043,7 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
         page.drawText('A', { x: totalX + 55, y, size: 7, font: bold });
         page.drawText('%', { x: totalX + 75, y, size: 7, font: bold });
 		y -= 55; // Space for the rotated dates
-        page.drawLine({ start: { x: 40, y: y + 5 }, end: { x: 980, y: y + 5 }, thickness: 1 });
+        page.drawLine({ start: { x: 30, y: y + 5 }, end: { x: 980, y: y + 5 }, thickness: 1 });
 
         // 3. DRAW SUBJECT ROWS
         groupMembers.forEach((sub, index) => {
@@ -1086,13 +1086,13 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
                 page.drawText(`${c.A || 0}`, { x: totalX + 55, y, size: 7, font });
                 page.drawText(`${perc}%`, { x: totalX + 75, y, size: 7, font: bold });
             }
-            page.drawLine({ start: { x: 40, y: y - 2 }, end: { x: 980, y: y - 2 }, thickness: 0.1, color: rgb(0.8, 0.8, 0.8) });
+            page.drawLine({ start: { x: 30, y: y - 2 }, end: { x: 980, y: y - 2 }, thickness: 0.1, color: rgb(0.8, 0.8, 0.8) });
         });
         y -= 30; // Gap between different schedule blocks
     }
 
     // --- FOOTER SECTION ---
-	page.drawText('LEGEND: P-Present | L-Late | A-Absent | E-Excuse | H-Holiday | C-Cancelled | S-Suspended | D-Dropped | CR-Credited | AS-Asynchronous | *-Make-up Session', { x: 40, y: 30, size: 6, font })
+	page.drawText('LEGEND: P-Present | L-Late | A-Absent | E-Excuse | H-Holiday | C-Cancelled | S-Suspended | D-Dropped | CR-Credited | AS-Asynchronous | *-Make-up Session', { x: 30, y: 30, size: 6, font })
     /*const footerY = 80;
     page.drawText('LEGEND: P-Present | L-Late | A-Absent | H-Holiday | S-Suspended | CR-Credited | *-Make-up', { x: 40, y: footerY + 30, size: 7, font });
     page.drawLine({ start: { x: 40, y: footerY }, end: { x: 250, y: footerY }, thickness: 0.5 });
@@ -1109,11 +1109,11 @@ async function appendExcuseLogPage(pdfDoc, title, excuses, font, bold, secondary
 
   // Header Helper (for pagination)
   const drawHeaders = (currentPage) => {
-    currentPage.drawText(title, { x: 40, y: 550, size: 16, font: bold });
-    currentPage.drawText('DATE', { x: 40, y: 520, size: 10, font: bold });
+    currentPage.drawText(title, { x: 30, y: 550, size: 16, font: bold });
+    currentPage.drawText('DATE', { x: 30, y: 520, size: 10, font: bold });
     currentPage.drawText(secondaryColName === 'student_name' ? 'STUDENT NAME' : 'SUBJECT/CLASS', { x: 150, y: 520, size: 10, font: bold });
     currentPage.drawText('REASON / STATUS', { x: 450, y: 520, size: 10, font: bold });
-    currentPage.drawLine({ start: { x: 40, y: 510 }, end: { x: 970, y: 510 }, thickness: 1 });
+    currentPage.drawLine({ start: { x: 30, y: 510 }, end: { x: 970, y: 510 }, thickness: 1 });
     return 490; // Returns new Y position
   };
   y = drawHeaders(page);
@@ -1127,9 +1127,9 @@ async function appendExcuseLogPage(pdfDoc, title, excuses, font, bold, secondary
 
   // 2. RENDER CREDITED SUMMARY AT THE TOP
   if (creditedStudents.length > 0) {
-    page.drawText("CREDITED / EXEMPTED STUDENTS:", { x: 40, y, size: 10, font: bold, color: rgb(0.1, 0.4, 0.7) });
+    page.drawText("CREDITED / EXEMPTED STUDENTS:", { x: 30, y, size: 10, font: bold, color: rgb(0.1, 0.4, 0.7) });
     y -= 15;
-    page.drawText(creditedStudents.join(', '), { x: 40, y, size: 9, font });
+    page.drawText(creditedStudents.join(', '), { x: 30, y, size: 9, font });
     y -= 25;
     page.drawLine({ start: { x: 40, y: y+5 }, end: { x: 970, y: y+5 }, thickness: 0.5, dashArray: [2, 2] });
     y -= 20;
@@ -1151,21 +1151,21 @@ async function appendExcuseLogPage(pdfDoc, title, excuses, font, bold, secondary
     if (y < 60) { page = pdfDoc.addPage([1008, 612]); y = drawHeaders(page); }
 
     if (isClassWide) {	// RENDER SINGLE CLASS-WIDE ROW
-      page.drawText(dateStr, { x: 40, y, size: 9, font: bold });
+      page.drawText(dateStr, { x: 30, y, size: 9, font: bold });
       page.drawText(`CLASS-WIDE: ${first.attendance_status}`, { x: 150, y, size: 9, font: bold });
       page.drawText(first.reason || "Scheduled Event", { x: 450, y, size: 9, font });
       y -= 20;
-      page.drawLine({ start: { x: 40, y: y+5 }, end: { x: 970, y: y+5 }, thickness: 0.1 });
+      page.drawLine({ start: { x: 30, y: y+5 }, end: { x: 970, y: y+5 }, thickness: 0.1 });
 	  y -= 15;
     } else {	// RENDER INDIVIDUAL STUDENT ROWS
 	  dayRows.forEach(e => {
 		if (e.attendance_status === 'EXCUSED') {
 			if (y < 50) { page = pdfDoc.addPage([1008, 612]); y = drawHeaders(page); }
-			page.drawText(dateStr, { x: 40, y, size: 9, font });
+			page.drawText(dateStr, { x: 30, y, size: 9, font });
 			page.drawText((e[secondaryColName] || "N/A").substring(0, 45), { x: 150, y, size: 9, font });
 			page.drawText((e.reason || e.attendance_status).substring(0, 100), { x: 450, y, size: 9, font });
 			y -= 15;
-			page.drawLine({ start: { x: 40, y: y+10 }, end: { x: 970, y: y+10 }, thickness: 0.1 });
+			page.drawLine({ start: { x: 30, y: y+10 }, end: { x: 970, y: y+10 }, thickness: 0.1 });
 		}
 	  });
     }
