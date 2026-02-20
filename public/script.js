@@ -4,6 +4,7 @@ let isSignup = false;
 let currentScheduleData = [];
 let dropdownCache = { data: null, fetchedAt: 0 };
 const DROPDOWN_CACHE_TTL_MS = 5 * 60 * 1000;
+const { DateTime } = luxon;
 
 // API Helper
 async function api(action, payload = {}) {
