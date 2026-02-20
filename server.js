@@ -867,7 +867,6 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
 	
   page.drawText(`Academic Year:`, { x: 600, y, size: 10, font: bold });
   page.drawText(`${semConfig.year}`, { x: 700, y, size: 10, font });
-  page.drawText('LEGEND: P-Present | L-Late | A-Absent | H-Holiday | S-Suspended | CR-Credited | *-Make-up', { x: 800, y, size: 7, font });
 
   y -= 15;
   page.drawText(`Professor:`, { x: 40, y, size: 10, font: bold });
@@ -961,7 +960,7 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
     // Horizontal row line
     page.drawLine({ start: { x: 40, y: y - 2 }, end: { x: 970, y: y - 2 }, thickness: 0.1, color: rgb(0.8, 0.8, 0.8) });
 	// Footer Legend
-	page.drawText(`* Denotes authorized Make-up Session`, { x: 40, y: 30, size: 6, font });
+    page.drawText('LEGEND: P-Present | L-Late | A-Absent | H-Holiday | S-Suspended | CR-Credited | *-Make-up Session', { x: 40, y: 30 size: 6, font })
   });
 }
 
@@ -979,7 +978,6 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
     page.drawText(`${sid}`, { x: 130, y, size: 10, font });
     page.drawText(`Semester:`, { x: 400, y, size: 10, font: bold });
     page.drawText(`${sem.name}`, { x: 480, y, size: 10, font });
-	page.drawText('LEGEND: P-Present | L-Late | A-Absent | H-Holiday | S-Suspended | CR-Credited | *-Make-up', { x: 800, y, size: 7, font });
 
     y -= 15;
     page.drawText(`Student Name:`, { x: 40, y, size: 10, font: bold });
@@ -1090,6 +1088,7 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
     }
 
     // --- FOOTER SECTION ---
+	page.drawText('LEGEND: P-Present | L-Late | A-Absent | H-Holiday | S-Suspended | CR-Credited | *-Make-up Session', { x: 40, y: 30 size: 6, font })
     /*const footerY = 80;
     page.drawText('LEGEND: P-Present | L-Late | A-Absent | H-Holiday | S-Suspended | CR-Credited | *-Make-up', { x: 40, y: footerY + 30, size: 7, font });
     page.drawLine({ start: { x: 40, y: footerY }, end: { x: 250, y: footerY }, thickness: 0.5 });
