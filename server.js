@@ -1039,10 +1039,10 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
 
         const totalX = startX + (Math.min(sortedDates.length, 35) * colWidth) + 5;
         page.drawText('P', { x: totalX, y, size: 7, font: bold });
-        page.drawText('L', { x: totalX + 10, y, size: 7, font: bold });
-        page.drawText('A', { x: totalX + 25, y, size: 7, font: bold });
-        page.drawText('%', { x: totalX + 40, y, size: 7, font: bold });
-		y -= 45; // Space for the rotated dates
+        page.drawText('L', { x: totalX + 15, y, size: 7, font: bold });
+        page.drawText('A', { x: totalX + 30, y, size: 7, font: bold });
+        page.drawText('%', { x: totalX + 45, y, size: 7, font: bold });
+		y -= 25; // Space for the rotated dates
         page.drawLine({ start: { x: 5, y: y + 5 }, end: { x: 990, y: y + 5 }, thickness: 1 });
 
         // 3. DRAW SUBJECT ROWS
@@ -1058,7 +1058,7 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
                 page.drawText('--- SUBJECT CREDITED / EXEMPTED ---', { 
                     x: startX, y, size: 7, font: bold, color: rgb(0.1, 0.4, 0.7) 
                 });
-                page.drawText('100%', { x: totalX + 75, y, size: 7, font: bold });
+                page.drawText('100%', { x: totalX + 45, y, size: 7, font: bold });
             } else {
                 sortedDates.slice(0, 35).forEach((dStr, i) => {
                     const status = sub.records[dStr] || '';
@@ -1082,9 +1082,9 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
                 const perc = totalPossible > 0 ? Math.round((presentTotal / totalPossible) * 100) : 0;
 
                 page.drawText(`${c.P || 0}`, { x: totalX, y, size: 7, font });
-                page.drawText(`${c.L || 0}`, { x: totalX + 10, y, size: 7, font });
-                page.drawText(`${c.A || 0}`, { x: totalX + 25, y, size: 7, font });
-                page.drawText(`${perc}%`, { x: totalX + 40, y, size: 7, font: bold });
+                page.drawText(`${c.L || 0}`, { x: totalX + 15, y, size: 7, font });
+                page.drawText(`${c.A || 0}`, { x: totalX + 30, y, size: 7, font });
+                page.drawText(`${perc}%`, { x: totalX + 45, y, size: 7, font: bold });
             }
             page.drawLine({ start: { x: 20, y: y - 2 }, end: { x: 990, y: y - 2 }, thickness: 0.1, color: rgb(0.8, 0.8, 0.8) });
         });
