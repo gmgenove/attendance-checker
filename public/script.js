@@ -267,8 +267,7 @@ async function loadProfessorDashboard() {
         return;
     }
     // 2. Automatically pull the code from the current schedule. Since there are no simultaneous classes, index 0 is the current target
-    const activeClass = currentScheduleData?.[0];
-    classCode = activeClass?.class_code;
+    classCode = currentScheduleData?.[0]?.class_code;
 
     const res = await api('prof_dashboard', { class_code: classCode });
     if (res.ok) {
