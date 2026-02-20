@@ -616,7 +616,8 @@ function showModal(id) {
     if (modal) {
         modal.style.display = 'block';
         // Optional: Disable body scroll when modal is open
-        document.body.style.overflow = 'hidden'; 
+        document.body.style.overflow = 'hidden';
+        
     }
 }
 
@@ -626,8 +627,33 @@ function hideModal(id) {
     if (modal) {
         modal.style.display = 'none';
         // Re-enable body scroll
-        document.body.style.overflow = 'auto'; 
+        document.body.style.overflow = 'auto';
+        clearModalFields(id); // Wipe it so it's clean for the next person
     }
+}
+
+function clearModalFields(modalContainerId) {
+    const container = document.getElementById(modalContainerId);
+    if (!container) return;
+
+    // Clear all standard inputs
+    container.querySelectorAll('input').forEach(input => {
+        if (input.type === 'checkbox' || input.type === 'radio') {
+            input.checked = false;
+        } else {
+            input.value = '';
+        }
+    });
+
+    // Reset all select dropdowns to the first option
+    container.querySelectorAll('select').forEach(select => {
+        select.selectedIndex = 0;
+    });
+
+    // Clear any text status spans or textareas
+    container.querySelectorAll('textarea').forEach(tx => tx.value = '');
+    // If you use spans for labels/status, clear them too
+    container.querySelectorAll('.modal-status-text').forEach(span => span.textContent = '');
 }
 
 // Keep the outside-click listener as a backup
