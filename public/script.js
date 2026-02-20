@@ -630,6 +630,7 @@ function hideModal(id) {
 }
 
 function clearModalFields(modalContainerId) {
+    document.getElementById('reportOutput').innerHTML = '';    // clear the download link
     const container = document.getElementById(modalContainerId);
     if (!container) return;
 
