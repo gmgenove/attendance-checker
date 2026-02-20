@@ -4,7 +4,6 @@ let isSignup = false;
 let currentScheduleData = [];
 let dropdownCache = { data: null, fetchedAt: 0 };
 const DROPDOWN_CACHE_TTL_MS = 5 * 60 * 1000;
-const { DateTime } = luxon;
 
 // API Helper
 async function api(action, payload = {}) {
@@ -797,23 +796,35 @@ async function updateCheckinUI(cls) {
 
 // Helper for Countdown to keep main function clean
 function renderCheckinCountdown(cls, btn, statusSpan, config) {
+    const { DateTime } = luxon;
     const safeCode = cls.class_code.replace(/\s+/g, '-');
+    const intervalKey = `timer_${safeCode.replace(/-/g, '_')}`;
+
     const updateInTimer = () => {
-        const now = new Date();
-        const startParts = parseTimeString(cls.start_time);
-        const start = new Date();
-        start.setHours(startParts.hours, startParts.minutes, 0, 0);
+        // 1. Get current time in Manila
+        const now = DateTime.now().setZone('Asia/Manila');
+        
+        // 2. Parse the class start time (e.g., "09:00:00")
+        const startTime = DateTime.fromFormat(cls.start_time, 'HH:mm:ss').set({
+            year: now.year,
+            month: now.month,
+            day: now.day
+        });
 
-        const enableFrom = new Date(start.getTime() - config.checkin_window_minutes * 60000);
-        const absentThreshold = new Date(start.getTime() + config.absent_window_minutes * 60000);
+        // 3. Define the Windows
+        const enableFrom = startTime.minus({ minutes: config.checkin_window_minutes });
+        const absentThreshold = startTime.plus({ minutes: config.absent_window_minutes });
 
-        if (now >= enableFrom && now <= absentThreshold) {    // --- WINDOW IS OPEN ---
+        // 4. Calculate diffs for display
+        const minsUntilOpen = Math.ceil(enableFrom.diff(now, 'minutes').minutes);
+
+        // --- SCENARIO 1: WINDOW IS OPEN ---
+        if (now >= enableFrom && now <= absentThreshold) {
             btn.disabled = false;
             btn.style.display = 'block';
             statusSpan.textContent = "Check-in window is OPEN";
             statusSpan.style.color = "#10b981";
 
-            // Attach the click handler here
             btn.onclick = async () => {
                 btn.disabled = true;
                 statusSpan.textContent = 'Verifying...';
@@ -827,45 +838,48 @@ function renderCheckinCountdown(cls, btn, statusSpan, config) {
                     statusSpan.textContent = `Status: ${checkRes.status}`;
                     statusSpan.style.color = "#10b981";
                     btn.style.display = 'none';
-                    
                     alert(`Confirmed! You are marked as ${checkRes.status}.`);
                     
-                    // Immediately transition the UI to the Check-out state
                     updateCheckinUI(cls); 
-                    
-                    // Clear the interval timer because we're done with check-in
-                    if (window[`timer_${cls.class_code.replace(/\s+/g, '_')}`]) {
-                        clearInterval(window[`timer_${cls.class_code.replace(/\s+/g, '_')}`]);
-                    }
+                    if (window[intervalKey]) clearInterval(window[intervalKey]);
                 } else {
                     alert(checkRes.error);
                     btn.disabled = false;
-                    updateInTimer(); // Reset the UI state
+                    updateInTimer(); 
                 }
             };
-        } else if (now > absentThreshold) {    // --- ABSENT ---
+        } 
+        // --- SCENARIO 2: ABSENT (WINDOW CLOSED) ---
+        else if (now > absentThreshold) {
             btn.disabled = true;
+            btn.style.display = 'none'; // Optional: hide button if they missed it
             statusSpan.textContent = "Check-in closed (Absent)";
             statusSpan.style.color = "#ef4444";
-        } else {    // --- NOT YET OPEN ---
-            // Calculate the actual opening time
-            const startTime = DateTime.fromFormat(cls.start_time, 'HH:mm:ss');
-            const opensAtTime = startTime.minus({ minutes: config.checkin_window_minutes });
-            const opensAtFormatted = opensAtTime.toFormat('h:mm a');  // Format for display (e.g., 8:45 AM)
-            
-            const mins = Math.ceil((enableFrom - now) / 60000);
+            if (window[intervalKey]) clearInterval(window[intervalKey]);
+        } 
+        // --- SCENARIO 3: NOT YET OPEN ---
+        else {
             btn.disabled = true;
-            statusSpan.textContent = mins <= config.checkin_window_minutes 
-                ? `Opens in ${mins} min(s)` 
+            btn.style.display = 'block'; // Keep button visible but disabled
+
+            // Formatting the specific opening time (e.g., 8:45 AM)
+            const opensAtFormatted = enableFrom.toFormat('h:mm a');
+            
+            // If it's very close (within the window duration), show countdown
+            // Otherwise show the "Opens at" time
+            statusSpan.textContent = minsUntilOpen <= config.checkin_window_minutes 
+                ? `Opens in ${minsUntilOpen} min(s)` 
                 : `Opens at ${opensAtFormatted}`;
+            
+            statusSpan.style.color = "#6b7280"; // Gray color for "Locked" state
         }
     };
 
-    // Store timer in a dynamic global variable to prevent memory leaks or overlaps
-    const intervalKey = `timer_${safeCode}`;    // Use a unique ID for the interval so classes don't fight over the same timer
+    // Clean up existing timers for this class
     if (window[intervalKey]) clearInterval(window[intervalKey]);
-    updateInTimer();     // Execute IMMEDIATELY
-    window[intervalKey] = setInterval(updateInTimer, 30000);    // Then set the interval
+    
+    updateInTimer(); // Run immediately
+    window[intervalKey] = setInterval(updateInTimer, 30000); // Update every 30 seconds
 }
 
 // Optimized Report Handler
