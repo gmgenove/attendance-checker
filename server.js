@@ -856,16 +856,16 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
   let y = 575;
 
   // --- TOP INFO BLOCK (Matches Excel Rows 1-6) ---
-  page.drawText(`Class Code:`, { x: 30, y, size: 10, font: bold });
-  page.drawText(`${info.class_code}`, { x: 100, y, size: 10, font });
+  page.drawText(`Class Code:`, { x: 20, y, size: 10, font: bold });
+  page.drawText(`${info.class_code}`, { x: 80, y, size: 10, font });
   
   // SYSTEM GENERATED TIMESTAMP (Top Right)
   const timestamp = getManilaNow().toFormat('yyyy-MM-dd HH:mm:ss');
   page.drawText(`Generated: ${timestamp}`, { x: 800, y, size: 9, font: bold, color: rgb(0.3, 0.3, 0.3) });
 
   y -= 15;
-  page.drawText(`Class Name:`, { x: 30, y, size: 10, font: bold });
-  page.drawText(`${info.class_name}`, { x: 100, y, size: 10, font });
+  page.drawText(`Class Name:`, { x: 20, y, size: 10, font: bold });
+  page.drawText(`${info.class_name}`, { x: 80, y, size: 10, font });
   
   // SEMESTER INFO
   page.drawText(`Semester:`, { x: 400, y, size: 10, font: bold });
@@ -875,16 +875,16 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
   page.drawText(`${semConfig.year}`, { x: 700, y, size: 10, font });
 
   y -= 15;
-  page.drawText(`Professor:`, { x: 30, y, size: 10, font: bold });
-  page.drawText(`${info.professor_name || 'N/A'}`, { x: 100, y, size: 10, font });
+  page.drawText(`Professor:`, { x: 20, y, size: 10, font: bold });
+  page.drawText(`${info.professor_name || 'N/A'}`, { x: 80, y, size: 10, font });
   
   y -= 15;
-  page.drawText(`Schedule:`, { x: 30, y, size: 10, font: bold });
-  page.drawText(`${info.days.join('/')} | ${DateTime.fromFormat(info.start_time, 'HH:mm:ss').toFormat('hh:mm a')}-${DateTime.fromFormat(info.end_time, 'HH:mm:ss').toFormat('hh:mm a')}`, { x: 100, y, size: 10, font });
+  page.drawText(`Schedule:`, { x: 20, y, size: 10, font: bold });
+  page.drawText(`${info.days.join('/')} | ${DateTime.fromFormat(info.start_time, 'HH:mm:ss').toFormat('hh:mm a')}-${DateTime.fromFormat(info.end_time, 'HH:mm:ss').toFormat('hh:mm a')}`, { x: 80, y, size: 10, font });
   
   y -= 15;
-  page.drawText(`Section:`, { x: 30, y, size: 10, font: bold });
-  page.drawText(`BPAOUMN 1-B`, { x: 100, y, size: 10, font });
+  page.drawText(`Section:`, { x: 20, y, size: 10, font: bold });
+  page.drawText(`BPAOUMN 1-B`, { x: 80, y, size: 10, font });
 
   y -= 30; // Space before table
 
@@ -892,8 +892,8 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
   let startX = 280;
   const colWidth = 18;
   
-  page.drawText('Student ID', { x: 30, y, size: 8, font: bold });
-  page.drawText('Student Name', { x: 100, y, size: 8, font: bold });
+  page.drawText('Student ID', { x: 20, y, size: 8, font: bold });
+  page.drawText('Student Name', { x: 80, y, size: 8, font: bold });
 
   const makeupDateSet = await getMakeupDateSet(info.class_code);
   dates.slice(0, 35).forEach((d, i) => {
@@ -911,7 +911,7 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
   page.drawText('%', { x: totalX + 60, y, size: 8, font: bold });
 
   y -= 20;
-  page.drawLine({ start: { x: 30, y }, end: { x: 990, y }, thickness: 0.5 });
+  page.drawLine({ start: { x: 20, y }, end: { x: 990, y }, thickness: 0.5 });
   
   // --- STUDENT ROWS ---
   Object.keys(roster).forEach((sid) => {
@@ -919,8 +919,8 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
     if (y < 40) return; // Add page logic if needed for very large classes
 
     const student = roster[sid];
-    page.drawText(sid, { x: 30, y, size: 7, font });
-    page.drawText(student.name.substring(0, 25), { x: 100, y, size: 7, font });
+    page.drawText(sid, { x: 20, y, size: 7, font });
+    page.drawText(student.name, { x: 80, y, size: 7, font });
 
     // Draw Status Grid
     dates.slice(0, 35).forEach((d, i) => {
@@ -934,9 +934,9 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
 	  if (status === 'A') statusColor = rgb(0.8, 0, 0);       // Red
 	  if (status === 'H') statusColor = rgb(0.2, 0.5, 0.8);   // Blue (Holiday)
 	  if (status === 'S') statusColor = rgb(0.5, 0.2, 0.7);   // Purple (Suspension)
-	  if (status === 'C') statusColor = rgb(0.4, 0.4, 0.4); 	// Dark Grey (Cancelled)
+	  if (status === 'C') statusColor = rgb(0.4, 0.4, 0.4);	  // Dark Grey (Cancelled)
 	  if (status === 'D') statusColor = rgb(0.5, 0.5, 0.5);   // Gray (Dropped)
-	  if (status === 'CR') statusColor = rgb(0.1, 0.4, 0.7); // Credited
+	  if (status === 'CR') statusColor = rgb(0.1, 0.4, 0.7);  // Credited
 
 	  page.drawText(status, { 
 	    x: startX + (i * colWidth), 
@@ -963,9 +963,9 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
 	page.drawText(`${perc}%`, { x: totalX + 60, y, size: 7, font: bold });
     
     // Horizontal row line
-    page.drawLine({ start: { x: 30, y: y - 2 }, end: { x: 990, y: y - 2 }, thickness: 0.1, color: rgb(0.8, 0.8, 0.8) });
+    page.drawLine({ start: { x: 20, y: y - 2 }, end: { x: 990, y: y - 2 }, thickness: 0.1, color: rgb(0.8, 0.8, 0.8) });
 	// Footer Legend
-    page.drawText('LEGEND: P-Present | L-Late | A-Absent | E-Excuse | H-Holiday | C-Cancelled | S-Suspended | D-Dropped | CR-Credited | AS-Asynchronous | *-Make-up Session', { x: 30, y: 30, size: 6, font })
+    page.drawText('LEGEND: P-Present | L-Late | A-Absent | E-Excuse | H-Holiday | C-Cancelled | S-Suspended | D-Dropped | CR-Credited | AS-Asynchronous | *-Make-up Session', { x: 20, y: 30, size: 6, font })
   });
 }
 
