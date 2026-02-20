@@ -967,7 +967,6 @@ async function loadAttendanceSummary() {
                         <th style="padding: 8px; border: 1px solid #e2e8f0; color: #10b981;">P</th>
                         <th style="padding: 8px; border: 1px solid #e2e8f0; color: #f59e0b;">L</th>
                         <th style="padding: 8px; border: 1px solid #e2e8f0; color: #ef4444;">A</th>
-                        <th style="padding: 8px; border: 1px solid #e2e8f0; color: #64748b;">INC</th>
                     </tr>
                 </thead>
                 <tbody>
