@@ -1277,7 +1277,7 @@ const initDb = async () => {
 	    end_date DATE NOT NULL,
 	    semester TEXT,
 	    academic_year TEXT, 
-	    cycle_status TEXT NOT NULL DEFAULT 'Asynchronous'
+	    cycle_status TEXT NOT NULL DEFAULT 'ASYNCHRONOUS'
 	);
        
     CREATE TABLE IF NOT EXISTS config (
