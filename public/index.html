@@ -194,7 +194,7 @@
                                     <option value="">Loading Classes...</option>
                                 </select>
                                 <input type="date" id="suspendDate" required />
-                                <input type="text" id="suspendReason" placeholder="Reason (e.g., Professor on official business or Typhoon Karding)" style="width: 80%;" />
+                                <input type="text" id="suspendReason" placeholder="Reason (e.g., Professor on official business or Typhoon Karding)" style="width: 80%;" autocomplete="off"/>
                                 <button onclick="handleStatusChange()" style="background:#7c3aed; color:white; border:none; margin-top:5px;">
                                     Update Class Status
                                 </button>
@@ -269,7 +269,7 @@
                             <hr style="margin-bottom: 20px; border: 0; border-top: 1px solid #eee;">    
                             
                             <label class="small muted">Cycle Name</label>
-                            <input type="text" id="cycleName" placeholder="e.g., Cycle 1">
+                            <input type="text" id="cycleName" placeholder="e.g., Cycle 1" autocomplete="off">
                             
                             <div class="grid">
                                 <div>
@@ -292,8 +292,8 @@
                                 <h3><i class="fa fa-plus-circle"></i> Create New Schedule</h3>
                                 <hr>
                                 <div class="grid">
-                                    <input type="text" id="schedCode" placeholder="Class Code (e.g., GEED 004)">
-                                    <input type="text" id="schedTitle" placeholder="Course Title">
+                                    <input type="text" id="schedCode" placeholder="Class Code (e.g., GEED 004)" autocomplete="off">
+                                    <input type="text" id="schedTitle" placeholder="Course Title" autocomplete="off">
                                 </div>
                                 
                                 <div class="grid" style="margin-top:10px;">
@@ -341,7 +341,7 @@
                             <h4><i class="fa fa-line-chart"></i> Live Attendance</h4>
     
                             <div id="searchWrapper" style="display: none; margin-bottom: 15px; position: relative;">
-                                <input type="text" id="studentSearch" placeholder="Search student name..." style="width: 100%; box-sizing: border-box; padding-left: 35px;" />
+                                <input type="text" id="studentSearch" placeholder="Search student name..." style="width: 100%; box-sizing: border-box; padding-left: 35px;" autocomplete="off"/>
                                 <span class="fa fa-search" style="position: absolute; left: 12px; top: 13px; color: #94a3b8;"></span>
                             </div>
                         
