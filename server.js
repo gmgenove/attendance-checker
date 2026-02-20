@@ -1042,7 +1042,7 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
         page.drawText('L', { x: totalX + 15, y, size: 7, font: bold });
         page.drawText('A', { x: totalX + 30, y, size: 7, font: bold });
         page.drawText('%', { x: totalX + 45, y, size: 7, font: bold });
-		y -= 20; // Space for the rotated dates
+		y -= 23; // Space for the rotated dates
         page.drawLine({ start: { x: 25, y: y + 5 }, end: { x: 980, y: y + 5 }, thickness: 1 });
 
         // 3. DRAW SUBJECT ROWS
