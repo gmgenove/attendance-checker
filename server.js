@@ -904,7 +904,7 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
   });
 
   // TOTALS HEADER
-  const totalX = startX + (35 * colWidth);
+  const totalX = startX + (35 * colWidth) + 5;
   page.drawText('P', { x: totalX, y, size: 8, font: bold });
   page.drawText('L', { x: totalX + 20, y, size: 8, font: bold });
   page.drawText('A', { x: totalX + 40, y, size: 8, font: bold });
@@ -1037,13 +1037,11 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
             //page.drawText(dateObj.toFormat('MM-dd'), { x: xPos + 5, y: y - 15, size: 6, font, rotate: degrees(-90) });	// Vertical Date (MM-dd)
         });
 
-        const totalX = startX + (Math.min(sortedDates.length, 35) * colWidth);
+        const totalX = startX + (Math.min(sortedDates.length, 35) * colWidth) - 10;
         page.drawText('P', { x: totalX + 25, y, size: 7, font: bold });
         page.drawText('L', { x: totalX + 40, y, size: 7, font: bold });
         page.drawText('A', { x: totalX + 55, y, size: 7, font: bold });
         page.drawText('%', { x: totalX + 75, y, size: 7, font: bold });
-
-        y -= 60; // Space for the rotated dates
         page.drawLine({ start: { x: 40, y: y + 5 }, end: { x: 980, y: y + 5 }, thickness: 1 });
 
         // 3. DRAW SUBJECT ROWS
