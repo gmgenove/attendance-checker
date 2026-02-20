@@ -1030,7 +1030,7 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
                 color: isMakeup ? rgb(0.8, 0.4, 0) : rgb(0, 0, 0) 
             });
             page.drawText(dateObj.toFormat('ccc'), { x: xPos, y: y - 8, size: 6, font });	// Day Name (Tue, Wed, etc.)
-			page.drawText(dateObj.toFormat('MM/dd'), { x: xPos + 5, y: y - 15, size: 6, font });
+			page.drawText(dateObj.toFormat('MM/dd'), { x: xPos, y: y - 15, size: 6, font });
             //page.drawText(dateObj.toFormat('MM-dd'), { x: xPos + 5, y: y - 15, size: 6, font, rotate: degrees(-90) });	// Vertical Date (MM-dd)
         });
 
