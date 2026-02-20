@@ -154,7 +154,7 @@ app.post('/api', async (req, res) => {
 		
 	  // 2. Check-in Logic
 	  case 'checkin': {
-		  const { class_code, student_id } = req.body;
+		  const { class_code, student_id } = payload;
 		  const now = getManilaNow();
 		  const dateStr = now.toISODate();
 		  const semConfig = await getCurrentSemConfig();
@@ -792,6 +792,18 @@ app.post('/api', async (req, res) => {
 	    }
 	  }
 
+	  case 'apply_async_cycle': {
+		const { cycle_id, status } = payload; // status would be 'ASYNCHRONOUS'
+		
+		await pool.query(`
+			INSERT INTO attendance (class_date, class_code, student_id, attendance_status, reason, time_in)
+			SELECT CURRENT_DATE, s.class_code, u.user_id, 'ASYNCHRONOUS', 'Scheduled Asynchronous Week', '00:00:00'
+			FROM schedules s
+			JOIN sys_users u ON u.user_role IN ('student', 'officer')
+			WHERE s.cycle_id = $1
+		`, [cycle_id]);
+	  }
+
 	  case 'get_profs': {
 	    try {
 	        const profs = await pool.query(
@@ -1244,7 +1256,8 @@ const initDb = async () => {
       end_time TIME,
       semester TEXT,
       academic_year TEXT,
-      professor_id TEXT
+      professor_id TEXT,
+      cycle_id INTEGER REFERENCES academic_cycles(cycle_id)
     );
 
 	CREATE TABLE IF NOT EXISTS attendance (
@@ -1256,6 +1269,16 @@ const initDb = async () => {
       reason TEXT,
       PRIMARY KEY (class_date, class_code, student_id)
     );
+
+	CREATE TABLE academic_cycles (
+	    cycle_id SERIAL PRIMARY KEY,
+	    cycle_name TEXT NOT NULL, -- e.g., 'Cycle 1', 'Cycle 2'
+	    start_date DATE NOT NULL,
+	    end_date DATE NOT NULL,
+	    semester TEXT,
+	    academic_year TEXT, 
+	    cycle_status TEXT NOT NULL DEFAULT 'Asynchronous'
+	);
        
     CREATE TABLE IF NOT EXISTS config (
       config_key TEXT PRIMARY KEY, 
@@ -1326,16 +1349,20 @@ const autoTagAbsentees = async () => {
     const holidayCheck = await pool.query(
       `SELECT holiday_name FROM holidays WHERE holiday_date = $1::date`, [dateStr]
     );
-
     const isHoliday = holidayCheck.rows.length > 0;
     const holidayReason = isHoliday ? holidayCheck.rows[0].holiday_name : null;
 
     // 2. Find all classes scheduled for today + Authorized Make-up sessions
-    const schedules = await pool.query(`
-      SELECT * FROM schedules s
-	  WHERE ($1 = ANY(days) AND s.semester = $2 AND s.academic_year = $3) 
-	  OR EXISTS (SELECT 1 FROM attendance a 
-	  WHERE a.class_code = s.class_code AND a.class_date = $4::date AND a.attendance_status = 'PENDING')`, [dayName, semInfo.sem, semInfo.year, dateStr]
+	const schedules = await pool.query(`
+      SELECT s.*, ac.status as cycle_status 
+      FROM schedules s
+      LEFT JOIN academic_cycles ac ON s.cycle_id = ac.cycle_id 
+        AND $4::date BETWEEN ac.start_date AND ac.end_date
+      WHERE ($1 = ANY(s.days) AND s.semester = $2 AND s.academic_year = $3) 
+      OR EXISTS (
+        SELECT 1 FROM attendance a 
+        WHERE a.class_code = s.class_code AND a.class_date = $4::date AND a.attendance_status = 'PENDING'
+      )`, [dayName, semInfo.sem, semInfo.year, dateStr]
     );
 
     for (const sched of schedules.rows) {
@@ -1359,7 +1386,23 @@ const autoTagAbsentees = async () => {
         continue; // Skip the rest of the logic for this class if it's a holiday
       }
 
-      // B. REGULAR MAINTENANCE (Only if not a holiday)
+      // B. ASYNCHRONOUS CYCLE TAGGING (Based on your image)
+      // If the cycle status for this specific date is 'ASYNCHRONOUS'
+      if (sched.cycle_status === 'ASYNCHRONOUS') {
+        await pool.query(`
+          INSERT INTO attendance (class_date, class_code, student_id, attendance_status, reason, time_in)
+          SELECT $1, $2, u.user_id, 'ASYNCHRONOUS', 'Scheduled Asynchronous Week', '00:00:00'
+          FROM sys_users u
+          WHERE u.user_role IN ('student', 'officer') AND u.user_status = TRUE
+          AND NOT EXISTS (
+            SELECT 1 FROM attendance a 
+            WHERE a.class_date = $1::date AND a.class_code = $2 AND a.student_id = u.user_id
+          )
+        `, [dateStr, sched.class_code]);
+        continue; // Move to next class, don't mark as absent
+      }
+
+      // C. REGULAR ABSENTEE MAINTENANCE (30 mins after class ends; Only if not a holiday)
       if (now > classEnd.plus({ minutes: 30 })) {
         // Mark missing students as ABSENT
         await pool.query(`
