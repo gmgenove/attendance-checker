@@ -904,7 +904,7 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
   });
 
   // TOTALS HEADER
-  const totalX = startX + (35 * colWidth) + 20;
+  const totalX = startX + (35 * colWidth);
   page.drawText('P', { x: totalX, y, size: 8, font: bold });
   page.drawText('L', { x: totalX + 20, y, size: 8, font: bold });
   page.drawText('A', { x: totalX + 40, y, size: 8, font: bold });
@@ -960,7 +960,7 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
 	page.drawText(`${presentTotal}`, { x: totalX, y, size: 7, font });
 	page.drawText(`${c.L}`, { x: totalX + 20, y, size: 7, font });
 	page.drawText(`${c.A}`, { x: totalX + 40, y, size: 7, font });
-	page.drawText(`${perc}%`, { x: totalX + 85, y, size: 7, font: bold });
+	page.drawText(`${perc}%`, { x: totalX + 60, y, size: 7, font: bold });
     
     // Horizontal row line
     page.drawLine({ start: { x: 40, y: y - 2 }, end: { x: 970, y: y - 2 }, thickness: 0.1, color: rgb(0.8, 0.8, 0.8) });
@@ -1037,7 +1037,7 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
             //page.drawText(dateObj.toFormat('MM-dd'), { x: xPos + 5, y: y - 15, size: 6, font, rotate: degrees(-90) });	// Vertical Date (MM-dd)
         });
 
-        const totalX = startX + (Math.min(sortedDates.length, 35) * colWidth) + 10;
+        const totalX = startX + (Math.min(sortedDates.length, 35) * colWidth);
         page.drawText('P', { x: totalX + 25, y, size: 7, font: bold });
         page.drawText('L', { x: totalX + 40, y, size: 7, font: bold });
         page.drawText('A', { x: totalX + 55, y, size: 7, font: bold });
