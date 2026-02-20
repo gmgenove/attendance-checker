@@ -135,7 +135,8 @@ app.post('/api', async (req, res) => {
 			        SELECT 1 FROM attendance ma 
 			        WHERE ma.class_code = s.class_code 
 			        AND ma.class_date = $2::date 
-			        AND ma.attendance_status = 'PENDING')
+			        AND ma.attendance_status = 'PENDING') 
+				ORDER BY s.start_time
 			`;
 			const result = await pool.query(query, [student_id, dateStr, dayName, semInfo.sem, semInfo.year]);
 			
