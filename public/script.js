@@ -855,7 +855,7 @@ function renderCheckinCountdown(cls, btn, statusSpan, config) {
             btn.disabled = true;
             statusSpan.textContent = mins <= config.checkin_window_minutes 
                 ? `Opens in ${mins} min(s)` 
-                : `Opens at ${cls.start_time - mins}`;
+                : `Opens at ${enableFrom}`;
         }
     };
 
