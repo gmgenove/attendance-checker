@@ -332,12 +332,17 @@ function renderLiveDashboard(container, res, classCode) {
     res.roster.forEach(r => {
         let statusColor = "#94a3b8"; 
         let opacity = r.status === 'NOT YET ARRIVED' ? "0.6" : "1";
+        // Define conditions for disabling buttons
+        const isCredited = r.status === 'CREDITED';
+        const isDropped = r.status === 'DROPPED';
         const isMakeup = r.status === 'PENDING' || r.is_makeup_session;
 
         if (r.status === 'PRESENT') statusColor = "#10b981";
         if (r.status === 'LATE') statusColor = "#f59e0b";
         if (r.status === 'ABSENT') statusColor = "#ef4444";
         if (r.status === 'EXCUSED') statusColor = "#3b82f6";
+        if (isCredited) statusColor = "#064e3b";
+        if (isDropped) statusColor = "#ef4444";
 
         html += `
             <li style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; opacity: ${opacity};">
@@ -345,15 +350,16 @@ function renderLiveDashboard(container, res, classCode) {
                     <span style="flex: 1;">
                         <div style="display:flex; align-items:center; gap:8px;">
                             <strong>${r.user_name}</strong>
+                            ${isMakeup ? `<span style="font-size:8px; background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; padding:1px 4px; border-radius:4px;">MAKE-UP</span>` : ''}
                             <span style="font-size:9px; padding:2px 6px; border-radius:10px; background:#f1f5f9; color:${statusColor}; font-weight:bold; border: 1px solid">${r.status}</span>
                         </div>
                         <div class="small muted">${r.time_in ? 'In at ' + r.time_in : 'No time recorded'}</div>
                     </span>
                     <div style="display:flex; gap:4px; align-items:center;">
-                        <button onclick="bulkStatusUpdate('${r.user_id}', 'CREDITED')" title="Credit Rest of Semester" style="background:#064e3b; color:white; border:none; padding:4px 8px; font-size:10px; border-radius:4px;">
+                        <button onclick="bulkStatusUpdate('${r.user_id}', 'CREDITED')" ${isCredited || isDropped ? 'disabled' : ''} title="Credit Rest of Semester" style="background:#064e3b; color:white; border:none; padding:4px 8px; font-size:10px; border-radius:4px;">
                             Credit
                         </button>
-                        <button onclick="bulkStatusUpdate('${r.user_id}', 'DROPPED')" title="Mark as Dropped" style="background:none; color:#ef4444; border:1px solid #ef4444; padding:4px 8px; font-size:10px; border-radius:4px;">
+                        <button onclick="bulkStatusUpdate('${r.user_id}', 'DROPPED')" ${isDropped || isCredited ? 'disabled' : ''} title="Mark as Dropped" style="background:none; color:#ef4444; border:1px solid #ef4444; padding:4px 8px; font-size:10px; border-radius:4px;">
                             Drop
                         </button>
                         <button onclick="reset_single_password('${r.user_id}')" title="Reset Password" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; padding:4px 8px; font-size:10px; border-radius:4px;">
