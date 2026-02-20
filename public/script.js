@@ -955,11 +955,16 @@ document.getElementById('generateReport').onclick = async () => {
 async function loadAttendanceSummary() {
     const container = document.getElementById('profSummaryOutput');
     container.innerHTML = '<div class="small muted"><i class="fa fa-spinner fa-spin"></i> Calculating totals...</div>';
-    const classCode = "BPAOUMN-1B"; // Dynamic if needed
+    const classCode = currentScheduleData?.[0]?.class_code;
+    if (!classCode) {
+        container.innerHTML = '<div class="small muted">No active class found, so totals cannot be generated yet.</div>';
+        return;
+    }
     
     const res = await api('prof_summary', { class_code: classCode });
     if (res.ok) {
         let tableHtml = `
+            <div class="small muted" style="margin-bottom:8px;">Class: <strong>${classCode}</strong></div>
             <table style="width:100%; border-collapse: collapse; font-size: 12px; margin-top: 15px;">
                 <thead>
                     <tr style="background: #f1f5f9; text-align: left;">
@@ -985,6 +990,8 @@ async function loadAttendanceSummary() {
 
         tableHtml += `</tbody></table>`;
         container.innerHTML = tableHtml;
+    } else {
+        container.innerHTML = `<div class="small muted">Failed to load totals: ${res.error || 'Unknown error'}</div>`;
     }
 }
 
