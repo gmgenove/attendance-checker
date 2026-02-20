@@ -617,7 +617,7 @@ function showModal(id) {
         modal.style.display = 'block';
         // Optional: Disable body scroll when modal is open
         document.body.style.overflow = 'hidden';
-        
+        clearModalFields(id); // Wipe it so it's clean for the next person
     }
 }
 
@@ -628,7 +628,6 @@ function hideModal(id) {
         modal.style.display = 'none';
         // Re-enable body scroll
         document.body.style.overflow = 'auto';
-        clearModalFields(id); // Wipe it so it's clean for the next person
     }
 }
 
