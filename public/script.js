@@ -804,8 +804,14 @@ function renderCheckinCountdown(cls, btn, statusSpan, config) {
         // 1. Get current time in Manila
         const now = DateTime.now().setZone('Asia/Manila');
         
-        // 2. Parse the class start time (e.g., "09:00:00")
-        const startTime = DateTime.fromFormat(cls.start_time, 'HH:mm:ss').set({
+        // 2. PARSE: If your DB sends "9:00 AM" instead of "09:00:00", we need to be flexible.
+        let startTime = DateTime.fromFormat(cls.start_time, 'HH:mm:ss');
+        // Fallback if the format is different (e.g., 'hh:mm a')
+        if (!startTime.isValid) {
+            startTime = DateTime.fromFormat(cls.start_time, 'h:mm a');
+        }
+        // ATTACH TO TODAY: Set the date to today so the math works
+        startTime = startTime.set({
             year: now.year,
             month: now.month,
             day: now.day
@@ -818,8 +824,7 @@ function renderCheckinCountdown(cls, btn, statusSpan, config) {
         // 4. Calculate diffs for display
         const minsUntilOpen = Math.ceil(enableFrom.diff(now, 'minutes').minutes);
 
-        // --- SCENARIO 1: WINDOW IS OPEN ---
-        if (now >= enableFrom && now <= absentThreshold) {
+        if (now >= enableFrom && now <= absentThreshold) {    // --- SCENARIO 1: WINDOW IS OPEN ---
             btn.disabled = false;
             btn.style.display = 'block';
             statusSpan.textContent = "Check-in window is OPEN";
@@ -848,22 +853,19 @@ function renderCheckinCountdown(cls, btn, statusSpan, config) {
                     updateInTimer(); 
                 }
             };
-        } 
-        // --- SCENARIO 2: ABSENT (WINDOW CLOSED) ---
-        else if (now > absentThreshold) {
+        } else if (now > absentThreshold) {    // --- SCENARIO 2: ABSENT (WINDOW CLOSED) ---
             btn.disabled = true;
             btn.style.display = 'none'; // Optional: hide button if they missed it
             statusSpan.textContent = "Check-in closed (Absent)";
             statusSpan.style.color = "#ef4444";
             if (window[intervalKey]) clearInterval(window[intervalKey]);
-        } 
-        // --- SCENARIO 3: NOT YET OPEN ---
-        else {
+        } else {    // --- SCENARIO 3: NOT YET OPEN ---
             btn.disabled = true;
             btn.style.display = 'block'; // Keep button visible but disabled
 
             // Formatting the specific opening time (e.g., 8:45 AM)
             const opensAtFormatted = enableFrom.toFormat('h:mm a');
+            const minsUntilOpen = Math.ceil(enableFrom.diff(now, 'minutes').minutes);
             
             // If it's very close (within the window duration), show countdown
             // Otherwise show the "Opens at" time
