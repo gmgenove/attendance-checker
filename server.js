@@ -980,13 +980,13 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
 
     y -= 25;
     page.drawText(`Student ID:`, { x: 20, y, size: 10, font: bold });
-    page.drawText(`${sid}`, { x: 90, y, size: 10, font });
+    page.drawText(`${sid}`, { x: 100, y, size: 10, font });
     page.drawText(`Semester:`, { x: 400, y, size: 10, font: bold });
     page.drawText(`${sem.name}`, { x: 480, y, size: 10, font });
 
     y -= 15;
     page.drawText(`Student Name:`, { x: 20, y, size: 10, font: bold });
-    page.drawText(`${student.user_name}`, { x: 90, y, size: 10, font });
+    page.drawText(`${student.user_name}`, { x: 100, y, size: 10, font });
     page.drawText(`Academic Year:`, { x: 400, y, size: 10, font: bold });
     page.drawText(`${sem.year}`, { x: 480, y, size: 10, font });
 
@@ -1020,7 +1020,7 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
         // --- DRAW TABLE HEADER ---
         page.drawText('No.', { x: 20, y, size: 8, font: bold });
         page.drawText('Subject Code', { x: 40, y, size: 8, font: bold });
-        page.drawText('Subject Title', { x: 80, y, size: 8, font: bold });
+        page.drawText('Subject Title', { x: 100, y, size: 8, font: bold });
 
         sortedDates.slice(0, 35).forEach((dStr, i) => {
             const xPos = startX + (i * colWidth);
@@ -1052,7 +1052,7 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
 
             page.drawText(`${index + 1}`, { x: 20, y, size: 7, font });
             page.drawText(sub.code, { x: 40, y, size: 7, font: bold });
-            page.drawText(sub.name, { x: 80, y, size: 7, font });
+            page.drawText(sub.name, { x: 90, y, size: 7, font });
 
             if (isCredited) {
                 page.drawText('--- SUBJECT CREDITED / EXEMPTED ---', { 
