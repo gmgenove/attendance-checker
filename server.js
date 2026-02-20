@@ -326,8 +326,8 @@ app.post('/api', async (req, res) => {
                  r.attendance_status === 'SUSPENDED' ? 'S' : 
                  r.attendance_status === 'CANCELLED' ? 'C' : 
                  r.attendance_status === 'DROPPED' ? 'D' :
-				 r.attendance_status === 'CREDITED' ? 'CR' :
-				 r.attendance_status === 'ASYNCHRONOUS' ? 'AS' :
+				 r.attendance_status === 'CREDITED' ? 'Cr' :
+				 r.attendance_status === 'ASYNCHRONOUS' ? 'As' :
                  (r.attendance_status === 'EXCUSED' ? 'E' : r.attendance_status[0].toUpperCase());		// Default (P, L, A, E)
 			
 			    roster[r.student_id].records[dStr] = statusChar;
@@ -374,8 +374,8 @@ app.post('/api', async (req, res) => {
 			    if (r.attendance_status === 'SUSPENDED') statusChar = 'S';
 			    if (r.attendance_status === 'CANCELLED') statusChar = 'C';
 				if (r.attendance_status === 'DROPPED') statusChar = 'D';
-				if (r.attendance_status === 'CREDITED') statusChar = 'CR';
-				if (r.attendance_status === 'ASYNCHRONOUS') statusChar = 'AS';
+				if (r.attendance_status === 'CREDITED') statusChar = 'Cr';
+				if (r.attendance_status === 'ASYNCHRONOUS') statusChar = 'As';
 			
 			    subjects[r.class_code].records[dStr] = statusChar;
 			    if (subjects[r.class_code].counts[statusChar] !== undefined) {
@@ -936,7 +936,7 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
 	  if (status === 'S') statusColor = rgb(0.5, 0.2, 0.7);   // Purple (Suspension)
 	  if (status === 'C') statusColor = rgb(0.4, 0.4, 0.4);	  // Dark Grey (Cancelled)
 	  if (status === 'D') statusColor = rgb(0.5, 0.5, 0.5);   // Gray (Dropped)
-	  if (status === 'CR') statusColor = rgb(0.1, 0.4, 0.7);  // Credited
+	  if (status === 'Cr') statusColor = rgb(0.1, 0.4, 0.7);  // Credited
 
 	  page.drawText(status, { 
 	    x: startX + (i * colWidth), 
@@ -965,7 +965,7 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
     // Horizontal row line
     page.drawLine({ start: { x: 20, y: y - 2 }, end: { x: 990, y: y - 2 }, thickness: 0.1, color: rgb(0.8, 0.8, 0.8) });
 	// Footer Legend
-    page.drawText('LEGEND: P-Present | L-Late | A-Absent | E-Excuse | H-Holiday | C-Cancelled | S-Suspended | D-Dropped | CR-Credited | AS-Asynchronous | *-Make-up Session', { x: 20, y: 30, size: 6, font })
+    page.drawText('LEGEND: P-Present | L-Late | A-Absent | E-Excuse | H-Holiday | C-Cancelled | S-Suspended | D-Dropped | Cr-Credited | As-Asynchronous | *-Make-up Session', { x: 20, y: 30, size: 6, font })
   });
 }
 
@@ -1069,7 +1069,7 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
 					if (status === 'S') color = rgb(0.5, 0.2, 0.7); // Purple (Suspension)
 					if (status === 'C') color = rgb(0.4, 0.4, 0.4); // Dark Grey (Cancelled)
 					if (status === 'D') color = rgb(0.5, 0.5, 0.5); // Gray (Dropped
-					if (status === 'CR') color = rgb(0.1, 0.4, 0.7); // Credited
+					if (status === 'Cr') color = rgb(0.1, 0.4, 0.7); // Credited
 
                     page.drawText(status, { x: startX + (i * colWidth), y, size: 7, font, color });
                 });
@@ -1092,9 +1092,9 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
     }
 
     // --- FOOTER SECTION ---
-	page.drawText('LEGEND: P-Present | L-Late | A-Absent | E-Excuse | H-Holiday | C-Cancelled | S-Suspended | D-Dropped | CR-Credited | AS-Asynchronous | *-Make-up Session', { x: 20, y: 30, size: 6, font })
+	page.drawText('LEGEND: P-Present | L-Late | A-Absent | E-Excuse | H-Holiday | C-Cancelled | S-Suspended | D-Dropped | Cr-Credited | As-Asynchronous | *-Make-up Session', { x: 20, y: 30, size: 6, font })
     /*const footerY = 80;
-    page.drawText('LEGEND: P-Present | L-Late | A-Absent | H-Holiday | S-Suspended | CR-Credited | *-Make-up', { x: 40, y: footerY + 30, size: 7, font });
+    page.drawText('LEGEND: P-Present | L-Late | A-Absent | H-Holiday | S-Suspended | Cr-Credited | *-Make-up', { x: 40, y: footerY + 30, size: 7, font });
     page.drawLine({ start: { x: 40, y: footerY }, end: { x: 250, y: footerY }, thickness: 0.5 });
     page.drawText('STUDENT SIGNATURE', { x: 85, y: footerY - 12, size: 8, font: bold });
     page.drawLine({ start: { x: 730, y: footerY }, end: { x: 980, y: footerY }, thickness: 0.5 });
