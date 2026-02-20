@@ -120,7 +120,7 @@ app.post('/api', async (req, res) => {
 			const query = `
 			    SELECT s.*, u.user_name as professor_name, a.attendance_status as my_status, a.time_in, a.reason
 			    FROM schedules s
-			    LEFT JOIN academic_cycles c ON s.cycle_id = c.cycle_id
+			    LEFT JOIN academic_cycles c ON s.cycle_name = c.cycle_name
 			    LEFT JOIN sys_users u ON s.professor_id = u.user_id AND u.user_status = TRUE
 			    LEFT JOIN attendance a ON s.class_code = a.class_code 
 			        AND a.student_id = $1 AND a.class_date = $2::date
@@ -129,7 +129,7 @@ app.post('/api', async (req, res) => {
 			        AND s.semester = $4 
 			        AND s.academic_year = $5
 			        AND (
-			            s.cycle_id IS NULL -- Shows classes that run all semester
+			            s.cycle_name IS NULL -- Shows classes that run all semester
 			            OR ($2::date BETWEEN c.start_date AND c.end_date) -- Shows classes in active cycle
 			        )) OR EXISTS (
 			        SELECT 1 FROM attendance ma 
@@ -776,7 +776,7 @@ app.post('/api', async (req, res) => {
 	            SELECT s.*, u.user_name as professor_name, c.cycle_name 
 	            FROM schedules s
 	            LEFT JOIN sys_users u ON s.professor_id = u.user_id
-	            LEFT JOIN academic_cycles c ON s.cycle_id = c.cycle_id
+	            LEFT JOIN academic_cycles c ON s.cycle_name = c.cycle_name
 	            WHERE s.semester = $1 AND s.academic_year = $2
 	            ORDER BY c.cycle_name ASC, s.class_code ASC
 	        `, [config.sem, config.year]);
@@ -790,18 +790,6 @@ app.post('/api', async (req, res) => {
 	        console.error("Error fetching schedules:", err);
 	        return res.json({ ok: false, error: "Server-side configuration error." });
 	    }
-	  }
-
-	  case 'apply_async_cycle': {
-		const { cycle_id, status } = payload; // status would be 'ASYNCHRONOUS'
-		
-		await pool.query(`
-			INSERT INTO attendance (class_date, class_code, student_id, attendance_status, reason, time_in)
-			SELECT CURRENT_DATE, s.class_code, u.user_id, 'ASYNCHRONOUS', 'Scheduled Asynchronous Week', '00:00:00'
-			FROM schedules s
-			JOIN sys_users u ON u.user_role IN ('student', 'officer')
-			WHERE s.cycle_id = $1
-		`, [cycle_id]);
 	  }
 
 	  case 'get_profs': {
