@@ -5,7 +5,8 @@ const cors = require('cors');
 const path = require('path');
 const crypto = require('crypto');
 const { DateTime } = require('luxon'); // Better timezone handling
-const { PDFDocument, rgb, StandardFonts } = require('pdf-lib');
+const { PDFDocument, rgb, StandardFonts, degrees } = require('pdf-lib'); // CRITICAL FIX
+const { DateTime } = require('luxon');
 
 const app = express();
 app.use(express.json());
@@ -23,6 +24,26 @@ let dropdownCache = { key: null, expiresAt: 0, data: null };
 
 // --- HELPERS ---
 const getManilaNow = () => DateTime.now().setZone(TIMEZONE);
+
+const makeupCache = {}; // Prevents redundant DB hits during a single report run
+const getMakeupDateSet = async (classCode) => {
+    if (makeupCache[classCode]) return makeupCache[classCode];
+    try {
+        const result = await pool.query(`
+            SELECT DISTINCT class_date FROM attendance
+            WHERE class_code = $1 AND attendance_status = 'PENDING'
+        `, [classCode]);
+
+        const dateSet = new Set(
+            result.rows.map(r => DateTime.fromJSDate(r.class_date).toISODate())
+        );
+        makeupCache[classCode] = dateSet;	 // Cache the result
+        return dateSet;
+    } catch (err) {
+        console.error("Error loading makeup dates:", err);
+        return new Set();
+    }
+};
 
 // Simple GET route for UptimeRobot
 app.get('/ping', (req, res) => res.send('System Awake'));
@@ -942,6 +963,8 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
 	// Footer Legend
 	page.drawText(`* Denotes authorized Make-up Session`, { x: 40, y: 30, size: 6, font });
   });
+  const footerY = 80;
+  page.drawText('LEGEND: P-Present | L-Late | A-Absent | H-Holiday | S-Suspended | CR-Credited | *-Make-up', { x: 40, y: footerY + 30, size: 7, font });
 }
 
 async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, font, bold) {
@@ -1074,12 +1097,10 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
     // --- FOOTER SECTION ---
     const footerY = 80;
     page.drawText('LEGEND: P-Present | L-Late | A-Absent | H-Holiday | S-Suspended | CR-Credited | *-Make-up', { x: 40, y: footerY + 30, size: 7, font });
-    
-    page.drawLine({ start: { x: 40, y: footerY }, end: { x: 250, y: footerY }, thickness: 0.5 });
+    /*page.drawLine({ start: { x: 40, y: footerY }, end: { x: 250, y: footerY }, thickness: 0.5 });
     page.drawText('STUDENT SIGNATURE', { x: 85, y: footerY - 12, size: 8, font: bold });
-
     page.drawLine({ start: { x: 730, y: footerY }, end: { x: 980, y: footerY }, thickness: 0.5 });
-    page.drawText('REGISTRAR / DEPARTMENT HEAD', { x: 760, y: footerY - 12, size: 8, font: bold });
+    page.drawText('REGISTRAR / DEPARTMENT HEAD', { x: 760, y: footerY - 12, size: 8, font: bold });*/
 }
 
 async function appendExcuseLogPage(pdfDoc, title, excuses, font, bold, secondaryColName) {
@@ -1190,30 +1211,6 @@ const getCurrentSemConfig = async () => {
     // Default to nearest sem or "Out of Semester"
     return { sem: "None", start: null, end: null, adjEnd: null, name: "None", year: "None" };
   }
-};
-
-const makeupCache = {}; // Prevents redundant DB hits during a single report run
-const getMakeupDateSet = async (classCode) => {
-    if (makeupCache[classCode]) return makeupCache[classCode];
-
-    try {
-        const result = await pool.query(`
-            SELECT DISTINCT class_date
-            FROM attendance
-            WHERE class_code = $1
-              AND attendance_status = 'PENDING'
-        `, [classCode]);
-
-        const dateSet = new Set(
-            result.rows.map(r => DateTime.fromJSDate(r.class_date).toISODate())
-        );
-        
-        makeupCache[classCode] = dateSet; // Cache the result
-        return dateSet;
-    } catch (err) {
-        console.error("Error loading makeup dates:", err);
-        return new Set();
-    }
 };
 
 const checkDateIfMakeup = async (date, classCode) => {
