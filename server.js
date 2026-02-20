@@ -326,6 +326,7 @@ app.post('/api', async (req, res) => {
                  r.attendance_status === 'SUSPENDED' ? 'S' : 
                  r.attendance_status === 'CANCELLED' ? 'C' : 
                  r.attendance_status === 'DROPPED' ? 'D' :
+				 r.attendance_status === 'CREDITED' ? 'CR' :
                  (r.attendance_status === 'EXCUSED' ? 'E' : r.attendance_status[0].toUpperCase());		// Default (P, L, A, E)
 			
 			    roster[r.student_id].records[dStr] = statusChar;
@@ -370,7 +371,9 @@ app.post('/api', async (req, res) => {
 			    let statusChar = r.attendance_status[0].toUpperCase();
 			    if (r.attendance_status === 'HOLIDAY') statusChar = 'H';
 			    if (r.attendance_status === 'SUSPENDED') statusChar = 'S';
-			    if (r.attendance_status === 'DROPPED') statusChar = 'D';
+			    if (r.attendance_status === 'CANCELLED') statusChar = 'C';
+				if (r.attendance_status === 'DROPPED') statusChar = 'D';
+				if (r.attendance_status === 'CREDITED') statusChar = 'CR';
 			
 			    subjects[r.class_code].records[dStr] = statusChar;
 			    if (subjects[r.class_code].counts[statusChar] !== undefined) {
@@ -903,8 +906,7 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
   page.drawText('P', { x: totalX, y, size: 8, font: bold });
   page.drawText('L', { x: totalX + 20, y, size: 8, font: bold });
   page.drawText('A', { x: totalX + 40, y, size: 8, font: bold });
-  page.drawText('D', { x: totalX + 60, y, size: 8, font: bold });
-  page.drawText('%', { x: totalX + 85, y, size: 8, font: bold });
+  page.drawText('%', { x: totalX + 60, y, size: 8, font: bold });
 
   y -= 20;
   page.drawLine({ start: { x: 40, y }, end: { x: 970, y }, thickness: 0.5 });
@@ -929,9 +931,10 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
 	  if (status === 'P') statusColor = rgb(0, 0.5, 0);       // Green
 	  if (status === 'A') statusColor = rgb(0.8, 0, 0);       // Red
 	  if (status === 'H') statusColor = rgb(0.2, 0.5, 0.8);   // Blue (Holiday)
-	  if (status === 'S') statusColor = rgb(0.5, 0.2, 0.7);   // Purple (Suspended)
+	  if (status === 'S') statusColor = rgb(0.5, 0.2, 0.7);   // Purple (Suspension)
 	  if (status === 'C') statusColor = rgb(0.4, 0.4, 0.4); 	// Dark Grey (Cancelled)
 	  if (status === 'D') statusColor = rgb(0.5, 0.5, 0.5);   // Gray (Dropped)
+	  if (status === 'CR') statusColor = rgb(0.1, 0.4, 0.7); // Credited
 
 	  page.drawText(status, { 
 	    x: startX + (i * colWidth), 
@@ -955,7 +958,6 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
 	page.drawText(`${presentTotal}`, { x: totalX, y, size: 7, font });
 	page.drawText(`${c.L}`, { x: totalX + 20, y, size: 7, font });
 	page.drawText(`${c.A}`, { x: totalX + 40, y, size: 7, font });
-	page.drawText(`${c.D || 0}`, { x: totalX + 60, y, size: 7, font });
 	page.drawText(`${perc}%`, { x: totalX + 85, y, size: 7, font: bold });
     
     // Horizontal row line
@@ -1155,14 +1157,16 @@ async function appendExcuseLogPage(pdfDoc, title, excuses, font, bold, secondary
       page.drawLine({ start: { x: 40, y: y+5 }, end: { x: 970, y: y+5 }, thickness: 0.1 });
 	  y -= 15;
     } else {	// RENDER INDIVIDUAL STUDENT ROWS
-	  dayRows.forEach(e => {
-        if (y < 50) { page = pdfDoc.addPage([1008, 612]); y = drawHeaders(page); }
-        page.drawText(dateStr, { x: 40, y, size: 9, font });
-        page.drawText((e[secondaryColName] || "N/A").substring(0, 45), { x: 150, y, size: 9, font });
-        page.drawText((e.reason || e.attendance_status).substring(0, 100), { x: 450, y, size: 9, font });
-        y -= 15;
-        page.drawLine({ start: { x: 40, y: y+10 }, end: { x: 970, y: y+10 }, thickness: 0.1 });
-      });
+	  if (e.attendance_status === 'EXCUSED') {
+		  dayRows.forEach(e => {
+	        if (y < 50) { page = pdfDoc.addPage([1008, 612]); y = drawHeaders(page); }
+	        page.drawText(dateStr, { x: 40, y, size: 9, font });
+	        page.drawText((e[secondaryColName] || "N/A").substring(0, 45), { x: 150, y, size: 9, font });
+	        page.drawText((e.reason || e.attendance_status).substring(0, 100), { x: 450, y, size: 9, font });
+	        y -= 15;
+	        page.drawLine({ start: { x: 40, y: y+10 }, end: { x: 970, y: y+10 }, thickness: 0.1 });
+	      });
+	  }
     }
   }
 }
