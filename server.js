@@ -857,7 +857,7 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
 
   // --- TOP INFO BLOCK (Matches Excel Rows 1-6) ---
   page.drawText(`Class Code:`, { x: 20, y, size: 10, font: bold });
-  page.drawText(`${info.class_code}`, { x: 80, y, size: 10, font });
+  page.drawText(`${info.class_code}`, { x: 90, y, size: 10, font });
   
   // SYSTEM GENERATED TIMESTAMP (Top Right)
   const timestamp = getManilaNow().toFormat('yyyy-MM-dd HH:mm:ss');
@@ -865,7 +865,7 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
 
   y -= 15;
   page.drawText(`Class Name:`, { x: 20, y, size: 10, font: bold });
-  page.drawText(`${info.class_name}`, { x: 80, y, size: 10, font });
+  page.drawText(`${info.class_name}`, { x: 90, y, size: 10, font });
   
   // SEMESTER INFO
   page.drawText(`Semester:`, { x: 400, y, size: 10, font: bold });
@@ -876,15 +876,15 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
 
   y -= 15;
   page.drawText(`Professor:`, { x: 20, y, size: 10, font: bold });
-  page.drawText(`${info.professor_name || 'N/A'}`, { x: 80, y, size: 10, font });
+  page.drawText(`${info.professor_name || 'N/A'}`, { x: 90, y, size: 10, font });
   
   y -= 15;
   page.drawText(`Schedule:`, { x: 20, y, size: 10, font: bold });
-  page.drawText(`${info.days.join('/')} | ${DateTime.fromFormat(info.start_time, 'HH:mm:ss').toFormat('hh:mm a')}-${DateTime.fromFormat(info.end_time, 'HH:mm:ss').toFormat('hh:mm a')}`, { x: 80, y, size: 10, font });
+  page.drawText(`${info.days.join('/')} | ${DateTime.fromFormat(info.start_time, 'HH:mm:ss').toFormat('hh:mm a')}-${DateTime.fromFormat(info.end_time, 'HH:mm:ss').toFormat('hh:mm a')}`, { x: 90, y, size: 10, font });
   
   y -= 15;
   page.drawText(`Section:`, { x: 20, y, size: 10, font: bold });
-  page.drawText(`BPAOUMN 1-B`, { x: 80, y, size: 10, font });
+  page.drawText(`BPAOUMN 1-B`, { x: 90, y, size: 10, font });
 
   y -= 30; // Space before table
 
@@ -893,7 +893,7 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
   const colWidth = 18;
   
   page.drawText('Student ID', { x: 20, y, size: 8, font: bold });
-  page.drawText('Student Name', { x: 80, y, size: 8, font: bold });
+  page.drawText('Student Name', { x: 90, y, size: 8, font: bold });
 
   const makeupDateSet = await getMakeupDateSet(info.class_code);
   dates.slice(0, 35).forEach((d, i) => {
@@ -920,7 +920,7 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
 
     const student = roster[sid];
     page.drawText(sid, { x: 20, y, size: 7, font });
-    page.drawText(student.name, { x: 80, y, size: 7, font });
+    page.drawText(student.name, { x: 90, y, size: 7, font });
 
     // Draw Status Grid
     dates.slice(0, 35).forEach((d, i) => {
@@ -980,13 +980,13 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
 
     y -= 25;
     page.drawText(`Student ID:`, { x: 20, y, size: 10, font: bold });
-    page.drawText(`${sid}`, { x: 80, y, size: 10, font });
+    page.drawText(`${sid}`, { x: 90, y, size: 10, font });
     page.drawText(`Semester:`, { x: 400, y, size: 10, font: bold });
     page.drawText(`${sem.name}`, { x: 480, y, size: 10, font });
 
     y -= 15;
     page.drawText(`Student Name:`, { x: 20, y, size: 10, font: bold });
-    page.drawText(`${student.user_name}`, { x: 80, y, size: 10, font });
+    page.drawText(`${student.user_name}`, { x: 90, y, size: 10, font });
     page.drawText(`Academic Year:`, { x: 400, y, size: 10, font: bold });
     page.drawText(`${sem.year}`, { x: 480, y, size: 10, font });
 
