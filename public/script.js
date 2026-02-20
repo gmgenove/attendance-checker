@@ -254,7 +254,8 @@ async function showApp() {
 async function loadProfessorDashboard() {
     const container = document.getElementById('profDashboardOutput');
     const searchWrapper = document.getElementById('searchWrapper');
-    let classCode = 'BPAOUMN-1B';
+    const activeClass = currentScheduleData?.[0];
+    const classCode = activeClass?.class_code || 'this class';
     
     // 1. Check if we have any classes loaded in our global state
     if (!currentScheduleData || currentScheduleData.length === 0) {
@@ -267,8 +268,6 @@ async function loadProfessorDashboard() {
         return;
     }
     // 2. Automatically pull the code from the current schedule. Since there are no simultaneous classes, index 0 is the current target
-    classCode = currentScheduleData?.[0]?.class_code;
-
     const res = await api('prof_dashboard', { class_code: classCode });
     if (res.ok) {
         // 3. Logic check: Is this session currently active? 
