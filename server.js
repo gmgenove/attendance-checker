@@ -350,7 +350,7 @@ app.post('/api', async (req, res) => {
 			);
 	
 	        await generateClassMatrixPDF(pdfDoc, info, classDates, roster, semConfig, font, boldFont);
-	        await appendExcuseLogPage(pdfDoc, "CLASS EXCUSE LOG", excuses.rows, font, boldFont, "name");
+	        await appendExcuseLogPage(pdfDoc, "CLASS EXCUSE LOG", excuses.rows, font, boldFont, "student_name");
 	    } else if (type === 'person') {
 	        const studentRes = await pool.query('SELECT user_name FROM sys_users WHERE user_id = $1 AND user_status = TRUE', [student_id]);
 	        const attendance = await pool.query(`SELECT a.*, s.class_name FROM attendance a JOIN schedules s ON a.class_code = s.class_code WHERE a.student_id = $1 AND s.semester = $2 AND s.academic_year = $3 ORDER BY s.class_name ASC`, [student_id, semConfig.sem, semConfig.year]);
@@ -1108,7 +1108,7 @@ async function appendExcuseLogPage(pdfDoc, title, excuses, font, bold, secondary
   const drawHeaders = (currentPage) => {
     currentPage.drawText(title, { x: 40, y: 550, size: 16, font: bold });
     currentPage.drawText('DATE', { x: 40, y: 520, size: 10, font: bold });
-    currentPage.drawText(secondaryColName === 'name' ? 'STUDENT NAME' : 'SUBJECT/CLASS', { x: 150, y: 520, size: 10, font: bold });
+    currentPage.drawText(secondaryColName === 'student_name' ? 'STUDENT NAME' : 'SUBJECT/CLASS', { x: 150, y: 520, size: 10, font: bold });
     currentPage.drawText('REASON / STATUS', { x: 450, y: 520, size: 10, font: bold });
     currentPage.drawLine({ start: { x: 40, y: 510 }, end: { x: 970, y: 510 }, thickness: 1 });
     return 490; // Returns new Y position
