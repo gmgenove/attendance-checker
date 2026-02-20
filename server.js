@@ -6,7 +6,6 @@ const path = require('path');
 const crypto = require('crypto');
 const { DateTime } = require('luxon'); // Better timezone handling
 const { PDFDocument, rgb, StandardFonts, degrees } = require('pdf-lib'); // CRITICAL FIX
-const { DateTime } = require('luxon');
 
 const app = express();
 app.use(express.json());
