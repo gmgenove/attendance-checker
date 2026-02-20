@@ -1019,7 +1019,7 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
 
         // --- DRAW TABLE HEADER ---
         page.drawText('No.', { x: 20, y, size: 8, font: bold });
-        page.drawText('Subject Code', { x: 40, y, size: 8, font: bold });
+        page.drawText('Subject Code', { x: 35, y, size: 8, font: bold });
         page.drawText('Subject Title', { x: 100, y, size: 8, font: bold });
 
         sortedDates.slice(0, 35).forEach((dStr, i) => {
@@ -1038,12 +1038,12 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
         });
 
         const totalX = startX + (Math.min(sortedDates.length, 35) * colWidth) + 5;
-        page.drawText('P', { x: totalX + 25, y, size: 7, font: bold });
-        page.drawText('L', { x: totalX + 40, y, size: 7, font: bold });
-        page.drawText('A', { x: totalX + 55, y, size: 7, font: bold });
-        page.drawText('%', { x: totalX + 75, y, size: 7, font: bold });
+        page.drawText('P', { x: totalX + 15, y, size: 7, font: bold });
+        page.drawText('L', { x: totalX + 30, y, size: 7, font: bold });
+        page.drawText('A', { x: totalX + 45, y, size: 7, font: bold });
+        page.drawText('%', { x: totalX + 65, y, size: 7, font: bold });
 		y -= 55; // Space for the rotated dates
-        page.drawLine({ start: { x: 30, y: y + 5 }, end: { x: 980, y: y + 5 }, thickness: 1 });
+        page.drawLine({ start: { x: 20, y: y + 5 }, end: { x: 990, y: y + 5 }, thickness: 1 });
 
         // 3. DRAW SUBJECT ROWS
         groupMembers.forEach((sub, index) => {
@@ -1051,8 +1051,8 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
             const isCredited = sub.isCredited || Object.values(sub.records).includes('CR');
 
             page.drawText(`${index + 1}`, { x: 20, y, size: 7, font });
-            page.drawText(sub.code, { x: 40, y, size: 7, font: bold });
-            page.drawText(sub.name, { x: 90, y, size: 7, font });
+            page.drawText(sub.code, { x: 35, y, size: 7, font: bold });
+            page.drawText(sub.name.substring(0, 54), { x: 85, y, size: 7, font });
 
             if (isCredited) {
                 page.drawText('--- SUBJECT CREDITED / EXEMPTED ---', { 
@@ -1081,12 +1081,12 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
                 const totalPossible = sortedDates.length - excused;
                 const perc = totalPossible > 0 ? Math.round((presentTotal / totalPossible) * 100) : 0;
 
-                page.drawText(`${c.P || 0}`, { x: totalX + 25, y, size: 7, font });
-                page.drawText(`${c.L || 0}`, { x: totalX + 40, y, size: 7, font });
-                page.drawText(`${c.A || 0}`, { x: totalX + 55, y, size: 7, font });
-                page.drawText(`${perc}%`, { x: totalX + 75, y, size: 7, font: bold });
+                page.drawText(`${c.P || 0}`, { x: totalX + 15, y, size: 7, font });
+                page.drawText(`${c.L || 0}`, { x: totalX + 30, y, size: 7, font });
+                page.drawText(`${c.A || 0}`, { x: totalX + 45, y, size: 7, font });
+                page.drawText(`${perc}%`, { x: totalX + 65, y, size: 7, font: bold });
             }
-            page.drawLine({ start: { x: 20, y: y - 2 }, end: { x: 980, y: y - 2 }, thickness: 0.1, color: rgb(0.8, 0.8, 0.8) });
+            page.drawLine({ start: { x: 20, y: y - 2 }, end: { x: 990, y: y - 2 }, thickness: 0.1, color: rgb(0.8, 0.8, 0.8) });
         });
         y -= 30; // Gap between different schedule blocks
     }
