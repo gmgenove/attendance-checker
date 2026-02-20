@@ -383,7 +383,7 @@ app.post('/api', async (req, res) => {
 			    }
 			});
 	
-	        const excuses = await pool.query(`SELECT a.class_date, s.class_name, a.reason FROM attendance a JOIN schedules s ON a.class_code = s.class_code WHERE a.student_id = $1 AND a.reason IS NOT NULL AND s.semester = $2 AND s.academic_year = $3 ORDER BY a.class_date DESC`, [student_id, semConfig.sem, semConfig.year]);
+	        const excuses = await pool.query(`SELECT a.class_date, s.class_name, a.attendance_status, a.reason FROM attendance a JOIN schedules s ON a.class_code = s.class_code WHERE a.student_id = $1 AND a.reason IS NOT NULL AND s.semester = $2 AND s.academic_year = $3 ORDER BY a.class_date DESC`, [student_id, semConfig.sem, semConfig.year]);
 	
 	        await generateStudentMatrixPDF(pdfDoc, studentRes.rows[0], student_id, subjects, semConfig, font, boldFont);
 	        await appendExcuseLogPage(pdfDoc, "STUDENT EXCUSE LOG", excuses.rows, font, boldFont, "class_name");
