@@ -806,8 +806,7 @@ function renderCheckinCountdown(cls, btn, statusSpan, config) {
         const enableFrom = new Date(start.getTime() - config.checkin_window_minutes * 60000);
         const absentThreshold = new Date(start.getTime() + config.absent_window_minutes * 60000);
 
-        if (now >= enableFrom && now <= absentThreshold) {
-            // --- WINDOW IS OPEN ---
+        if (now >= enableFrom && now <= absentThreshold) {    // --- WINDOW IS OPEN ---
             btn.disabled = false;
             btn.style.display = 'block';
             statusSpan.textContent = "Check-in window is OPEN";
@@ -843,19 +842,21 @@ function renderCheckinCountdown(cls, btn, statusSpan, config) {
                     updateInTimer(); // Reset the UI state
                 }
             };
-
-        } else if (now > absentThreshold) {
-            // --- ABSENT ---
+        } else if (now > absentThreshold) {    // --- ABSENT ---
             btn.disabled = true;
             statusSpan.textContent = "Check-in closed (Absent)";
             statusSpan.style.color = "#ef4444";
-        } else {
-            // --- NOT YET OPEN ---
+        } else {    // --- NOT YET OPEN ---
+            // Calculate the actual opening time
+            const startTime = DateTime.fromFormat(cls.start_time, 'HH:mm:ss');
+            const opensAtTime = startTime.minus({ minutes: config.checkin_window_minutes });
+            const opensAtFormatted = opensAtTime.toFormat('h:mm a');  // Format for display (e.g., 8:45 AM)
+            
             const mins = Math.ceil((enableFrom - now) / 60000);
             btn.disabled = true;
             statusSpan.textContent = mins <= config.checkin_window_minutes 
                 ? `Opens in ${mins} min(s)` 
-                : `Opens at ${enableFrom}`;
+                : `Opens at ${opensAtFormatted}`;
         }
     };
 
