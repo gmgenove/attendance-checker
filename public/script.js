@@ -2,6 +2,8 @@ const API_BASE = '/api'; // Optimized for same-domain hosting
 let currentUser = null;
 let isSignup = false;
 let currentScheduleData = [];
+let selectedTimelineSubject = '';
+let timelineSubjects = [];
 let dropdownCache = { data: null, fetchedAt: 0 };
 const DROPDOWN_CACHE_TTL_MS = 5 * 60 * 1000;
 
@@ -231,7 +233,8 @@ async function showApp() {
     // Fetch Data (Parallelized for speed). We run these at the same time but wait for ALL to finish
     await Promise.all([
         loadTodaySchedule(),  // Hydrates currentScheduleData
-        checkGlobalStatus()   // Renders the alert banner
+        checkGlobalStatus(),  // Renders the alert banner
+        renderCycleTimeline() // Shows semester cycle progress
     ]);
     
     // Show both the Live Monitor and Summary to Professors AND Officers
@@ -371,6 +374,119 @@ function renderLiveDashboard(container, res, classCode) {
     html += `</ul>`;
     container.innerHTML = html;
 }
+
+async function renderCycleTimeline() {
+    const container = document.getElementById('cycleTimelineContainer');
+    if (!container) return;
+
+    container.innerHTML = '<div class="small muted">Loading cycle calendar...</div>';
+
+    const payload = selectedTimelineSubject ? { subject_code: selectedTimelineSubject } : {};
+    const res = await api('get_cycle_calendar', payload);
+
+    if (!res.ok || !res.semester || !res.cycles || res.cycles.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+
+    timelineSubjects = res.subjects || [];
+
+    const today = luxon.DateTime.now().setZone('Asia/Manila').startOf('day');
+    const semesterStart = luxon.DateTime.fromISO(res.semester.start_date).startOf('day');
+    const semesterEnd = luxon.DateTime.fromISO(res.semester.end_date).endOf('day');
+    const totalDays = Math.max(semesterEnd.diff(semesterStart, 'days').days, 1);
+
+    const rows = res.cycles.map(cycle => ({
+        ...cycle,
+        assignmentsText: (cycle.assignments || [])
+            .map(item => `${item.class_code} - ${item.class_name} (${item.professor_name || 'TBD'})`)
+            .join(' | '),
+        windows: (cycle.windows || []).map(window => {
+            const start = luxon.DateTime.fromISO(window.start).startOf('day');
+            const end = luxon.DateTime.fromISO(window.end).endOf('day');
+            const left = Math.min(Math.max(start.diff(semesterStart, 'days').days / totalDays, 0), 1) * 100;
+            const width = Math.max((end.diff(start, 'days').days / totalDays) * 100, 0.7);
+            const isActive = today >= start && today <= end;
+            return { ...window, start, end, left, width, isActive };
+        })
+    }));
+
+    const monthMarks = [];
+    let monthCursor = semesterStart.startOf('month');
+    while (monthCursor <= semesterEnd) {
+        const left = Math.min(Math.max(monthCursor.diff(semesterStart, 'days').days / totalDays, 0), 1) * 100;
+        monthMarks.push({ label: monthCursor.toFormat('LLL'), left });
+        monthCursor = monthCursor.plus({ months: 1 });
+    }
+
+    const markerOffset = Math.min(Math.max(today.diff(semesterStart, 'days').days / totalDays, 0), 1) * 100;
+    const activeWindows = rows.flatMap(cycle =>
+        cycle.windows.filter(window => window.isActive).map(window => ({ ...window, cycleName: cycle.cycle_name }))
+    );
+
+    const statusText = activeWindows.length > 0
+        ? `Today is <strong>${activeWindows[0].mode === 'sync' ? 'Synchronous' : 'Asynchronous'}</strong> for ${activeWindows.map(window => `<strong>${window.cycleName}</strong>`).join(', ')}.`
+        : 'Today is outside the active cycle windows.';
+
+    const optionsHtml = ['<option value="">All Subjects</option>']
+        .concat(timelineSubjects.map(subject =>
+            `<option value="${subject.code}" ${selectedTimelineSubject === subject.code ? 'selected' : ''}>${subject.code} - ${subject.name}</option>`
+        ))
+        .join('');
+
+    const rowsHtml = rows.map(cycle => `
+        <div class="cycle-row">
+            <div class="cycle-label">${cycle.cycle_name}</div>
+            <div class="cycle-track">
+                ${cycle.windows.map(window => `
+                    <span
+                        class="cycle-window ${window.mode} ${window.isActive ? 'is-active' : ''}"
+                        style="left:${window.left}%; width:${window.width}%;"
+                        title="${cycle.cycle_name} · ${window.mode === 'sync' ? 'Synchronous' : 'Asynchronous'} · ${window.start.toFormat('LLL dd')} - ${window.end.toFormat('LLL dd')}&#10;${cycle.assignmentsText || 'No subject/professor assigned'}"
+                    ></span>
+                `).join('')}
+                <span class="cycle-now-marker" style="left: calc(${markerOffset}% - 1px);"></span>
+            </div>
+        </div>
+    `).join('');
+
+    container.innerHTML = `
+        <div class="cycle-timeline-card">
+            <div class="cycle-topbar">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex:1; min-width:180px;">
+                    <strong style="font-size: 0.92rem; color:#7f1d1d;">Weekday Cycle Calendar</strong>
+                    <span class="small muted">${today.toFormat('LLL dd, yyyy')}</span>
+                </div>
+                <label class="cycle-filter">Filter
+                    <select id="cycleSubjectFilter">${optionsHtml}</select>
+                </label>
+            </div>
+            <div class="cycle-range-head">
+                <span>${res.semester.name} ${res.semester.academic_year}</span>
+                <div class="cycle-month-scale">
+                    ${monthMarks.map(mark => `<span class="cycle-month-tag" style="left:${mark.left}%;">${mark.label}</span>`).join('')}
+                </div>
+            </div>
+            ${rowsHtml}
+            <div class="small" style="color:#7f1d1d; margin-top:8px;">${statusText}</div>
+            <div class="cycle-legend">
+                <span class="cycle-legend-item"><span class="cycle-legend-dot sync"></span>Synchronous week</span>
+                <span class="cycle-legend-item"><span class="cycle-legend-dot async"></span>Asynchronous period</span>
+                <span class="cycle-legend-item"><span style="width:2px;height:12px;background:#1f2937;display:inline-block;border-radius:999px;"></span>Today</span>
+                <span class="cycle-legend-item">Hover a block to view subject + professor</span>
+            </div>
+        </div>
+    `;
+
+    const filterEl = document.getElementById('cycleSubjectFilter');
+    if (filterEl) {
+        filterEl.addEventListener('change', async (event) => {
+            selectedTimelineSubject = event.target.value;
+            await renderCycleTimeline();
+        });
+    }
+}
+
 
 async function loadTodaySchedule() {
     const list = document.getElementById('scheduleList');
