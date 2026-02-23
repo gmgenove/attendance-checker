@@ -845,14 +845,29 @@ app.post('/api', async (req, res) => {
 	        arr.findIndex(entry => entry.class_code === item.class_code) === index
 	      );
 
-	      grouped.set(cycleName, {
-	        cycle_name: cycleName,
-	        start_date: start.toISODate(),
-	        end_date: end.toISODate(),
-	        windows,
-	        teaching_days: Array.from(cycleDays).sort(),
-	        assignments: dedupedAssignments
-	      });
+	      if (!grouped.has(cycleName)) {
+	        grouped.set(cycleName, {
+	          cycle_name: cycleName,
+	          start_date: start.toISODate(),
+	          end_date: end.toISODate(),
+	          windows: [],
+	          teaching_days: [],
+	          assignments: []
+	        });
+	      }
+
+	      const existing = grouped.get(cycleName);
+	      existing.windows.push(...windows);
+	      existing.teaching_days = Array.from(new Set([
+	        ...(existing.teaching_days || []),
+	        ...Array.from(cycleDays)
+	      ])).sort();
+	      existing.assignments = [...(existing.assignments || []), ...dedupedAssignments].filter((item, index, arr) =>
+	        arr.findIndex(entry => entry.class_code === item.class_code) === index
+	      );
+
+	      if (start < DateTime.fromISO(existing.start_date)) existing.start_date = start.toISODate();
+	      if (end > DateTime.fromISO(existing.end_date)) existing.end_date = end.toISODate();
 	    });
 
 	    const cycles = Array.from(grouped.values())
