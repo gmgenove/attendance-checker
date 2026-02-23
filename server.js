@@ -293,7 +293,7 @@ app.post('/api', async (req, res) => {
 	    if (semConfig.sem === "None") return res.json({ ok: false, error: "No active semester found." });
 	
 	    if (type === 'class') {
-	        const classInfo = await pool.query(`SELECT s.*, u.user_name as professor_name FROM schedules s JOIN sys_users u ON s.professor_id = u.user_id WHERE s.class_code = $1 AND s.semester = $2 AND s.academic_year = $3 AND u.user_status = TRUE`, [class_code, semConfig.sem, semConfig.year]);
+	        const classInfo = await pool.query(`SELECT * FROM schedules WHERE class_code = $1 AND semester = $2 AND academic_year = $3`, [class_code, semConfig.sem, semConfig.year]);
 	        if (classInfo.rows.length === 0) return res.json({ ok: false, error: "Class not found." });
 	        const info = classInfo.rows[0];
 	
