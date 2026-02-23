@@ -742,11 +742,152 @@ app.post('/api', async (req, res) => {
 	  }
 
 	  case 'get_cycles': {
+	    const semInfo = await getCurrentSemConfig();
+	    if (semInfo.sem === "None") return res.json({ ok: true, cycles: [] });
+
 	    const cycles = await pool.query(
 	        "SELECT * FROM academic_cycles WHERE semester = $1 AND academic_year = $2 ORDER BY start_date ASC",
-	        [payload.semester || currentSemester, payload.academic_year || currentYear]
+	        [payload.semester || semInfo.sem, payload.academic_year || semInfo.year]
 	    );
 	    return res.json({ ok: true, cycles: cycles.rows });
+	  }
+
+	  case 'get_cycle_calendar': {
+	    const semInfo = await getCurrentSemConfig();
+	    if (semInfo.sem === "None") {
+	      return res.json({ ok: true, semester: null, cycles: [], subjects: [] });
+	    }
+
+	    const subjectFilter = payload.subject_code ? String(payload.subject_code).trim() : null;
+
+	    const [cyclesRes, schedulesRes] = await Promise.all([
+	      pool.query(
+	        `SELECT cycle_name, start_date, end_date, cycle_status
+	         FROM academic_cycles
+	         WHERE semester = $1 AND academic_year = $2
+	         ORDER BY cycle_name ASC, start_date ASC`,
+	        [semInfo.sem, semInfo.year]
+	      ),
+	      pool.query(
+	        `SELECT s.class_code, s.class_name, s.cycle_name, s.days, u.user_name AS professor_name
+	         FROM schedules s
+	         LEFT JOIN sys_users u ON s.professor_id = u.user_id
+	         WHERE s.semester = $1 AND s.academic_year = $2 AND s.cycle_name IS NOT NULL`,
+	        [semInfo.sem, semInfo.year]
+	      )
+	    ]);
+
+	    const allSubjects = schedulesRes.rows
+	      .map(row => ({ code: row.class_code, name: row.class_name || row.class_code }))
+	      .filter((subject, index, arr) => arr.findIndex(entry => entry.code === subject.code) === index)
+	      .sort((a, b) => a.code.localeCompare(b.code));
+
+	    const filteredSchedules = subjectFilter
+	      ? schedulesRes.rows.filter(row => row.class_code === subjectFilter)
+	      : schedulesRes.rows;
+
+	    const dayMap = new Map();
+	    const assignmentMap = new Map();
+	    filteredSchedules.forEach(row => {
+	      if (!row.cycle_name) return;
+	      if (!dayMap.has(row.cycle_name)) dayMap.set(row.cycle_name, new Set());
+	      if (!assignmentMap.has(row.cycle_name)) assignmentMap.set(row.cycle_name, []);
+	
+	      (row.days || []).forEach(day => dayMap.get(row.cycle_name).add(day));
+	      assignmentMap.get(row.cycle_name).push({
+	        class_code: row.class_code,
+	        class_name: row.class_name || row.class_code,
+	        professor_name: row.professor_name || 'TBD'
+	      });
+	    });
+
+	    const parseDate = (value) => {
+	      if (!value) return null;
+	      if (value instanceof Date) return DateTime.fromJSDate(value).setZone(TIMEZONE);
+	      return DateTime.fromISO(String(value)).setZone(TIMEZONE);
+	    };
+
+	    const grouped = new Map();
+	    cyclesRes.rows.forEach(row => {
+	      const start = parseDate(row.start_date)?.startOf('day');
+	      const end = parseDate(row.end_date)?.endOf('day');
+	      if (!start || !end) return;
+
+	      const cycleName = row.cycle_name;
+	      const cycleDays = dayMap.get(cycleName) || new Set();
+	      const cycleAssignments = assignmentMap.get(cycleName) || [];
+	      const fallbackMode = String(row.cycle_status || '').toUpperCase() === 'SYNCHRONOUS' ? 'sync' : 'async';
+
+	      if (subjectFilter && cycleAssignments.length === 0) return;
+
+	      const windows = [];
+	      let cursor = start.startOf('day');
+	      let activeWindow = null;
+
+	      while (cursor <= end) {
+	        const mode = cycleDays.size > 0
+	          ? (cycleDays.has(cursor.toFormat('ccc')) ? 'sync' : 'async')
+	          : fallbackMode;
+
+	        if (!activeWindow || activeWindow.mode !== mode) {
+	          if (activeWindow) windows.push(activeWindow);
+	          activeWindow = { mode, start: cursor.toISODate(), end: cursor.toISODate() };
+	        } else {
+	          activeWindow.end = cursor.toISODate();
+	        }
+
+	        cursor = cursor.plus({ days: 1 });
+	      }
+
+	      if (activeWindow) windows.push(activeWindow);
+
+	      const dedupedAssignments = cycleAssignments.filter((item, index, arr) =>
+	        arr.findIndex(entry => entry.class_code === item.class_code) === index
+	      );
+
+	      if (!grouped.has(cycleName)) {
+	        grouped.set(cycleName, {
+	          cycle_name: cycleName,
+	          start_date: start.toISODate(),
+	          end_date: end.toISODate(),
+	          windows: [],
+	          teaching_days: [],
+	          assignments: []
+	        });
+	      }
+
+	      const existing = grouped.get(cycleName);
+	      existing.windows.push(...windows);
+	      existing.teaching_days = Array.from(new Set([
+	        ...(existing.teaching_days || []),
+	        ...Array.from(cycleDays)
+	      ])).sort();
+	      existing.assignments = [...(existing.assignments || []), ...dedupedAssignments].filter((item, index, arr) =>
+	        arr.findIndex(entry => entry.class_code === item.class_code) === index
+	      );
+
+	      if (start < DateTime.fromISO(existing.start_date)) existing.start_date = start.toISODate();
+	      if (end > DateTime.fromISO(existing.end_date)) existing.end_date = end.toISODate();
+	    });
+
+	    const cycles = Array.from(grouped.values())
+	      .sort((a, b) => a.cycle_name.localeCompare(b.cycle_name))
+	      .map(cycle => ({
+	        ...cycle,
+	        windows: cycle.windows.sort((a, b) => a.start.localeCompare(b.start))
+	      }));
+
+	    return res.json({
+	      ok: true,
+	      semester: {
+	        name: semInfo.name,
+	        start_date: semInfo.start?.toISODate(),
+	        end_date: semInfo.end?.toISODate(),
+	        academic_year: semInfo.year
+	      },
+	      subjects: allSubjects,
+	      cycles
+	    });
 	  }
 
 	  case 'add_schedule': {
