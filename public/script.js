@@ -4,6 +4,7 @@ let isSignup = false;
 let currentScheduleData = [];
 let selectedTimelineSubject = '';
 let timelineSubjects = [];
+let selectedMonitorClassCode = '';
 let dropdownCache = { data: null, fetchedAt: 0 };
 const DROPDOWN_CACHE_TTL_MS = 5 * 60 * 1000;
 
@@ -245,6 +246,15 @@ async function showApp() {
     if (summaryCard) summaryCard.style.display = isElevated ? 'block' : 'none';
 
     if (isElevated) {
+        const monitorFilter = document.getElementById('monitorClassFilter');
+        if (monitorFilter && !monitorFilter.dataset.bound) {
+            monitorFilter.addEventListener('change', async (event) => {
+                selectedMonitorClassCode = event.target.value;
+                await loadProfessorDashboard();
+            });
+            monitorFilter.dataset.bound = 'true';
+        }
+
         loadProfessorDashboard();
         populateClassDropdowns();
     }
@@ -254,23 +264,85 @@ async function showApp() {
     }*/
 }
 
+function parseMinutesFromDisplayTime(displayTime) {
+    const parsed = luxon.DateTime.fromFormat(displayTime, 'hh:mm a');
+    return parsed.isValid ? (parsed.hour * 60) + parsed.minute : null;
+}
+
+function getDefaultMonitorClassCode(schedule = []) {
+    if (!schedule.length) return '';
+
+    const now = luxon.DateTime.now().setZone('Asia/Manila');
+    const nowMinutes = (now.hour * 60) + now.minute;
+
+    const enriched = schedule
+        .map(cls => {
+            const startMinutes = parseMinutesFromDisplayTime(cls.start_time);
+            const endMinutes = parseMinutesFromDisplayTime(cls.end_time);
+            return { ...cls, startMinutes, endMinutes };
+        })
+        .filter(cls => cls.startMinutes !== null && cls.endMinutes !== null);
+
+    const activeClass = enriched.find(cls => nowMinutes >= cls.startMinutes && nowMinutes <= cls.endMinutes);
+    if (activeClass) return activeClass.class_code;
+
+    const upcomingClass = enriched.find(cls => cls.startMinutes > nowMinutes);
+    if (upcomingClass) return upcomingClass.class_code;
+
+    return schedule[0].class_code;
+}
+
+function renderMonitorClassFilter() {
+    const wrapper = document.getElementById('monitorClassFilterWrapper');
+    const select = document.getElementById('monitorClassFilter');
+    if (!wrapper || !select) return;
+
+    if (!currentScheduleData.length) {
+        wrapper.style.display = 'none';
+        select.innerHTML = '';
+        selectedMonitorClassCode = '';
+        return;
+    }
+
+    const uniqueClasses = currentScheduleData.filter((cls, idx, arr) =>
+        arr.findIndex(item => item.class_code === cls.class_code) === idx
+    );
+
+    if (!selectedMonitorClassCode || !uniqueClasses.some(cls => cls.class_code === selectedMonitorClassCode)) {
+        selectedMonitorClassCode = getDefaultMonitorClassCode(uniqueClasses);
+    }
+
+    select.innerHTML = uniqueClasses.map(cls => `
+        <option value="${cls.class_code}" ${cls.class_code === selectedMonitorClassCode ? 'selected' : ''}>
+            ${cls.class_code} • ${cls.start_time} - ${cls.end_time}
+        </option>
+    `).join('');
+
+    wrapper.style.display = 'block';
+}
+
 async function loadProfessorDashboard() {
     const container = document.getElementById('profDashboardOutput');
     const searchWrapper = document.getElementById('searchWrapper');
-    const activeClass = currentScheduleData?.[0];
-    const classCode = activeClass?.class_code || 'this class';
+    const classCode = selectedMonitorClassCode || currentScheduleData?.[0]?.class_code || '';
     
     // 1. Check if we have any classes loaded in our global state
     if (!currentScheduleData || currentScheduleData.length === 0) {
         container.innerHTML = `
             <div style="text-align:center; padding: 20px; background: #f8fafc; border-radius: 8px; border: 1px dashed #cbd5e1;">
-                <p style="margin:0;">No active class session for <strong>${classCode}</strong> today.</p>
+                <p style="margin:0;">No active class session for <strong>today's schedule</strong>.</p>
                 <span class="small muted">Live stats will appear once the class starts.</span>
             </div>`;
         if (searchWrapper) searchWrapper.style.display = 'none'; // Hide if no data
         return;
     }
     // 2. Automatically pull the code from the current schedule. Since there are no simultaneous classes, index 0 is the current target
+    if (!classCode) {
+        container.innerHTML = '<div class="small muted">No class selected for monitoring.</div>';
+        if (searchWrapper) searchWrapper.style.display = 'none';
+        return;
+    }
+
     const res = await api('prof_dashboard', { class_code: classCode });
     if (res.ok) {
         // 3. Logic check: Is this session currently active? 
@@ -494,12 +566,15 @@ async function loadTodaySchedule() {
     const res = await api('today_schedule', { student_id: currentUser.id });
     
     if (!res.ok) {
+        currentScheduleData = [];
         list.innerHTML = '<div class="error-message">Failed to load schedule.</div>';
+        renderMonitorClassFilter();
         return;
     }
 
     // Check if the list is empty
     if (!res.schedule || res.schedule.length === 0) {
+        currentScheduleData = [];
         list.innerHTML = `
             <div class="card" style="text-align:center; padding: 40px 20px; border: 1px dashed #cbd5e1; background: #f8fafc;">
                 <i class="fa fa-calendar-o" style="font-size: 2rem; color: #94a3b8; margin-bottom: 10px;"></i>
@@ -512,6 +587,7 @@ async function loadTodaySchedule() {
 
     // HYDRATE GLOBAL STATE: Store the array here
     currentScheduleData = res.schedule; 
+    renderMonitorClassFilter();
     // Otherwise, clear and loop through classes
     list.innerHTML = '';
     const timeMap = {}; // To track time overlaps
@@ -1082,7 +1158,7 @@ document.getElementById('generateReport').onclick = async () => {
 async function loadAttendanceSummary() {
     const container = document.getElementById('profSummaryOutput');
     container.innerHTML = '<div class="small muted"><i class="fa fa-spinner fa-spin"></i> Calculating totals...</div>';
-    const classCode = currentScheduleData?.[0]?.class_code;
+    const classCode = selectedMonitorClassCode || currentScheduleData?.[0]?.class_code;
     if (!classCode) {
         container.innerHTML = '<div class="small muted">No active class found, so totals cannot be generated yet.</div>';
         return;
