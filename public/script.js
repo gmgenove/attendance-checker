@@ -442,7 +442,6 @@ async function renderCycleTimeline() {
                     <span
                         class="cycle-window ${window.mode} ${window.isActive ? 'is-active' : ''}"
                         style="left:${window.left}%; width:${window.width}%;"
-                        //title="${cycle.cycle_name} · ${window.mode === 'sync' ? 'Synchronous' : 'Asynchronous'} · ${window.start.toFormat('LLL dd')} - ${window.end.toFormat('LLL dd')}&#10;${cycle.assignmentsText || 'No subject/professor assigned'}"
                         title="${cycle.cycle_name} · ${window.mode === 'sync' ? 'Synchronous' : 'Asynchronous'} · ${window.start.toFormat('LLL dd')} - ${window.end.toFormat('LLL dd')}&#10;"
                     ></span>
                 `).join('')}
@@ -474,7 +473,6 @@ async function renderCycleTimeline() {
                 <span class="cycle-legend-item"><span class="cycle-legend-dot sync"></span>Synchronous week</span>
                 <span class="cycle-legend-item"><span class="cycle-legend-dot async"></span>Asynchronous period</span>
                 <span class="cycle-legend-item"><span style="width:2px;height:12px;background:#1f2937;display:inline-block;border-radius:999px;"></span>Today</span>
-                <!--span class="cycle-legend-item">Hover a block to view subject + professor</span-->
             </div>
         </div>
     `;
