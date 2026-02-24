@@ -925,7 +925,10 @@ async function updateCheckinUI(cls) {
         const adjustmentEnd = new Date(config.adjustment_end);
         const isWithinAdjustment = now <= adjustmentEnd;
         // 2. Handle already-recorded attendance first (PRESENT/LATE/etc.)
-        if (record && record.status && record.status !== 'not_recorded') {
+        const relaxableStatuses = ['ASYNCHRONOUS', 'ABSENT', 'PENDING'];
+        const isRelaxedRecord = isWithinAdjustment && record && relaxableStatuses.includes(record.status);
+
+        if (record && record.status && record.status !== 'not_recorded' && !isRelaxedRecord) {
             if (btn) btn.style.display = 'none';
             if (excuseLink) excuseLink.style.display = 'none';
 
@@ -939,7 +942,9 @@ async function updateCheckinUI(cls) {
 
         // 3. Handle Terminal Statuses (Excused, Holiday, Credited, etc.)
         const specialStatuses = ['EXCUSED', 'SUSPENDED', 'CANCELLED', 'HOLIDAY', 'ABSENT', 'ASYNCHRONOUS', 'CREDITED', 'DROPPED'];
-        if (specialStatuses.includes(cls.my_status) || (record && specialStatuses.includes(record.status))) {
+        const finalStatus = record?.status || cls.my_status;
+        const isRelaxedSpecialStatus = isWithinAdjustment && relaxableStatuses.includes(finalStatus);
+        if ((specialStatuses.includes(cls.my_status) || (record && specialStatuses.includes(record.status))) && !isRelaxedSpecialStatus) {
             const finalStatus = record?.status || cls.my_status;
             if (btn) btn.style.display = 'none';
             if (excuseLink) excuseLink.style.display = 'none';
@@ -985,7 +990,7 @@ async function updateCheckinUI(cls) {
     
         // 4. Handle Self-Service (Credit/Drop)
         const selfServiceContainer = document.getElementById(`self-service-container-${safeCode}`);
-        if (!record || record.status === 'not_recorded') {
+        if (!record || record.status === 'not_recorded' || isRelaxedRecord) {
             selfServiceContainer.innerHTML = ''; // Clear previous
             // Credit Button
             if (isWithinAdjustment) {
