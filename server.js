@@ -124,7 +124,6 @@ app.post('/api', async (req, res) => {
 			const query = `
 			    SELECT s.*, u.user_name as professor_name, a.attendance_status as my_status, a.time_in, a.reason
 			    FROM schedules s
-			    LEFT JOIN academic_cycles c ON s.cycle_name = c.cycle_name
 			    LEFT JOIN sys_users u ON s.professor_id = u.user_id AND u.user_status = TRUE
 			    LEFT JOIN attendance a ON s.class_code = a.class_code 
 			        AND a.student_id = $1 AND a.class_date = $2::date
@@ -134,8 +133,15 @@ app.post('/api', async (req, res) => {
 			        AND s.academic_year = $5
 			        AND (
 			            s.cycle_name IS NULL -- Shows classes that run all semester
-			            OR ($2::date BETWEEN c.start_date AND c.end_date) -- Shows classes in active cycle
-						OR $6::boolean = TRUE -- Relax cycle enforcement during adjustment
+			            OR $6::boolean = TRUE -- Relax cycle enforcement during adjustment
+			            OR EXISTS (
+			                SELECT 1
+			                FROM academic_cycles c
+			                WHERE c.cycle_name = s.cycle_name
+			                  AND c.semester = s.semester
+			                  AND c.academic_year = s.academic_year
+			                  AND $2::date BETWEEN c.start_date AND c.end_date
+			            ) -- Shows classes in active cycle
 			        )) OR EXISTS (
 			        SELECT 1 FROM attendance ma 
 			        WHERE ma.class_code = s.class_code 
