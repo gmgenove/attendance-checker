@@ -502,7 +502,7 @@ async function renderCycleTimeline() {
 
     const optionsHtml = ['<option value="">All Subjects</option>']
         .concat(timelineSubjects.map(subject =>
-            `<option value="${subject.code}" ${selectedTimelineSubject === subject.code ? 'selected' : ''}>${subject.code} - ${subject.name}</option>`
+            `<option value="${subject.code}" ${selectedTimelineSubject === subject.code ? 'selected' : ''}>${subject.code}</option>`
         ))
         .join('');
 
