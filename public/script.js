@@ -599,7 +599,7 @@ async function loadTodaySchedule() {
         const isConflict = timeMap[timeKey].length > 1;
 
         const cycleBadge = cls.cycle_name ? 
-            `<span style="background: #f1f5f9; color: #475569; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; border: 1px solid #cbd5e1; margin-left: 8px;">
+            `<span style="background: #f1f5f9; color: #475569; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; border: 1px solid #cbd5e1; margin-left: 3px;">
                 ${cls.cycle_name}
             </span>` : '';
             
