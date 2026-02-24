@@ -23,6 +23,10 @@ let dropdownCache = { key: null, expiresAt: 0, data: null };
 
 // --- HELPERS ---
 const getManilaNow = () => DateTime.now().setZone(TIMEZONE);
+const isWithinAdjustmentPeriod = (semConfig, now = getManilaNow()) => {
+  if (!semConfig?.adjStart || !semConfig?.adjEnd) return false;
+  return now >= semConfig.adjStart.startOf('day') && now <= semConfig.adjEnd.endOf('day');
+};
 
 const makeupCache = {}; // Prevents redundant DB hits during a single report run
 const getMakeupDateSet = async (classCode) => {
@@ -131,6 +135,7 @@ app.post('/api', async (req, res) => {
 			        AND (
 			            s.cycle_name IS NULL -- Shows classes that run all semester
 			            OR ($2::date BETWEEN c.start_date AND c.end_date) -- Shows classes in active cycle
+						OR $6::boolean = TRUE -- Relax cycle enforcement during adjustment
 			        )) OR EXISTS (
 			        SELECT 1 FROM attendance ma 
 			        WHERE ma.class_code = s.class_code 
@@ -138,7 +143,7 @@ app.post('/api', async (req, res) => {
 			        AND ma.attendance_status = 'PENDING') 
 				ORDER BY s.start_time
 			`;
-			const result = await pool.query(query, [student_id, dateStr, dayName, semInfo.sem, semInfo.year]);
+			const result = await pool.query(query, [student_id, dateStr, dayName, semInfo.sem, semInfo.year, isWithinAdjustmentPeriod(semInfo, now)]);
 			
 			// Format times for frontend
 			const schedule = result.rows.map(row => ({
@@ -1345,6 +1350,7 @@ const getCurrentSemConfig = async () => {
       sem: "1", 
       start: s1Start, 
       end: s1End, 
+	  adjStart: DateTime.fromISO(config.sem1_adjustment_start).setZone(TIMEZONE),
       adjEnd: DateTime.fromISO(config.sem1_adjustment_end).setZone(TIMEZONE),
 	  name: "First Semester", 
 	  year: schoolYear
@@ -1354,6 +1360,7 @@ const getCurrentSemConfig = async () => {
       sem: "2", 
       start: s2Start, 
       end: s2End, 
+	  adjStart: DateTime.fromISO(config.sem2_adjustment_start).setZone(TIMEZONE),
       adjEnd: DateTime.fromISO(config.sem2_adjustment_end).setZone(TIMEZONE),
 	  name: "Second Semester", 
 	  year: schoolYear
@@ -1485,6 +1492,7 @@ const autoTagAbsentees = async () => {
     const dayName = now.toFormat('ccc');
     const dateStr = now.toISODate();
 	const semInfo = await getCurrentSemConfig();
+	const inAdjustmentPeriod = isWithinAdjustmentPeriod(semInfo, now);
 
     if (semInfo.sem === 'None') {
       return;
@@ -1533,7 +1541,7 @@ const autoTagAbsentees = async () => {
 
       // B. ASYNCHRONOUS CYCLE TAGGING (Based on your image)
       // If the cycle status for this specific date is 'ASYNCHRONOUS'
-      if (sched.cycle_status === 'ASYNCHRONOUS') {
+	  if (!inAdjustmentPeriod && sched.cycle_status === 'ASYNCHRONOUS') {
         await pool.query(`
           INSERT INTO attendance (class_date, class_code, student_id, attendance_status, reason, time_in)
           SELECT $1, $2, u.user_id, 'ASYNCHRONOUS', 'Scheduled Asynchronous Week', '00:00:00'
@@ -1547,8 +1555,9 @@ const autoTagAbsentees = async () => {
         continue; // Move to next class, don't mark as absent
       }
 
-      // C. REGULAR ABSENTEE MAINTENANCE (Only if Synchronous or No Cycle Defined). Tag ABSENT if 30 minutes have passed since class ended
-      if (now > classEnd.plus({ minutes: 30 })) {
+	  // C. REGULAR ABSENTEE MAINTENANCE (Only if Synchronous or No Cycle Defined). Tag ABSENT if 30 minutes have passed since class ended. 
+	  // During adjustment periods, we intentionally skip strict auto-absence tagging.
+      if (!inAdjustmentPeriod && now > classEnd.plus({ minutes: 30 })) {
         // Mark missing students as ABSENT
         await pool.query(`
           INSERT INTO attendance (class_date, class_code, student_id, attendance_status, time_in)
