@@ -176,8 +176,13 @@ app.post('/api', async (req, res) => {
 			  [dateStr, class_code, student_id]
 			);
 		
-			if (existing.rows.length > 0) {
-			  return res.json({ ok: true, status: existing.rows[0].attendance_status, message: 'Already checked in' });
+			const inAdjustmentPeriod = isWithinAdjustmentPeriod(semConfig, now);
+            if (existing.rows.length > 0) {
+			  const existingStatus = existing.rows[0].attendance_status;
+			  const canOverrideDuringAdjustment = inAdjustmentPeriod && ['ASYNCHRONOUS', 'ABSENT', 'PENDING'].includes(existingStatus);
+			  if (!canOverrideDuringAdjustment) {
+			    return res.json({ ok: true, status: existingStatus, message: 'Already checked in' });
+			  }
 			}
 		
 			// B. Get Class Start Time
@@ -200,7 +205,10 @@ app.post('/api', async (req, res) => {
 		
 			// D. Save to Postgres
 			await pool.query(
-			  'INSERT INTO attendance (class_date, class_code, student_id, attendance_status, time_in) VALUES ($1, $2, $3, $4, $5)',
+			  `INSERT INTO attendance (class_date, class_code, student_id, attendance_status, time_in) 
+			   VALUES ($1, $2, $3, $4, $5)
+			   ON CONFLICT (class_date, class_code, student_id)
+			   DO UPDATE SET attendance_status = EXCLUDED.attendance_status, time_in = EXCLUDED.time_in, reason = NULL`,
 			  [dateStr, class_code, student_id, status, now.toFormat('HH:mm:ss')]
 			);
 		
@@ -638,8 +646,14 @@ app.post('/api', async (req, res) => {
 	        [today, class_code, student_id]
 	    );
 	
-	    if (existing.rows.length > 0) {
-	        return res.json({ ok: false, error: "Already filed for today." });
+	    const semConfig = await getCurrentSemConfig();
+	    const inAdjustmentPeriod = isWithinAdjustmentPeriod(semConfig, now);
+		if (existing.rows.length > 0) {
+	        const existingStatus = existing.rows[0].attendance_status;
+	        const canOverrideDuringAdjustment = inAdjustmentPeriod && ['ASYNCHRONOUS', 'ABSENT', 'PENDING'].includes(existingStatus);
+	        if (!canOverrideDuringAdjustment) {
+	            return res.json({ ok: false, error: "Already filed for today." });
+	        }
 	    }
 	
 	    if (!reason || reason.trim().length < 5) {
@@ -1367,7 +1381,7 @@ const getCurrentSemConfig = async () => {
     };
   } else {
     // Default to nearest sem or "Out of Semester"
-    return { sem: "None", start: null, end: null, adjEnd: null, name: "None", year: "None" };
+    return { sem: "None", start: null, end: null, adjStart: null, adjEnd: null, name: "None", year: "None" };
   }
 };
 
