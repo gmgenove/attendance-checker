@@ -1436,7 +1436,7 @@ const initDb = async () => {
       PRIMARY KEY (class_date, class_code, student_id)
     );
 
-	CREATE TABLE academic_cycles (
+	CREATE TABLE IF NOT EXISTS academic_cycles (
 	    cycle_id SERIAL PRIMARY KEY,
 	    cycle_name TEXT NOT NULL, -- e.g., 'Cycle 1', 'Cycle 2'
 	    start_date DATE NOT NULL,
