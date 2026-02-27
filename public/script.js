@@ -535,7 +535,7 @@ async function renderCycleTimeline() {
         }
     };
 
-    const selectedWindow = rangeWindows[selectedTimelineRange] || rangeWindows.month;
+    const selectedWindow = rangeWindows[selectedTimelineRange] || rangeWindows.week;
     const timelineStart = selectedWindow.start < semesterStart ? semesterStart : selectedWindow.start;
     const timelineEnd = selectedWindow.end > semesterEnd ? semesterEnd : selectedWindow.end;
     const totalDays = Math.max(timelineEnd.diff(timelineStart, 'days').days, 1);
