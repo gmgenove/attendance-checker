@@ -982,8 +982,6 @@ app.post('/api', async (req, res) => {
 	        end: end.toISODate()
 	      }];
 
-	      if (activeWindow) windows.push(activeWindow);
-
 	      const dedupedAssignments = cycleAssignments.filter((item, index, arr) =>
 	        arr.findIndex(entry => entry.class_code === item.class_code) === index
 	      );
