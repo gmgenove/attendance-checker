@@ -1366,8 +1366,10 @@ window.handleStatusChange = async () => {
     if (res.ok) {
         alert(`Notice Posted: ${res.message}`);
         document.getElementById('suspendReason').value = '';
-        // Refresh UI to show the new banner immediately
-        checkGlobalStatus();
+         hideModal('classStatusModal');
+        // Refresh UI to show the new banner and updated class list immediately
+        await checkGlobalStatus();
+        if (typeof loadTodaySchedule === 'function') await loadTodaySchedule();
         if (typeof loadProfessorDashboard === 'function') loadProfessorDashboard();
     } else {
         alert(res.error);
@@ -1391,7 +1393,12 @@ window.handleMakeUpClass = async () => {
     const res = await api('authorize_makeup', { class_code: code, date: date, actor_id: currentUser.id });
     if (res.ok) {
         alert(res.message);
-        loadTodaySchedule(); 
+        hideModal('makeupModal');
+        if (typeof loadTodaySchedule === 'function') await loadTodaySchedule();
+        if (typeof loadProfessorDashboard === 'function') await loadProfessorDashboard();
+        await checkGlobalStatus();
+    } else {
+        alert(res.error || 'Failed to authorize make-up class.');
     }
 };
 
