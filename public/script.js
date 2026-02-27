@@ -447,7 +447,7 @@ function renderLiveDashboard(container, res, classCode) {
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <span style="flex: 1;">
                         <div style="display:flex; align-items:center; gap:8px;">
-                            <strong>${r.user_name}</strong>
+                            <span style="word-break: break-all;"><strong>${r.user_name}</strong></span>
                             ${isMakeup ? `<span style="font-size:8px; background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; padding:1px 4px; border-radius:4px;">MAKE-UP</span>` : ''}
                             <span style="font-size:9px; padding:2px 6px; border-radius:10px; background:#f1f5f9; color:${statusColor}; font-weight:bold; border: 1px solid">${r.status}</span>
                         </div>
