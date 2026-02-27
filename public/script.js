@@ -620,7 +620,7 @@ async function renderCycleTimeline() {
                 </label>
             </div>
             <div class="cycle-range-head">
-                <span>${res.semester.name} ${res.semester.academic_year} · ${selectedWindow.label} (${timelineRangeLabel})</span>
+                <span>${(selectedWindow.label == 'Full Semester') ? res.semester.name + " " + res.semester.academic_year : selectedWindow.label + " (" + timelineRangeLabel + ")"}</span>
                 <div class="cycle-month-scale">
                     ${monthMarks.map(mark => `<span class="cycle-month-tag" style="left:${mark.left}%;">${mark.label}</span>`).join('')}
                 </div>
