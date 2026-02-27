@@ -363,29 +363,35 @@
 
                     <div id="profControls" class="card" style="display:none">
                         <h3><i class="fa fa-bar-chart"></i> Attendance Monitor</h3>
-                        <div class="card">
-                            <h4><i class="fa fa-line-chart"></i> Live Attendance</h4>
-
-                            <div id="monitorClassFilterWrapper" style="display:none; margin-bottom: 12px;">
-                                <label class="small muted" for="monitorClassFilter">Class Filter (Today)</label>
-                                <select id="monitorClassFilter" style="width:100%; margin-top:6px;"></select>
-                            </div>
-    
-                            <div id="searchWrapper" style="display: none; margin-bottom: 15px; position: relative;">
-                                <input type="text" id="studentSearch" placeholder="Search student name..." style="width: 100%; box-sizing: border-box; padding-left: 35px;" autocomplete="off"/>
-                                <span class="fa fa-search" style="position: absolute; left: 12px; top: 13px; color: #94a3b8;"></span>
-                            </div>
-                        
-                            <div id="profDashboardOutput" class="small muted">Loading Live Stats...</div>
-                            <button onclick="loadProfessorDashboard()" style="margin-top:10px">Refresh Live Stats</button>
+                        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                            <h3 style="margin:0;"><i class="fa fa-bar-chart"></i> Attendance Monitor</h3>
+                            <button id="toggleProfControlsBtn" type="button" onclick="toggleProfControlsCollapse()" aria-expanded="true">Collapse</button>
                         </div>
+                        <div id="profControlsContent" style="margin-top:12px;">
+                            <div class="card">
+                                <h4><i class="fa fa-line-chart"></i> Live Attendance</h4>
     
-                        <div class="card">
-                            <div style="display:flex; justify-content: space-between; align-items: center;">
-                                <h4><i class="fa fa-file-text-o"></i> Attendance Overview</h4>
-                                <button id="toggleTotalsBtn" onclick="toggleProfSummary()">View Totals</button>
+                                <div id="monitorClassFilterWrapper" style="display:none; margin-bottom: 12px;">
+                                    <label class="small muted" for="monitorClassFilter">Class Filter (Today)</label>
+                                    <select id="monitorClassFilter" style="width:100%; margin-top:6px;"></select>
+                                </div>
+        
+                                <div id="searchWrapper" style="display: none; margin-bottom: 15px; position: relative;">
+                                    <input type="text" id="studentSearch" placeholder="Search student name..." style="width: 100%; box-sizing: border-box; padding-left: 35px;" autocomplete="off"/>
+                                    <span class="fa fa-search" style="position: absolute; left: 12px; top: 13px; color: #94a3b8;"></span>
+                                </div>
+                            
+                                <div id="profDashboardOutput" class="small muted">Loading Live Stats...</div>
+                                <button onclick="loadProfessorDashboard()" style="margin-top:10px">Refresh Live Stats</button>
                             </div>
-                            <div id="profSummaryOutput" style="display: none; margin-top: 15px;"></div>
+        
+                            <div class="card">
+                                <div style="display:flex; justify-content: space-between; align-items: center;">
+                                    <h4><i class="fa fa-file-text-o"></i> Attendance Overview</h4>
+                                    <button id="toggleTotalsBtn" onclick="toggleProfSummary()">View Totals</button>
+                                </div>
+                                <div id="profSummaryOutput" style="display: none; margin-top: 15px;"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
