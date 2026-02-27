@@ -1352,7 +1352,7 @@ window.handleStatusChange = async () => {
     if (!classCode) return alert("Please select a class.");
     if ((!reason || reason.length < 5) && (type == 'CANCELLED' || type == 'SUSPENDED')) return alert("Please provide a detailed reason.");
 
-    const confirmMsg = `Declare ${type.toLowerCase()} for ${classCode}?`;
+    let confirmMsg = `Declare ${type.toLowerCase()} for ${classCode}?`;
     if (type == 'CANCELLED' || type == 'SUSPENDED') confirmMsg += `\nReason: ${reason}. This marks the entire roster.`;
     if (!confirm(confirmMsg)) return;
 
