@@ -1455,7 +1455,8 @@ async function populateClassDropdowns() {
 var timeDisplay = document.getElementById("hdr");
 function refreshTime() {
   var options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', fractionalSecondDigits: 3, timeZone: 'Asia/Manila' };
-  var dateString = new Date().toISOString();
+  var isoString = new Date().toISOString();
+  var dateString = new Date(isoString);
   var formattedDateString = new Intl.DateTimeFormat("en-US", options).format(dateString);
   timeDisplay.innerHTML = formattedDateString;
 }
