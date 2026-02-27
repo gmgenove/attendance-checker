@@ -609,7 +609,7 @@ async function renderCycleTimeline() {
         <div class="cycle-timeline-card">
             <div class="cycle-topbar">
                 <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex:1; min-width:180px;">
-                    <strong style="font-size: 0.92rem; color:#7f1d1d;">Weekday Cycle Calendar</strong>
+                    <strong style="font-size: 0.92rem; color:#7f1d1d;">Cycle Calendar</strong>
                     <span class="small muted">${today.toFormat('LLL dd, yyyy')}</span>
                 </div>
                 <label class="cycle-filter">Filter
@@ -626,7 +626,7 @@ async function renderCycleTimeline() {
                 </div>
             </div>
             ${rowsHtml || '<div class="small muted" style="margin-top:8px;">No cycle windows in this timeframe.</div>'}
-            <div class="small" style="color:#7f1d1d; margin-top:8px;">${statusText}</div>
+            <div class="small" style="color:#7f1d1d; margin-top:8px; font-size: 0.8rem;">${statusText}</div>
             <div class="cycle-legend">
                 <span class="cycle-legend-item"><span class="cycle-legend-dot sync"></span>Synchronous week</span>
                 <span class="cycle-legend-item"><span class="cycle-legend-dot async"></span>Asynchronous period</span>
