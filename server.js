@@ -1695,31 +1695,64 @@ const autoTagAbsentees = async () => {
       if (isHoliday) {
         // Tag everyone as HOLIDAY for this class if not already tagged
         await pool.query(`
-          INSERT INTO attendance (class_date, class_code, student_id, attendance_status, reason, time_in)
-          SELECT $1, $2, u.user_id, 'HOLIDAY', $3, '00:00:00'
-          FROM sys_users u
-          WHERE u.user_role IN ('student', 'officer') AND u.user_status = TRUE
-          AND NOT EXISTS (
-            SELECT 1 FROM attendance a 
-            WHERE a.class_date = $1::date AND a.class_code = $2 AND a.student_id = u.user_id AND u.user_status = TRUE
+          WITH inserted AS (
+            INSERT INTO attendance (class_date, class_code, student_id, attendance_status, reason, time_in)
+            SELECT $1, $2, u.user_id, 'HOLIDAY', $3, '00:00:00'
+            FROM sys_users u
+            WHERE u.user_role IN ('student', 'officer') AND u.user_status = TRUE
+            AND NOT EXISTS (
+              SELECT 1 FROM attendance a 
+              WHERE a.class_date = $1::date AND a.class_code = $2 AND a.student_id = u.user_id AND u.user_status = TRUE
+            )
+            RETURNING class_date, class_code, student_id, attendance_status, reason, time_in
           )
+          INSERT INTO attendance_transactions
+            (class_date, class_code, student_id, event_type, attendance_status, reason, time_in, actor_id, details, transaction_time)
+          SELECT
+            class_date,
+            class_code,
+            student_id,
+            'AUTO_TAG_HOLIDAY',
+            attendance_status,
+            reason,
+            time_in,
+            'SYSTEM_AUTO_TAG',
+            jsonb_build_object('source', 'autoTagAbsentees', 'mode', 'holiday'),
+            NOW()
+          FROM inserted
         `, [dateStr, sched.class_code, holidayReason]);
         
         continue; // Skip the rest of the logic for this class if it's a holiday
       }
 
-      // B. ASYNCHRONOUS CYCLE TAGGING (Based on your image)
-      // If the cycle status for this specific date is 'ASYNCHRONOUS'
+      // B. ASYNCHRONOUS CYCLE TAGGING: If the cycle status for this specific date is 'ASYNCHRONOUS'
 	  if (!inAdjustmentPeriod && sched.cycle_status === 'ASYNCHRONOUS') {
         await pool.query(`
-          INSERT INTO attendance (class_date, class_code, student_id, attendance_status, reason, time_in)
-          SELECT $1, $2, u.user_id, 'ASYNCHRONOUS', 'Scheduled Asynchronous Week', '00:00:00'
-          FROM sys_users u
-          WHERE u.user_role IN ('student', 'officer') AND u.user_status = TRUE
-          AND NOT EXISTS (
-            SELECT 1 FROM attendance a 
-            WHERE a.class_date = $1::date AND a.class_code = $2 AND a.student_id = u.user_id
+          WITH inserted AS (
+            INSERT INTO attendance (class_date, class_code, student_id, attendance_status, reason, time_in)
+            SELECT $1, $2, u.user_id, 'ASYNCHRONOUS', 'Scheduled Asynchronous Week', '00:00:00'
+            FROM sys_users u
+            WHERE u.user_role IN ('student', 'officer') AND u.user_status = TRUE
+            AND NOT EXISTS (
+              SELECT 1 FROM attendance a 
+              WHERE a.class_date = $1::date AND a.class_code = $2 AND a.student_id = u.user_id
+            )
+            RETURNING class_date, class_code, student_id, attendance_status, reason, time_in
           )
+          INSERT INTO attendance_transactions
+            (class_date, class_code, student_id, event_type, attendance_status, reason, time_in, actor_id, details, transaction_time)
+          SELECT
+            class_date,
+            class_code,
+            student_id,
+            'AUTO_TAG_ASYNCHRONOUS',
+            attendance_status,
+            reason,
+            time_in,
+            'SYSTEM_AUTO_TAG',
+            jsonb_build_object('source', 'autoTagAbsentees', 'mode', 'asynchronous_cycle'),
+            NOW()
+          FROM inserted
         `, [dateStr, sched.class_code]);
         continue; // Move to next class, don't mark as absent
       }
@@ -1730,14 +1763,31 @@ const autoTagAbsentees = async () => {
 	  if (now > classEnd.plus({ minutes: 30 })) {
         // Mark missing students as ABSENT
         await pool.query(`
-          INSERT INTO attendance (class_date, class_code, student_id, attendance_status, time_in)
-          SELECT $1, $2, u.user_id, 'ABSENT', '00:00:00'
-          FROM sys_users u
-          WHERE u.user_role IN ('student', 'officer') AND u.user_status = TRUE
-          AND NOT EXISTS (
-            SELECT 1 FROM attendance a 
-            WHERE a.class_date = $1::date AND a.class_code = $2 AND a.student_id = u.user_id AND u.user_status = TRUE
+          WITH inserted AS (
+            INSERT INTO attendance (class_date, class_code, student_id, attendance_status, time_in)
+            SELECT $1, $2, u.user_id, 'ABSENT', '00:00:00'
+            FROM sys_users u
+            WHERE u.user_role IN ('student', 'officer') AND u.user_status = TRUE
+            AND NOT EXISTS (
+              SELECT 1 FROM attendance a 
+              WHERE a.class_date = $1::date AND a.class_code = $2 AND a.student_id = u.user_id AND u.user_status = TRUE
+            )
+            RETURNING class_date, class_code, student_id, attendance_status, reason, time_in
           )
+          INSERT INTO attendance_transactions
+            (class_date, class_code, student_id, event_type, attendance_status, reason, time_in, actor_id, details, transaction_time)
+          SELECT
+            class_date,
+            class_code,
+            student_id,
+            'AUTO_TAG_ABSENT',
+            attendance_status,
+            reason,
+            time_in,
+            'SYSTEM_AUTO_TAG',
+            jsonb_build_object('source', 'autoTagAbsentees', 'mode', 'absent_after_window'),
+            NOW()
+          FROM inserted
         `, [dateStr, sched.class_code]);
       }
     }
