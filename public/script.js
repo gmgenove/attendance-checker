@@ -1368,6 +1368,27 @@ async function handleBulkReset() {
     }
 }
 
+window.reset_single_password = async (studentId) => {
+    if (!studentId) {
+        alert('Missing student ID.');
+        return;
+    }
+
+    const confirmation = confirm(`Reset password for ${studentId} to 'password1234'?`);
+    if (!confirmation) return;
+
+    const res = await api('reset_single_password', {
+        role: currentUser?.role,
+        target_user_id: studentId
+    });
+
+    if (res.ok) {
+        alert(res.message || 'Password reset successful.');
+    } else {
+        alert('Error: ' + (res.error || 'Failed to reset password.'));
+    }
+};
+
 async function checkGlobalStatus() {
     const res = await api('get_today_status');
     const alertBox = document.getElementById('statusAlert');
