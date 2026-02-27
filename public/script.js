@@ -7,6 +7,25 @@ let timelineSubjects = [];
 let selectedMonitorClassCode = '';
 let dropdownCache = { data: null, fetchedAt: 0 };
 const DROPDOWN_CACHE_TTL_MS = 5 * 60 * 1000;
+let isProfControlsCollapsed = false;
+
+function setProfControlsCollapsed(collapsed) {
+    isProfControlsCollapsed = collapsed;
+
+    const content = document.getElementById('profControlsContent');
+    const toggleBtn = document.getElementById('toggleProfControlsBtn');
+
+    if (!content || !toggleBtn) return;
+
+    content.style.display = collapsed ? 'none' : 'block';
+    toggleBtn.textContent = collapsed ? 'Expand' : 'Collapse';
+    toggleBtn.setAttribute('aria-expanded', String(!collapsed));
+}
+
+function toggleProfControlsCollapse() {
+    setProfControlsCollapsed(!isProfControlsCollapsed);
+    localStorage.setItem('profControlsCollapsed', JSON.stringify(isProfControlsCollapsed));
+}
 
 // API Helper
 async function api(action, payload = {}) {
@@ -239,6 +258,12 @@ async function showApp() {
     
     // Show both the Live Monitor and Summary to Professors AND Officers
     document.getElementById('profControls').style.display = isElevated ? 'block' : 'none';
+
+    if (isElevated) {
+        const savedCollapsedState = localStorage.getItem('profControlsCollapsed');
+        const shouldCollapse = savedCollapsedState ? JSON.parse(savedCollapsedState) : false;
+        setProfControlsCollapsed(shouldCollapse);
+    }
     
     // Restricted summary card
     const summaryCard = document.querySelector('#profSummaryOutput').closest('.card');
