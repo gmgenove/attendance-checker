@@ -23,9 +23,30 @@ let dropdownCache = { key: null, expiresAt: 0, data: null };
 
 // --- HELPERS ---
 const getManilaNow = () => DateTime.now().setZone(TIMEZONE);
+const getManilaTimestamp = () => getManilaNow().toJSDate();
 const isWithinAdjustmentPeriod = (semConfig, now = getManilaNow()) => {
   if (!semConfig?.adjStart || !semConfig?.adjEnd) return false;
   return now >= semConfig.adjStart.startOf('day') && now <= semConfig.adjEnd.endOf('day');
+};
+
+const logAttendanceTransaction = async ({
+  classDate,
+  classCode,
+  studentId,
+  eventType,
+  status,
+  reason = null,
+  timeIn = null,
+  actorId = 'SYSTEM',
+  details = null,
+  transactionTime = getManilaTimestamp()
+}) => {
+  await pool.query(
+    `INSERT INTO attendance_transactions
+      (class_date, class_code, student_id, event_type, attendance_status, reason, time_in, actor_id, details, transaction_time)
+     VALUES ($1::date, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10::timestamptz)`,
+    [classDate, classCode, studentId, eventType, status, reason, timeIn, actorId, details ? JSON.stringify(details) : null, transactionTime]
+  );
 };
 
 const makeupCache = {}; // Prevents redundant DB hits during a single report run
@@ -210,15 +231,26 @@ app.post('/api', async (req, res) => {
 			if (diffMins > lateThreshold) status = 'LATE';
 		
 			// D. Save to Postgres
+			const checkinTime = now.toFormat('HH:mm:ss');
 			await pool.query(
 			  `INSERT INTO attendance (class_date, class_code, student_id, attendance_status, time_in) 
 			   VALUES ($1, $2, $3, $4, $5)
 			   ON CONFLICT (class_date, class_code, student_id)
 			   DO UPDATE SET attendance_status = EXCLUDED.attendance_status, time_in = EXCLUDED.time_in, reason = NULL`,
-			  [dateStr, class_code, student_id, status, now.toFormat('HH:mm:ss')]
+			  [dateStr, class_code, student_id, status, checkinTime]
 			);
+
+			await logAttendanceTransaction({
+			  classDate: dateStr,
+			  classCode: class_code,
+			  studentId: student_id,
+			  eventType: 'CHECKIN',
+			  status,
+			  timeIn: checkinTime,
+			  actorId: student_id
+			});
 		
-			return res.json({ ok: true, status, timestamp: now.toFormat('HH:mm:ss') });
+			return res.json({ ok: true, status, timestamp: checkinTime });
 		  } catch (err) {
 			return res.json({ ok: false, error: err.message });
 		  }
@@ -233,6 +265,49 @@ app.post('/api', async (req, res) => {
           [date, class_code, student_id]
         );
         return res.json({ ok: true, record: result.rows[0] || { status: 'not_recorded' } });
+      }
+
+      case 'get_attendance_transactions': {
+        const { class_code, student_id, class_date, limit = 50 } = payload;
+        const filters = [];
+        const values = [];
+
+        if (class_code) {
+          values.push(class_code);
+          filters.push(`class_code = $${values.length}`);
+        }
+        if (student_id) {
+          values.push(student_id);
+          filters.push(`student_id = $${values.length}`);
+        }
+        if (class_date) {
+          values.push(class_date);
+          filters.push(`class_date = $${values.length}::date`);
+        }
+
+        values.push(Math.max(1, Math.min(parseInt(limit, 10) || 50, 200)));
+        const whereClause = filters.length > 0 ? `WHERE ${filters.join(' AND ')}` : '';
+        const result = await pool.query(
+          `SELECT
+              transaction_id,
+              class_date,
+              class_code,
+              student_id,
+              event_type,
+              attendance_status,
+              reason,
+              time_in,
+              actor_id,
+              details,
+              transaction_time
+            FROM attendance_transactions
+            ${whereClause}
+            ORDER BY transaction_time DESC
+            LIMIT $${values.length}`,
+          values
+        );
+
+        return res.json({ ok: true, records: result.rows });
       }
 
 	  case 'prof_dashboard': {
@@ -589,7 +664,7 @@ app.post('/api', async (req, res) => {
 	  }
 	
       case 'credit_attendance': {
-		  const { class_code, student_id, type } = payload; // type: 'CREDITED' or 'DROPPED'
+		  const { class_code, student_id, type, actor_id } = payload; // type: 'CREDITED' or 'DROPPED'
 		  const now = getManilaNow();
 		  const semConfig = await getCurrentSemConfig();
 		
@@ -624,12 +699,26 @@ app.post('/api', async (req, res) => {
 		    // 3. Bulk Upsert the status (D for Dropped, C for Credited)
 		    const statusToApply = (type === 'DROPPED') ? 'DROPPED' : 'CREDITED';
 		    
+		    const txnTime = now.toFormat('HH:mm:ss');
 		    await pool.query(`
 		      INSERT INTO attendance (class_date, class_code, student_id, attendance_status, time_in)
 		      SELECT unnest($1::date[]), $2, $3, $4, $5
 		      ON CONFLICT (class_date, class_code, student_id) 
 		      DO UPDATE SET attendance_status = $4
-		    `, [datesToUpdate, class_code, student_id, statusToApply, now.toFormat('HH:mm:ss')]);
+		    `, [datesToUpdate, class_code, student_id, statusToApply, txnTime]);
+
+		    for (const classDate of datesToUpdate) {
+		      await logAttendanceTransaction({
+		        classDate,
+		        classCode: class_code,
+		        studentId: student_id,
+		        eventType: 'CREDIT_ATTENDANCE',
+		        status: statusToApply,
+		        timeIn: txnTime,
+		        actorId: actor_id || 'SYSTEM',
+		        details: { type }
+		      });
+		    }
 		
 		    return res.json({ 
 		      ok: true, 
@@ -668,18 +757,30 @@ app.post('/api', async (req, res) => {
 	
 	    // This updates an existing record (Late/Absent) 
 	    // or creates a new one marked as 'EXCUSED'
+	    const sanitizedReason = reason.trim();
 	    await pool.query(`
 	        INSERT INTO attendance (class_date, class_code, student_id, attendance_status, reason, time_in)
 	        VALUES ($1, $2, $3, 'EXCUSED', $4, $5)
 	        ON CONFLICT (class_date, class_code, student_id) 
 	        DO UPDATE SET reason = $4, attendance_status = 'EXCUSED'
-	    `, [today, class_code, student_id, reason.trim(), timestamp]);
+	    `, [today, class_code, student_id, sanitizedReason, timestamp]);
+
+	    await logAttendanceTransaction({
+	      classDate: today,
+	      classCode: class_code,
+	      studentId: student_id,
+	      eventType: 'SUBMIT_EXCUSE',
+	      status: 'EXCUSED',
+	      reason: sanitizedReason,
+	      timeIn: timestamp,
+	      actorId: student_id
+	    });
 	
 	    return res.json({ ok: true, message: "Excuse filed successfully.", filedAt: timestamp });
 	  }
 
 	  case 'update_class_status': {
-	    const { class_code, reason, status, date } = payload;	 // statusType: 'SUSPENDED' or 'CANCELLED', "ASYNCHRONOUS"
+	    const { class_code, reason, status, date, actor_id } = payload;	 // statusType: 'SUSPENDED' or 'CANCELLED', "ASYNCHRONOUS"
 	    const today = date || getManilaNow().toISODate();
 	
 	    // 1. Validate the status to prevent database corruption
@@ -694,7 +795,15 @@ app.post('/api', async (req, res) => {
 	            "DELETE FROM attendance WHERE class_date = $1 AND class_code = $2 AND time_in = '00:00:00'",
 	            [today, class_code]
 	        );
-	        return res.json({ ok: true, message: "Class status reset to Normal." });
+	        await logAttendanceTransaction({
+              classDate: today,
+              classCode: class_code,
+              studentId: null,
+              eventType: 'RESET_CLASS_STATUS',
+              status: 'NORMAL',
+              actorId: actor_id || 'SYSTEM'
+            });
+            return res.json({ ok: true, message: "Class status reset to Normal." });
 	    }
 	
 	    // 3. Otherwise, fetch all active students and upsert the new status
@@ -709,13 +818,24 @@ app.post('/api', async (req, res) => {
 	            ON CONFLICT (class_date, class_code, student_id) 
 	            DO UPDATE SET attendance_status = $4, reason = $5
 	        `, [today, class_code, student.user_id, status, reason]);
+	
+	        await logAttendanceTransaction({
+	          classDate: today,
+	          classCode: class_code,
+	          studentId: student.user_id,
+	          eventType: 'UPDATE_CLASS_STATUS',
+	          status,
+	          reason,
+	          timeIn: '00:00:00',
+	          actorId: actor_id || 'SYSTEM'
+	        });
 	    }
 	
 	    return res.json({ ok: true, message: `Class successfully marked as ${status}.` });
 	  }
 
 	  case 'authorize_makeup': {
-		const { class_code, date } = payload;
+		const { class_code, date, actor_id } = payload;
 
 		const semConfig = await getCurrentSemConfig();
 		if (semConfig.sem === "None") return res.json({ ok: false, error: "No active semester." });
@@ -744,6 +864,16 @@ app.post('/api', async (req, res) => {
 			FROM sys_users WHERE user_role IN ('student', 'officer') AND user_status = TRUE
 			ON CONFLICT DO NOTHING
 		`, [date, class_code]);
+
+		await logAttendanceTransaction({
+		  classDate: date,
+		  classCode: class_code,
+		  studentId: null,
+		  eventType: 'AUTHORIZE_MAKEUP',
+		  status: 'PENDING',
+		  timeIn: '00:00:00',
+		  actorId: actor_id || 'SYSTEM'
+		});
 		return res.json({ ok: true, message: `Make-up session authorized for ${date}` });
 	  }
 
@@ -1442,6 +1572,24 @@ const initDb = async () => {
 	  remarks TEXT,
       PRIMARY KEY (class_date, class_code, student_id)
     );
+
+
+	CREATE TABLE IF NOT EXISTS attendance_transactions (
+      transaction_id BIGSERIAL PRIMARY KEY,
+      class_date DATE,
+      class_code TEXT,
+      student_id TEXT,
+      event_type TEXT NOT NULL,
+      attendance_status TEXT,
+      reason TEXT,
+      time_in TIME,
+      actor_id TEXT,
+      details JSONB,
+      transaction_time TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_attendance_txn_lookup
+      ON attendance_transactions (class_code, student_id, class_date, transaction_time DESC);
 
 	CREATE TABLE IF NOT EXISTS academic_cycles (
 	    cycle_id SERIAL PRIMARY KEY,
