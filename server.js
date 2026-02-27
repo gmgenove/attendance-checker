@@ -1688,6 +1688,11 @@ const autoTagAbsentees = async () => {
     );
 
     for (const sched of schedules.rows) {
+	  // Skip auto-tagging for classes that do not have an assigned professor yet.
+      if (!sched.professor_id) {
+        continue;
+      }
+
       const [endHH, endMM] = sched.end_time.split(':');
       const classEnd = now.set({ hour: endHH, minute: endMM, second: 0 });
 
