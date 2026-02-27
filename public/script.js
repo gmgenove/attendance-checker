@@ -1017,8 +1017,9 @@ async function updateCheckinUI(cls) {
         const adjustmentEnd = new Date(config.adjustment_end);
         const isWithinAdjustment = now <= adjustmentEnd;
         // 2. Handle already-recorded attendance first (PRESENT/LATE/etc.)
-        const relaxableStatuses = ['ASYNCHRONOUS', 'ABSENT', 'PENDING'];
-        const isRelaxedRecord = isWithinAdjustment && record && relaxableStatuses.includes(record.status);
+        const relaxableStatuses = ['ASYNCHRONOUS', 'ABSENT'];
+        const isPendingRecord = record?.status === 'PENDING';
+        const isRelaxedRecord = isPendingRecord || (isWithinAdjustment && record && relaxableStatuses.includes(record.status));
 
         if (record && record.status && record.status !== 'not_recorded' && !isRelaxedRecord) {
             if (btn) btn.style.display = 'none';
