@@ -1439,6 +1439,7 @@ const initDb = async () => {
       attendance_status TEXT, 
       time_in TIME, 
       reason TEXT,
+	  remarks TEXT,
       PRIMARY KEY (class_date, class_code, student_id)
     );
 
@@ -1577,7 +1578,8 @@ const autoTagAbsentees = async () => {
 
 	  // C. REGULAR ABSENTEE MAINTENANCE (Only if Synchronous or No Cycle Defined). Tag ABSENT if 30 minutes have passed since class ended. 
 	  // During adjustment periods, we intentionally skip strict auto-absence tagging.
-      if (!inAdjustmentPeriod && now > classEnd.plus({ minutes: 30 })) {
+      //if (!inAdjustmentPeriod && now > classEnd.plus({ minutes: 30 })) {
+	  if (now > classEnd.plus({ minutes: 30 })) {
         // Mark missing students as ABSENT
         await pool.query(`
           INSERT INTO attendance (class_date, class_code, student_id, attendance_status, time_in)
