@@ -1479,13 +1479,6 @@ async function populateClassDropdowns() {
     }
 }
 
-// show current time in dashboard
-var timeDisplay = document.getElementById("hdr");
-function refreshTime() {
-  var dateString = new Date().toLocaleString("en-US", { timeZone: 'Asia/Manila', dateStyle: 'full', timeStyle: 'medium' });
-  timeDisplay.innerHTML = dateString;
-}
-setInterval(refreshTime, 1000);
 // Refresh the dashboard every 60 seconds if the user is an Officer/Prof
 setInterval(() => {
     if (currentUser && (currentUser.role === 'professor' || currentUser.role === 'officer')) {
