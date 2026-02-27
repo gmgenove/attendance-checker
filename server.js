@@ -976,24 +976,11 @@ app.post('/api', async (req, res) => {
 
 	      if (subjectFilter && cycleAssignments.length === 0) return;
 
-	      const windows = [];
-	      let cursor = start.startOf('day');
-	      let activeWindow = null;
-
-	      while (cursor <= end) {
-	        const mode = cycleDays.size > 0
-	          ? (cycleDays.has(cursor.toFormat('ccc')) ? 'sync' : 'async')
-	          : fallbackMode;
-
-	        if (!activeWindow || activeWindow.mode !== mode) {
-	          if (activeWindow) windows.push(activeWindow);
-	          activeWindow = { mode, start: cursor.toISODate(), end: cursor.toISODate() };
-	        } else {
-	          activeWindow.end = cursor.toISODate();
-	        }
-
-	        cursor = cursor.plus({ days: 1 });
-	      }
+	      const windows = [{
+	        mode: fallbackMode,
+	        start: start.toISODate(),
+	        end: end.toISODate()
+	      }];
 
 	      if (activeWindow) windows.push(activeWindow);
 
