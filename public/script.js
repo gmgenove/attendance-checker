@@ -610,7 +610,6 @@ async function renderCycleTimeline() {
             <div class="cycle-topbar">
                 <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex:1; min-width:180px;">
                     <strong style="font-size: 0.92rem; color:#7f1d1d;">Cycle Calendar</strong>
-                    <span class="small muted">${today.toFormat('LLL dd, yyyy')}</span>
                 </div>
                 <label class="cycle-filter">Filter
                     <select id="cycleSubjectFilter">${optionsHtml}</select>
