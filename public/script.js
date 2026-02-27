@@ -1454,9 +1454,9 @@ async function populateClassDropdowns() {
 // show current time in dashboard
 var timeDisplay = document.getElementById("hdr");
 function refreshTime() {
-  var formatter = new Intl.DateTimeFormat('en-us', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', fractionalSecondDigits: 3, timeZone: 'Asia/Manila' });
-  var dateString = new Date().toLocaleString("en-US", { timeZone: 'Asia/Manila' });
-  var formattedDateString = formatter.formatToParts(dateString);
+  var options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', fractionalSecondDigits: 3, timeZone: 'Asia/Manila' };
+  var dateString = new Date().toISOString();
+  var formattedDateString = new Intl.DateTimeFormat("en-US", options).format(dateString);
   timeDisplay.innerHTML = formattedDateString;
 }
 setInterval(refreshTime, 1000);
