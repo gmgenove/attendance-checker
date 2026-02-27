@@ -262,7 +262,7 @@ async function showApp() {
 
     if (isElevated) {
         const savedCollapsedState = localStorage.getItem('profControlsCollapsed');
-        const shouldCollapse = savedCollapsedState ? JSON.parse(savedCollapsedState) : false;
+        const shouldCollapse = savedCollapsedState ? JSON.parse(savedCollapsedState) : true;
         setProfControlsCollapsed(shouldCollapse);
     }
     
