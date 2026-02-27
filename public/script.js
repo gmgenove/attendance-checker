@@ -3,6 +3,7 @@ let currentUser = null;
 let isSignup = false;
 let currentScheduleData = [];
 let selectedTimelineSubject = '';
+let selectedTimelineRange = 'month';
 let timelineSubjects = [];
 let selectedMonitorClassCode = '';
 let dropdownCache = { data: null, fetchedAt: 0 };
@@ -515,7 +516,29 @@ async function renderCycleTimeline() {
     const today = luxon.DateTime.now().setZone('Asia/Manila').startOf('day');
     const semesterStart = luxon.DateTime.fromISO(res.semester.start_date).startOf('day');
     const semesterEnd = luxon.DateTime.fromISO(res.semester.end_date).endOf('day');
-    const totalDays = Math.max(semesterEnd.diff(semesterStart, 'days').days, 1);
+
+    const rangeWindows = {
+        week: {
+            start: today.startOf('week'),
+            end: today.endOf('week'),
+            label: 'This Week'
+        },
+        month: {
+            start: today.startOf('month'),
+            end: today.endOf('month'),
+            label: 'This Month'
+        },
+        semester: {
+            start: semesterStart,
+            end: semesterEnd,
+            label: 'Full Semester'
+        }
+    };
+
+    const selectedWindow = rangeWindows[selectedTimelineRange] || rangeWindows.month;
+    const timelineStart = selectedWindow.start < semesterStart ? semesterStart : selectedWindow.start;
+    const timelineEnd = selectedWindow.end > semesterEnd ? semesterEnd : selectedWindow.end;
+    const totalDays = Math.max(timelineEnd.diff(timelineStart, 'days').days, 1);
 
     const rows = res.cycles.map(cycle => ({
         ...cycle,
@@ -525,24 +548,29 @@ async function renderCycleTimeline() {
         windows: (cycle.windows || []).map(window => {
             const start = luxon.DateTime.fromISO(window.start).startOf('day');
             const end = luxon.DateTime.fromISO(window.end).endOf('day');
-            const left = Math.min(Math.max(start.diff(semesterStart, 'days').days / totalDays, 0), 1) * 100;
-            const width = Math.max((end.diff(start, 'days').days / totalDays) * 100, 0.7);
+            const clippedStart = start < timelineStart ? timelineStart : start;
+            const clippedEnd = end > timelineEnd ? timelineEnd : end;
+            const isVisible = clippedEnd >= timelineStart && clippedStart <= timelineEnd;
+            const left = Math.min(Math.max(clippedStart.diff(timelineStart, 'days').days / totalDays, 0), 1) * 100;
+            const width = Math.max((clippedEnd.diff(clippedStart, 'days').days / totalDays) * 100, 0.7);
             const isActive = today >= start && today <= end;
-            return { ...window, start, end, left, width, isActive };
+            return { ...window, start, end, left, width, isActive, isVisible };
         })
-    }));
+    })).filter(cycle => cycle.windows.some(window => window.isVisible));
 
     const monthMarks = [];
-    let monthCursor = semesterStart.startOf('month');
-    while (monthCursor <= semesterEnd) {
-        const left = Math.min(Math.max(monthCursor.diff(semesterStart, 'days').days / totalDays, 0), 1) * 100;
+    let monthCursor = timelineStart.startOf('month');
+    while (monthCursor <= timelineEnd) {
+        const left = Math.min(Math.max(monthCursor.diff(timelineStart, 'days').days / totalDays, 0), 1) * 100;
         monthMarks.push({ label: monthCursor.toFormat('LLL'), left });
         monthCursor = monthCursor.plus({ months: 1 });
     }
 
-    const markerOffset = Math.min(Math.max(today.diff(semesterStart, 'days').days / totalDays, 0), 1) * 100;
+    const markerOffset = Math.min(Math.max(today.diff(timelineStart, 'days').days / totalDays, 0), 1) * 100;
     const activeWindows = rows.flatMap(cycle =>
-        cycle.windows.filter(window => window.isActive).map(window => ({ ...window, cycleName: cycle.cycle_name }))
+        cycle.windows
+            .filter(window => window.isVisible && window.isActive)
+            .map(window => ({ ...window, cycleName: cycle.cycle_name }))
     );
 
     const statusText = activeWindows.length > 0
@@ -555,11 +583,15 @@ async function renderCycleTimeline() {
         ))
         .join('');
 
+    const rangeOptionsHtml = Object.entries(rangeWindows)
+        .map(([value, range]) => `<option value="${value}" ${selectedTimelineRange === value ? 'selected' : ''}>${range.label}</option>`)
+        .join('');
+
     const rowsHtml = rows.map(cycle => `
         <div class="cycle-row">
             <div class="cycle-label">${cycle.cycle_name}</div>
             <div class="cycle-track">
-                ${cycle.windows.map(window => `
+                ${cycle.windows.filter(window => window.isVisible).map(window => `
                     <span
                         class="cycle-window ${window.mode} ${window.isActive ? 'is-active' : ''}"
                         style="left:${window.left}%; width:${window.width}%;"
@@ -581,14 +613,17 @@ async function renderCycleTimeline() {
                 <label class="cycle-filter">Filter
                     <select id="cycleSubjectFilter">${optionsHtml}</select>
                 </label>
+                <label class="cycle-filter">Range
+                    <select id="cycleRangeFilter">${rangeOptionsHtml}</select>
+                </label>
             </div>
             <div class="cycle-range-head">
-                <span>${res.semester.name} ${res.semester.academic_year}</span>
+                <span>${res.semester.name} ${res.semester.academic_year} · ${selectedWindow.label}</span>
                 <div class="cycle-month-scale">
                     ${monthMarks.map(mark => `<span class="cycle-month-tag" style="left:${mark.left}%;">${mark.label}</span>`).join('')}
                 </div>
             </div>
-            ${rowsHtml}
+            ${rowsHtml || '<div class="small muted" style="margin-top:8px;">No cycle windows in this timeframe.</div>'}
             <div class="small" style="color:#7f1d1d; margin-top:8px;">${statusText}</div>
             <div class="cycle-legend">
                 <span class="cycle-legend-item"><span class="cycle-legend-dot sync"></span>Synchronous week</span>
@@ -602,6 +637,14 @@ async function renderCycleTimeline() {
     if (filterEl) {
         filterEl.addEventListener('change', async (event) => {
             selectedTimelineSubject = event.target.value;
+            await renderCycleTimeline();
+        });
+    }
+
+    const rangeEl = document.getElementById('cycleRangeFilter');
+    if (rangeEl) {
+        rangeEl.addEventListener('change', async (event) => {
+            selectedTimelineRange = event.target.value;
             await renderCycleTimeline();
         });
     }
