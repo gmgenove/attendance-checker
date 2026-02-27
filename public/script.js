@@ -587,6 +587,8 @@ async function renderCycleTimeline() {
         .map(([value, range]) => `<option value="${value}" ${selectedTimelineRange === value ? 'selected' : ''}>${range.label}</option>`)
         .join('');
 
+    const timelineRangeLabel = `${timelineStart.toFormat('LLL dd, yyyy')} - ${timelineEnd.toFormat('LLL dd, yyyy')}`;
+
     const rowsHtml = rows.map(cycle => `
         <div class="cycle-row">
             <div class="cycle-label">${cycle.cycle_name}</div>
@@ -618,7 +620,7 @@ async function renderCycleTimeline() {
                 </label>
             </div>
             <div class="cycle-range-head">
-                <span>${res.semester.name} ${res.semester.academic_year} · ${selectedWindow.label}</span>
+                <span>${res.semester.name} ${res.semester.academic_year} · ${selectedWindow.label} (${timelineRangeLabel})</span>
                 <div class="cycle-month-scale">
                     ${monthMarks.map(mark => `<span class="cycle-month-tag" style="left:${mark.left}%;">${mark.label}</span>`).join('')}
                 </div>
