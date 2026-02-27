@@ -435,6 +435,9 @@ function renderLiveDashboard(container, res, classCode) {
                         <button onclick="bulkStatusUpdate('${r.user_id}', 'DROPPED')" ${isDropped || isCredited ? 'disabled' : ''} title="Mark as Dropped" style="background:none; color:#ef4444; border:1px solid #ef4444; padding:4px 8px; font-size:10px; border-radius:4px;">
                             Drop
                         </button>
+                        <button onclick="showAttendanceHistory('${classCode}', '${r.user_id}')" title="View Attendance History" style="background:#eef2ff; color:#3730a3; border:1px solid #c7d2fe; padding:4px 8px; font-size:10px; border-radius:4px;">
+                            History
+                        </button>
                         <button onclick="reset_single_password('${r.user_id}')" title="Reset Password" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; padding:4px 8px; font-size:10px; border-radius:4px;">
                             <i class="fa fa-key"></i>
                         </button>
@@ -445,6 +448,28 @@ function renderLiveDashboard(container, res, classCode) {
 
     html += `</ul>`;
     container.innerHTML = html;
+}
+
+
+async function showAttendanceHistory(classCode, studentId) {
+    const res = await api('get_attendance_transactions', {
+        class_code: classCode,
+        student_id: studentId,
+        limit: 10
+    });
+
+    if (!res.ok || !res.records || res.records.length === 0) {
+        alert('No transaction records found for this student yet.');
+        return;
+    }
+
+    const rows = res.records.map((r, idx) => {
+        const time = new Date(r.transaction_time).toLocaleString();
+        const reason = r.reason ? ` | ${r.reason}` : '';
+        return `${idx + 1}. [${time}] ${r.event_type} → ${r.attendance_status || 'N/A'}${reason}`;
+    });
+
+    alert(`Attendance Transaction History\n\n${rows.join('\n')}`);
 }
 
 async function renderCycleTimeline() {
@@ -1017,7 +1042,8 @@ async function updateCheckinUI(cls) {
                     const res = await api('credit_attendance', { 
                         class_code: classCode, 
                         student_id: currentUser.id, 
-                        type: type 
+                        type: type,
+                        actor_id: currentUser.id
                     });
                     alert(res.message);
                     loadTodaySchedule();
@@ -1308,7 +1334,8 @@ window.bulkStatusUpdate = async (studentId, type) => {
         const res = await api('credit_attendance', { 
             class_code: classCode, 
             student_id: studentId,
-            type: type 
+            type: type,
+            actor_id: currentUser.id 
         });
         alert(res.message);
         loadProfessorDashboard();
@@ -1333,7 +1360,8 @@ window.handleStatusChange = async () => {
         class_code: classCode, 
         reason: reason, 
         status: type,
-        date: date
+        date: date,
+        actor_id: currentUser.id
     });
 
     if (res.ok) {
@@ -1361,7 +1389,7 @@ window.handleMakeUpClass = async () => {
         }
     }
     
-    const res = await api('authorize_makeup', { class_code: code, date: date });
+    const res = await api('authorize_makeup', { class_code: code, date: date, actor_id: currentUser.id });
     if (res.ok) {
         alert(res.message);
         loadTodaySchedule(); 
