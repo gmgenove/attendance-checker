@@ -1454,8 +1454,10 @@ async function populateClassDropdowns() {
 // show current time in dashboard
 var timeDisplay = document.getElementById("hdr");
 function refreshTime() {
-  var dateString = new Date().toLocaleString("en-US", { timeZone: 'Asia/Manila', dateStyle: 'full', timeStyle: 'medium' });
-  timeDisplay.innerHTML = dateString;
+  var formatter = new Intl.DateTimeFormat('en-us', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', fractionalSecondDigits: 3, timeZone: 'Asia/Manila' });
+  var dateString = new Date().toLocaleString("en-US", { timeZone: 'Asia/Manila' });
+  var formattedDateString = formatter.formatToParts(dateString);
+  timeDisplay.innerHTML = formattedDateString;
 }
 setInterval(refreshTime, 1000);
 // Refresh the dashboard every 60 seconds if the user is an Officer/Prof
