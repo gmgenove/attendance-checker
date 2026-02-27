@@ -55,7 +55,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // UI Initialization
     document.getElementById('copyrightYear').textContent = new Date().getFullYear();
-    document.getElementById("hdr").textContent = new Date().toLocaleString("en-US", { dateStyle: 'full' });
 
     // Password visibility toggle logic
     const pwd = document.getElementById('passwordInput');      
