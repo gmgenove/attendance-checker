@@ -712,7 +712,7 @@ app.post('/api', async (req, res) => {
 		        classDate,
 		        classCode: class_code,
 		        studentId: student_id,
-		        eventType: 'CREDIT_ATTENDANCE',
+		        eventType: (type === 'DROPPED_CLASS') ? 'DROPPED' : 'CREDIT_ATTENDANCE',
 		        status: statusToApply,
 		        timeIn: txnTime,
 		        actorId: actor_id || 'SYSTEM',
