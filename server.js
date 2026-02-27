@@ -206,8 +206,9 @@ app.post('/api', async (req, res) => {
 			const inAdjustmentPeriod = isWithinAdjustmentPeriod(semConfig, now);
             if (existing.rows.length > 0) {
 			  const existingStatus = existing.rows[0].attendance_status;
-			  const canOverrideDuringAdjustment = inAdjustmentPeriod && ['ASYNCHRONOUS', 'ABSENT', 'PENDING'].includes(existingStatus);
-			  if (!canOverrideDuringAdjustment) {
+			  const canOverridePending = existingStatus === 'PENDING';
+			  const canOverrideDuringAdjustment = inAdjustmentPeriod && ['ASYNCHRONOUS', 'ABSENT'].includes(existingStatus);
+			  if (!canOverridePending && !canOverrideDuringAdjustment) {
 			    return res.json({ ok: true, status: existingStatus, message: 'Already checked in' });
 			  }
 			}
