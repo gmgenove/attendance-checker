@@ -77,9 +77,15 @@
             .cycle-legend-dot.sync {background:#991b1b;}
             .cycle-legend-dot.async {background:#fbbf24; border:1px solid #d97706; box-sizing:border-box;}
             .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 15px; }
+            .admin-actions { display: grid; grid-template-columns: 1fr 1fr; column-gap: 10px; row-gap: 12px; align-items: stretch; }
+            .admin-actions .btn-outline { display: flex; width: 100%; box-sizing: border-box; }
+            .admin-report-btn { grid-column: 1 / -1; background: #f8fafc; }
             .btn-outline { flex-direction: column; align-items: center; justify-content: center; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; color: #475569; transition: all 0.2s; gap: 8px; }
             .btn-outline i { font-size: 18px; }
             .btn-outline:hover { background: #f1f5f9; border-color: #cbd5e1; }
+            .live-roster-row {display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:nowrap;}
+            .live-roster-details {flex:1; min-width:0;}
+            .live-roster-actions {display:flex; gap:4px; align-items:center; flex-shrink:0; margin-top:0; flex-wrap:nowrap;}
             /* Mobile Responsiveness */
             @media (max-width: 480px) { .grid { grid-template-columns: 1fr; } .admin-actions { grid-template-columns: 1fr; row-gap: 10px; } .admin-report-btn { grid-column: auto; } .btn-outline { flex-direction: row; justify-content: flex-start; padding-left: 20px; } .live-roster-row {flex-direction: column; align-items: stretch;} .live-roster-actions {margin-top: 8px; flex-wrap: wrap; justify-content: flex-start; gap: 6px;} }
         </style>
