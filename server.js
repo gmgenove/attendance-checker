@@ -13,6 +13,8 @@ app.use(cors());
 app.use(express.static(path.join(__dirname, 'public')));
 
 console.log("DB URL IS:", process.env.DATABASE_URL);
+console.log("ALL ENVS:", Object.keys(process.env).filter(key => key.includes('DB') || key.includes('DATABASE')));
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL	
   //, ssl: { rejectUnauthorized: false }
