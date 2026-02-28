@@ -1375,11 +1375,13 @@ window.reset_single_password = async (studentId) => {
         return;
     }
 
-    const confirmation = confirm(`Reset password for ${studentId} to 'password1234'?`);
+    tempPass = SecurePasswordGenerator.generate(12, 1, 1, 1, 1, 0);
+    const confirmation = confirm(`Reset password for ${studentId} to '` + tempPass + `'?`);
     if (!confirmation) return;
 
     const res = await api('reset_single_password', {
         role: currentUser?.role,
+        password: tempPass,
         target_user_id: studentId
     });
 
@@ -1577,6 +1579,119 @@ async function populateClassDropdowns() {
         makeup.innerHTML = '<option value="">Error loading classes</option>';
     }
 }
+
+/**
+ * Generates a password based on positional flags (1 or 0). Customize the character set and the security level.
+ * All the computation is done locally on the client side. No data is sent to or received from the server.
+ * Based on Project Nayuki: https://www.nayuki.io/page/random-password-generator-javascript
+ *
+ * Example: 16 characters, Numbers (1), Lower (1), Upper (1), Symbols (1), No Space (0)
+ * const result = SecurePasswordGenerator.generate(16, 1, 1, 1, 1, 0);
+ * console.log("Password:", result.password);
+ * console.log("Strength:", result.entropy, "bits");
+ */
+class SecurePasswordGenerator {
+    static CHARACTER_SETS = [
+        ["Numbers", "0123456789"],
+        ["Lowercase", "abcdefghijklmnopqrstuvwxyz"],
+        ["Uppercase", "ABCDEFGHIJKLMNOPQRSTUVWXYZ"],
+        ["ASCII symbols", "!\"#$%" + String.fromCharCode(38) + "'()*+,-./:;" + String.fromCharCode(60) + "=>?@[\\]^_`{|}~"],	// !\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~
+        ["Space", "\u00A0"], // Non-breaking space used in original logic
+    ];
+
+    /**
+     * @param {number} length - Desired length
+     * @param {number} n, l, u, s, sp - 1 for True, 0 for False
+     */
+    static generate(length, n, l, u, s, sp) {
+        const flags = [n, l, u, s, sp];
+        
+        // 1. Build the character pool
+        let rawCharset = "";
+        this.CHARACTER_SETS.forEach((set, i) => {
+            if (flags[i] === 1) rawCharset += set[1];
+        });
+
+        // 2. Filter duplicates and handle UTF-16, convert to array of strings
+        let charset = [];
+        for (const ch of rawCharset) {
+            if (!charset.includes(ch)) charset.push(ch);
+        }
+        if (charset.length === 0) throw new Error("Character set is empty");
+
+        // 3. Generate password using secure random picks
+        let password = "";
+        for (let i = 0; i < length; i++) {
+            password += charset[this.randomInt(charset.length)];
+        }
+		
+		// copy password to clipboard
+		navigator.clipboard.writeText(result);
+
+        return {
+            password: password,
+			statistics: getPasswordStats(length, charset)
+        };
+    }
+
+    /**
+     * Combines Math.random and Crypto.getRandomValues for security
+     */
+    static randomInt(n) {
+        let x = Math.floor(Math.random() * n); // Low security source, always available
+        
+        // High security source (Web Crypto API)
+        const cryptoObj = window.crypto || window.msCrypto;
+        if (cryptoObj && cryptoObj.getRandomValues) {
+            let cryptoRoll = new Uint32Array(1);
+            do {
+                cryptoObj.getRandomValues(cryptoRoll);
+            } while (cryptoRoll[0] - (cryptoRoll[0] % n) > 4294967296 - n);
+            
+            x = (x + (cryptoRoll[0] % n)) % n; // Mix both sources
+        }
+        
+        return x;
+    }
+	
+	/*
+	* Example: 12 chars, Numbers (1), Lower (1), Upper (1), Special (0), Space (0)
+	* console.log(getPasswordStats(12, 1, 1, 1, 0, 0));
+	* Output: { poolSize: 62, entropyBits: "71.45", strength: "Medium" }
+	*/
+	function getPasswordStats(length, rawCharset) {
+		// Remove duplicates to get true size
+		const uniqueChars = [...new Set(rawCharset)];
+		const charsetSize = uniqueChars.length;
+
+		// Calculate entropy
+		const bits = calculateEntropy(charsetSize, length);
+		
+		// `Length = ${length} chars, ` + `\u00A0\u00A0Charset size = ${charsetSize} symbols, ` + `\u00A0\u00A0Entropy = ${bits} bits` + `\u00A0\u00A0Strength = ${bits < 60 ? "Weak" : bits < 100 ? "Medium" : "Strong"}`;
+
+		return {
+			poolSize: charsetSize,
+			entropyBits: bits,
+			strength: bits < 60 ? "Weak" : bits < 100 ? "Medium" : "Strong"
+		};
+	}
+	
+	/**
+	 * Calculates the strength of a password in bits.
+	 * @param {number} charsetSize - Number of unique characters available.
+	 * @param {number} length - The length of the generated password.
+	 * @returns {string} - The entropy formatted to 2 decimal places.
+	 */
+	function calculateEntropy(charsetSize, length) {
+		if (charsetSize <= 1 || length <= 0) return "0.00";
+		
+		// Formula from source: Math.log(charset.length) * length / Math.log(2)
+		const entropy = Math.log(charsetSize) * length / Math.log(2);
+		
+		return entropy.toFixed(2);
+	}
+}
+/*** End SecurePasswordGenerator ***/
 
 // Refresh the dashboard every 60 seconds if the user is an Officer/Prof
 setInterval(() => {
