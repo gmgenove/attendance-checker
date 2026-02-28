@@ -1369,14 +1369,37 @@ async function handleBulkReset() {
     }
 }
 
+async function copyToClipboard(text) {
+    try {
+        if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(text);
+            return true;
+        }
+
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        const copied = document.execCommand('copy');
+        document.body.removeChild(textarea);
+        return copied;
+    } catch (_) {
+        return false;
+    }
+}
+
 window.reset_single_password = async (studentId) => {
     if (!studentId) {
         alert('Missing student ID.');
         return;
     }
 
-    tempPass = SecurePasswordGenerator.generate(12, 1, 1, 1, 1, 0);
-    const confirmation = confirm(`Reset password for ${studentId} to '` + tempPass + `'?`);
+    const generated = SecurePasswordGenerator.generate(12, 1, 1, 1, 1, 0);
+	const tempPass = generated.password;
+	const confirmation = confirm(`Reset password for ${studentId} to '${tempPass}'?`);
     if (!confirmation) return;
 
     const res = await api('reset_single_password', {
@@ -1386,7 +1409,8 @@ window.reset_single_password = async (studentId) => {
     });
 
     if (res.ok) {
-        alert(res.message || 'Password reset successful.');
+		const copied = await copyToClipboard(tempPass);
+        alert((res.message || 'Password reset successful.') + (copied ? '\n\nGenerated password copied to clipboard.' : '\n\nCould not auto-copy. Please copy it manually.'));
     } else {
         alert('Error: ' + (res.error || 'Failed to reset password.'));
     }
@@ -1624,13 +1648,10 @@ class SecurePasswordGenerator {
         for (let i = 0; i < length; i++) {
             password += charset[this.randomInt(charset.length)];
         }
-		
-		// copy password to clipboard
-		navigator.clipboard.writeText(result);
 
         return {
             password: password,
-			statistics: getPasswordStats(length, charset)
+			statistics: this.getPasswordStats(length, charset)
         };
     }
 
@@ -1659,16 +1680,15 @@ class SecurePasswordGenerator {
 	* console.log(getPasswordStats(12, 1, 1, 1, 0, 0));
 	* Output: { poolSize: 62, entropyBits: "71.45", strength: "Medium" }
 	*/
-	function getPasswordStats(length, rawCharset) {
+	static getPasswordStats(length, rawCharset) {
 		// Remove duplicates to get true size
 		const uniqueChars = [...new Set(rawCharset)];
 		const charsetSize = uniqueChars.length;
 
 		// Calculate entropy
-		const bits = calculateEntropy(charsetSize, length);
+		const bits = this.calculateEntropy(charsetSize, length);
 		
 		// `Length = ${length} chars, ` + `\u00A0\u00A0Charset size = ${charsetSize} symbols, ` + `\u00A0\u00A0Entropy = ${bits} bits` + `\u00A0\u00A0Strength = ${bits < 60 ? "Weak" : bits < 100 ? "Medium" : "Strong"}`;
-
 		return {
 			poolSize: charsetSize,
 			entropyBits: bits,
@@ -1682,7 +1702,7 @@ class SecurePasswordGenerator {
 	 * @param {number} length - The length of the generated password.
 	 * @returns {string} - The entropy formatted to 2 decimal places.
 	 */
-	function calculateEntropy(charsetSize, length) {
+	static calculateEntropy(charsetSize, length) {
 		if (charsetSize <= 1 || length <= 0) return "0.00";
 		
 		// Formula from source: Math.log(charset.length) * length / Math.log(2)
