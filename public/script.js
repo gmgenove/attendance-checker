@@ -742,6 +742,11 @@ async function loadTodaySchedule() {
 
         // Send the excuse to the server
         window.submitExcuse = async (classCode) => {
+			const selectedClass = currentScheduleData.find(item => item.class_code === classCode);
+            if (selectedClass && !selectedClass.professor_id) {
+                return alert('Student transactions are disabled until a professor is assigned.');
+            }
+			
             // 1. Critical Check: Is classCode actually valid?
             if (!classCode || typeof classCode !== 'string') {
                 console.error("Invalid classCode received:", classCode);
@@ -1007,7 +1012,21 @@ async function updateCheckinUI(cls) {
     const statusSpan = document.getElementById(`status-${safeCode}`);
     const excuseLink = document.getElementById(`excuse-link-${safeCode}`);
 
-    try {
+    const hasAssignedProfessor = Boolean(cls.professor_id);
+    if (!hasAssignedProfessor) {
+        if (btn) {
+            btn.disabled = true;
+            btn.style.display = 'none';
+        }
+        if (excuseLink) {
+            excuseLink.disabled = true;
+            excuseLink.style.pointerEvents = 'none';
+            excuseLink.style.opacity = '0.6';
+            excuseLink.title = 'Excuse filing is disabled until a professor is assigned.';
+        }
+    }
+	
+	try {
         // 1. Fetch data in parallel to save time
         const [attRes, configData] = await Promise.all([
             api('get_attendance', { class_code: cls.class_code, student_id: currentUser.id }),
@@ -1123,6 +1142,11 @@ async function updateCheckinUI(cls) {
         }
 
         // 5. Handle Check-In Countdown
+		if (!hasAssignedProfessor) {
+            statusSpan.textContent = 'Check-in and excuse filing are disabled until a professor is assigned.';
+            statusSpan.style.color = '#b45309';
+            return;
+        }
         renderCheckinCountdown(cls, btn, statusSpan, config);
     } catch (err) {
         console.error("UI Update Failed:", err);
