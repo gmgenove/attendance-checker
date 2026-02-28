@@ -12,11 +12,13 @@ app.use(express.json());
 app.use(cors());
 app.use(express.static(path.join(__dirname, 'public')));
 
+/* for checking DB connection
 console.log("DB URL IS:", process.env.DATABASE_URL);
 console.log("ALL ENVS:", Object.keys(process.env).filter(key => key.includes('DB') || key.includes('DATABASE')));
 const dbUrl = process.env.DATABASE_URL;
 const maskedUrl = dbUrl ? dbUrl.replace(/:([^:@]+)@/, ':****@') : 'NOT FOUND';
 console.log("App is attempting to connect to:", maskedUrl);
+*/
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL?.trim(), 
