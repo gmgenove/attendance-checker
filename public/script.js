@@ -444,8 +444,8 @@ function renderLiveDashboard(container, res, classCode) {
 
         html += `
             <li style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; opacity: ${opacity};">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span style="flex: 1;">
+                <div class="live-roster-row">
+                    <span class="live-roster-details">
                         <div style="display:flex; align-items:center; gap:8px;">
                             <div style="word-break: break-all;">
                                 <strong>${r.user_name}</strong>
@@ -455,7 +455,7 @@ function renderLiveDashboard(container, res, classCode) {
                         </div>
                         <div class="small muted">${r.time_in ? 'In at ' + r.time_in : 'No time recorded'}</div>
                     </span>
-                    <div style="display:flex; gap:4px; align-items:center;">
+                    <div class="live-roster-actions">
                         <button onclick="bulkStatusUpdate('${r.user_id}', 'CREDITED')" ${isCredited || isDropped ? 'disabled' : ''} title="Credit Rest of Semester" style="background:#064e3b; color:white; border:none; padding:4px 8px; font-size:10px; border-radius:4px;">
                             Credit
                         </button>
