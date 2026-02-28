@@ -49,6 +49,18 @@ const isWithinAdjustmentPeriod = (semConfig, now = getManilaNow()) => {
   return now >= semConfig.adjStart.startOf('day') && now <= semConfig.adjEnd.endOf('day');
 };
 
+const hasAssignedProfessor = async (classCode, semConfig) => {
+  const result = await pool.query(
+    `SELECT professor_id
+     FROM schedules
+     WHERE class_code = $1 AND semester = $2 AND academic_year = $3`,
+    [classCode, semConfig.sem, semConfig.year]
+  );
+
+  if (result.rows.length === 0) return { found: false, assigned: false };
+  return { found: true, assigned: Boolean(result.rows[0].professor_id) };
+};
+
 const logAttendanceTransaction = async ({
   classDate,
   classCode,
@@ -212,6 +224,14 @@ app.post('/api', async (req, res) => {
 			if (!semConfig.start || semConfig.sem === "None") {
 	           return res.json({ ok: false, error: "Attendance disabled outside semester dates." });
 	        }
+
+			const profAssignment = await hasAssignedProfessor(class_code, semConfig);
+			if (!profAssignment.found) {
+			  return res.json({ ok: false, error: 'Class not found' });
+			}
+			if (!profAssignment.assigned) {
+			  return res.json({ ok: false, error: 'Student transactions are disabled until a professor is assigned.' });
+			}
 			// A. Check for existing attendance (Duplicate Prevention)
 			const existing = await pool.query(
 			  'SELECT attendance_status FROM attendance WHERE class_date = $1::date AND class_code = $2 AND student_id = $3',
@@ -406,7 +426,10 @@ app.post('/api', async (req, res) => {
 	        const classInfo = await pool.query(`SELECT * FROM schedules WHERE class_code = $1 AND semester = $2 AND academic_year = $3`, [class_code, semConfig.sem, semConfig.year]);
 	        if (classInfo.rows.length === 0) return res.json({ ok: false, error: "Class not found." });
 	        const info = classInfo.rows[0];
-	
+			if (!info.professor_id) {
+	          return res.json({ ok: false, error: "Cannot generate class report yet. No professor is assigned to this class." });
+	        }
+			
 	        let classDates = [];
 	        let curr = semConfig.start;
 	        while (curr <= semConfig.end) {
@@ -755,6 +778,13 @@ app.post('/api', async (req, res) => {
 	    const now = getManilaNow();
 	    const today = now.toISODate();
 		const timestamp = now.toFormat('hh:mm a'); // e.g., 09:45 AM
+		const semConfig = await getCurrentSemConfig();
+		if (semConfig.sem === "None") return res.json({ ok: false, error: "No active semester." });
+		const profAssignment = await hasAssignedProfessor(class_code, semConfig);
+		if (!profAssignment.found) return res.json({ ok: false, error: 'Class not found.' });
+		if (!profAssignment.assigned) {
+		  return res.json({ ok: false, error: 'Student transactions are disabled until a professor is assigned.' });
+		}
 
 		// Existing check for duplicates...
 	    const existing = await pool.query(
@@ -762,7 +792,6 @@ app.post('/api', async (req, res) => {
 	        [today, class_code, student_id]
 	    );
 	
-	    const semConfig = await getCurrentSemConfig();
 	    const inAdjustmentPeriod = isWithinAdjustmentPeriod(semConfig, now);
 		if (existing.rows.length > 0) {
 	        const existingStatus = existing.rows[0].attendance_status;
@@ -1686,19 +1715,17 @@ const autoTagAbsentees = async () => {
       FROM schedules s
       LEFT JOIN academic_cycles ac ON s.cycle_name = ac.cycle_name 
         AND $4::date BETWEEN ac.start_date AND ac.end_date
-      WHERE ($1 = ANY(s.days) AND s.semester = $2 AND s.academic_year = $3) 
-      OR EXISTS (
-        SELECT 1 FROM attendance a 
-        WHERE a.class_code = s.class_code AND a.class_date = $4::date AND a.attendance_status = 'PENDING'
-      )`, [dayName, semInfo.sem, semInfo.year, dateStr]
+      WHERE s.professor_id IS NOT NULL
+        AND (
+          ($1 = ANY(s.days) AND s.semester = $2 AND s.academic_year = $3)
+          OR EXISTS (
+            SELECT 1 FROM attendance a 
+            WHERE a.class_code = s.class_code AND a.class_date = $4::date AND a.attendance_status = 'PENDING'
+          )
+        )`, [dayName, semInfo.sem, semInfo.year, dateStr]
     );
 
     for (const sched of schedules.rows) {
-	  // Skip auto-tagging for classes that do not have an assigned professor yet.
-      if (!sched.professor_id) {
-        continue;
-      }
-
       const [endHH, endMM] = sched.end_time.split(':');
       const classEnd = now.set({ hour: endHH, minute: endMM, second: 0 });
 
