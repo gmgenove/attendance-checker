@@ -14,10 +14,13 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 console.log("DB URL IS:", process.env.DATABASE_URL);
 console.log("ALL ENVS:", Object.keys(process.env).filter(key => key.includes('DB') || key.includes('DATABASE')));
+const dbUrl = process.env.DATABASE_URL;
+const maskedUrl = dbUrl ? dbUrl.replace(/:([^:@]+)@/, ':****@') : 'NOT FOUND';
+console.log("App is attempting to connect to:", maskedUrl);
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL	
-  //, ssl: { rejectUnauthorized: false }
+  connectionString: process.env.DATABASE_URL?.trim(), 
+  ssl: { rejectUnauthorized: false }
 });
 
 const TIMEZONE = "Asia/Manila";
