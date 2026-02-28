@@ -24,6 +24,18 @@ let dropdownCache = { key: null, expiresAt: 0, data: null };
 // --- HELPERS ---
 const getManilaNow = () => DateTime.now().setZone(TIMEZONE);
 const getManilaTimestamp = () => getManilaNow().toJSDate();
+const MIN_PASSWORD_LENGTH = 12;
+
+const verifyPasswordWithLegacySupport = async (password, passwordHash) => {
+  if (!passwordHash) return false;
+  if (passwordHash.startsWith('$2')) {
+    return bcrypt.compare(password, passwordHash);
+  }
+
+  const sha256Hash = crypto.createHash('sha256').update(password).digest('hex');
+  return sha256Hash === passwordHash;
+};
+
 const isWithinAdjustmentPeriod = (semConfig, now = getManilaNow()) => {
   if (!semConfig?.adjStart || !semConfig?.adjEnd) return false;
   return now >= semConfig.adjStart.startOf('day') && now <= semConfig.adjEnd.endOf('day');
@@ -95,29 +107,24 @@ app.post('/api', async (req, res) => {
         
         if (result.rows.length === 0) return res.json({ ok: false, error: 'User not found' });
         const user = result.rows[0];
-
-        let isValid = false;
-        // Check if hash is bcrypt ($2b$...) or old SHA-256
-        if (user.password_hash.startsWith('$2b$')) {
-          isValid = await bcrypt.compare(password, user.password_hash);
-        } else {
-          const sha256Hash = crypto.createHash('sha256').update(password).digest('hex');
-          if (sha256Hash === user.password_hash) {
-            isValid = true;
-            // Upgrade to bcrypt on the fly
-            const newHash = await bcrypt.hash(password, 10);
-            await pool.query('UPDATE sys_users SET password_hash = $1 WHERE user_id = $2 AND user_status = TRUE', [newHash, id]);
-          }
-        }
-
+		const isValid = await verifyPasswordWithLegacySupport(password, user.password_hash);
         if (!isValid) return res.json({ ok: false, error: 'Invalid credentials' });
+
+        // Upgrade legacy SHA-256 accounts to bcrypt on successful sign-in.
+        if (!user.password_hash.startsWith('$2')) {
+          const newHash = await bcrypt.hash(password, 10);
+          await pool.query('UPDATE sys_users SET password_hash = $1 WHERE user_id = $2 AND user_status = TRUE', [newHash, id]);
+        }
         return res.json({ ok: true, user: { id: user.user_id, name: user.user_name, role: user.user_role } });
       }
 
       // --- SIGN UP ---
       case 'signup': {
         const { id, password, role } = payload;
-        // Verify user exists in roster first
+		if (!password || password.length < MIN_PASSWORD_LENGTH) {
+          return res.json({ ok: false, error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` });
+        }
+		// Verify user exists in roster first
         const check = await pool.query('SELECT * FROM sys_users WHERE user_id = $1 AND user_role = $2 AND user_status = TRUE', [id, role]);
         if (check.rows.length === 0) return res.json({ ok: false, error: 'ID not found in roster' });
         if (check.rows[0].password_hash) return res.json({ ok: false, error: 'Account already exists' });
@@ -413,6 +420,7 @@ app.post('/api', async (req, res) => {
 	        const roster = {};
 	        attendance.rows.forEach(r => {
 	          if (!roster[r.student_id]) roster[r.student_id] = { name: r.user_name, records: {}, counts: { P: 0, L: 0, A: 0, E: 0, C: 0, H: 0, S: 0, D: 0 } };
+			  //if (!roster[r.student_id]) roster[r.student_id] = { name: r.user_name, records: {}, counts: { P: 0, L: 0, A: 0, E: 0, C: 0, H: 0, S: 0, D: 0, Cr: 0, As: 0 } };
 			  if (r.class_date) {
 			    const dStr = DateTime.fromJSDate(r.class_date).toISODate();
 			    
@@ -459,6 +467,7 @@ app.post('/api', async (req, res) => {
 			            name: r.class_name, 
 			            records: {}, 
 			            counts: { P: 0, L: 0, A: 0, E: 0, C: 0, H: 0, S: 0, D: 0 } 
+						//counts: { P: 0, L: 0, A: 0, E: 0, C: 0, H: 0, S: 0, D: 0, Cr: 0, As: 0 } 
 			        };
 			    }
 			    const dStr = DateTime.fromJSDate(r.class_date).toISODate();
@@ -571,6 +580,9 @@ app.post('/api', async (req, res) => {
 
 	  case 'change_password': {
 		    const { user_id, current_password, new_password } = payload;
+		    if (!new_password || new_password.length < MIN_PASSWORD_LENGTH) {
+		      return res.json({ ok: false, error: `New password must be at least ${MIN_PASSWORD_LENGTH} characters.` });
+		    }
 		
 		    // 1. Fetch user from DB
 		    const result = await pool.query("SELECT password_hash FROM sys_users WHERE user_id = $1 AND user_status = TRUE", [user_id]);
@@ -579,7 +591,7 @@ app.post('/api', async (req, res) => {
 		    const user = result.rows[0];
 		
 		    // 2. Verify current password
-		    const isValid = await bcrypt.compare(current_password, user.password_hash);
+		    const isValid = await verifyPasswordWithLegacySupport(current_password, user.password_hash);
 		    if (!isValid) return res.json({ ok: false, error: "Current password is incorrect." });
 		
 		    // 3. Hash and save new password
