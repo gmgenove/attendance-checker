@@ -590,10 +590,10 @@ app.post('/api', async (req, res) => {
 	  }
 
 	  case 'reset_single_password': {
-	    const { target_user_id } = payload;
-	    const hashed = await bcrypt.hash("password1234", 10);
+	    const { password, target_user_id } = payload;
+	    const hashed = await bcrypt.hash(password, 10);
 	    await pool.query("UPDATE sys_users SET password_hash = $1 WHERE user_id = $2 AND user_status = TRUE", [hashed, target_user_id]);
-	    return res.json({ ok: true, message: "Password reset to password1234" });
+	    return res.json({ ok: true, message: "Password reset to " + password });
 	  }
 
 	  case 'bulk_password_reset': {
