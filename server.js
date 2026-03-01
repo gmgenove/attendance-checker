@@ -123,12 +123,18 @@ app.post('/api', async (req, res) => {
       // --- SIGN IN (Hybrid SHA256/Bcrypt) ---
       case 'signin': {
         const { id, password, role } = payload;
-        const result = await pool.query('SELECT * FROM sys_users WHERE user_id = $1 AND user_role = $2 AND user_status = TRUE', [id, role]);
-        
-        if (result.rows.length === 0) return res.json({ ok: false, error: 'User not found' });
+        const result = await pool.query('SELECT * FROM sys_users WHERE user_id = $1 AND user_status = TRUE', [id]);
+
+        if (result.rows.length === 0) return res.json({ ok: false, error: 'User does not exist.' });
         const user = result.rows[0];
+		if (user.user_role !== role) {
+		  return res.json({ ok: false, error: 'Wrong role selected. Please choose the correct role.' });
+		}
+		if (!user.password_hash) {
+		  return res.json({ ok: false, error: 'Account is not signed up yet. Please sign up first.' });
+		}
 		const isValid = await verifyPasswordWithLegacySupport(password, user.password_hash);
-        if (!isValid) return res.json({ ok: false, error: 'Invalid credentials' });
+		if (!isValid) return res.json({ ok: false, error: 'Wrong password. Please try again.' });
 
         // Upgrade legacy SHA-256 accounts to bcrypt on successful sign-in.
         if (!user.password_hash.startsWith('$2')) {
