@@ -314,6 +314,7 @@ async function initializeOfficerPasswordTools() {
 
     classSelect.innerHTML = `<option value="">Select Class</option>${(data.classes || []).map(c => `<option value="${c.code}">${c.code} • ${c.name}</option>`).join('')}`;
     studentSelect.innerHTML = `<option value="">Select Student</option>${(data.students || []).map(s => `<option value="${s.user_id}">${s.user_name} [${s.user_id}]</option>`).join('')}`;
+	statusEl.textContent = '';
 
     if (!resetBtn.dataset.bound) {
         resetBtn.addEventListener('click', async () => {
