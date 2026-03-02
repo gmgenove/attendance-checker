@@ -9,6 +9,7 @@ let selectedMonitorClassCode = '';
 let dropdownCache = { data: null, fetchedAt: 0 };
 const DROPDOWN_CACHE_TTL_MS = 5 * 60 * 1000;
 let isProfControlsCollapsed = false;
+let auditLookup = { students: new Map(), classes: new Map() };
 
 function setProfControlsCollapsed(collapsed) {
     isProfControlsCollapsed = collapsed;
@@ -283,10 +284,102 @@ async function showApp() {
         loadProfessorDashboard();
         populateClassDropdowns();
     }
+
+	if (currentUser.role === 'officer') {
+		await initializeOfficerAuditTrail();
+	}
     // Call this function when the Officer view loads
     /*if (currentUser.role === 'officer') {
         loadScheduleList();
     }*/
+}
+
+async function initializeOfficerAuditTrail() {
+    const classFilter = document.getElementById('auditClassFilter');
+    const studentFilter = document.getElementById('auditStudentFilter');
+    const dateFilter = document.getElementById('auditDateFilter');
+    const applyBtn = document.getElementById('auditApplyBtn');
+    const clearBtn = document.getElementById('auditClearBtn');
+    if (!classFilter || !studentFilter || !dateFilter || !applyBtn || !clearBtn) return;
+
+    const data = await getDropdownData();
+    if (!data.ok) {
+        document.getElementById('auditTrailMeta').textContent = 'Unable to load filter options right now.';
+        return;
+    }
+
+    auditLookup.students = new Map((data.students || []).map(s => [s.user_id, s.user_name]));
+    auditLookup.classes = new Map((data.classes || []).map(c => [c.code, c.name]));
+
+    classFilter.innerHTML = `<option value="">All Classes</option>${(data.classes || []).map(c => `<option value="${c.code}">${c.code} • ${c.name}</option>`).join('')}`;
+    studentFilter.innerHTML = `<option value="">All Students</option>${(data.students || []).map(s => `<option value="${s.user_id}">${s.user_name} [${s.user_id}]</option>`).join('')}`;
+
+    dateFilter.value = luxon.DateTime.now().setZone('Asia/Manila').toISODate();
+
+    if (!applyBtn.dataset.bound) {
+        applyBtn.addEventListener('click', loadOfficerAuditTrail);
+        clearBtn.addEventListener('click', () => {
+            classFilter.value = '';
+            studentFilter.value = '';
+            dateFilter.value = '';
+            loadOfficerAuditTrail();
+        });
+        [classFilter, studentFilter, dateFilter].forEach(el => {
+            el.addEventListener('change', loadOfficerAuditTrail);
+        });
+        applyBtn.dataset.bound = 'true';
+    }
+
+    await loadOfficerAuditTrail();
+}
+
+async function loadOfficerAuditTrail() {
+    const classCode = document.getElementById('auditClassFilter')?.value || '';
+    const studentId = document.getElementById('auditStudentFilter')?.value || '';
+    const classDate = document.getElementById('auditDateFilter')?.value || '';
+    const tbody = document.getElementById('auditTrailBody');
+    const meta = document.getElementById('auditTrailMeta');
+    if (!tbody || !meta) return;
+
+    tbody.innerHTML = '<tr><td colspan="7" class="small muted">Loading attendance transaction history...</td></tr>';
+
+    const payload = { limit: 200 };
+    if (classCode) payload.class_code = classCode;
+    if (studentId) payload.student_id = studentId;
+    if (classDate) payload.class_date = classDate;
+
+    const res = await api('get_attendance_transactions', payload);
+    if (!res.ok) {
+        tbody.innerHTML = `<tr><td colspan="7" class="small" style="color:#b91c1c;">${res.error || 'Failed to load audit trail.'}</td></tr>`;
+        meta.textContent = 'Audit trail unavailable.';
+        return;
+    }
+
+    const records = res.records || [];
+    meta.textContent = `Showing ${records.length} transaction(s)${classDate ? ` for ${classDate}` : ''}.`;
+
+    if (records.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="small muted">No attendance transactions found for the selected filters.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = records.map(record => {
+        const stamp = new Date(record.transaction_time).toLocaleString();
+        const studentName = auditLookup.students.get(record.student_id) || record.student_id;
+        const className = auditLookup.classes.get(record.class_code) || '';
+        const reason = record.reason || '-';
+        return `
+            <tr>
+                <td>${stamp}</td>
+                <td>${studentName}<div class="small muted">${record.student_id}</div></td>
+                <td>${record.class_code}${className ? `<div class="small muted">${className}</div>` : ''}</td>
+                <td>${record.event_type || '-'}</td>
+                <td>${record.attendance_status || '-'}</td>
+                <td>${record.actor_id || '-'}</td>
+                <td>${reason}</td>
+            </tr>
+        `;
+    }).join('');
 }
 
 function parseMinutesFromDisplayTime(displayTime) {
