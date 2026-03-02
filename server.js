@@ -1912,4 +1912,4 @@ const autoTagAbsentees = async () => {
 setInterval(autoTagAbsentees, 30 * 60 * 1000);
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Backend running on port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`Backend running on port ${PORT}`));	// Add '0.0.0.0' to ensure the server is accessible externally within Railway
