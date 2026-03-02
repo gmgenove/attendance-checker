@@ -245,11 +245,11 @@ async function showApp() {
     
     // Control section visibility
     const controls = document.getElementById('controls');
-    const isElevated = currentUser.role === 'officer' || currentUser.role === 'professor';
+    const isElevated = currentUser.role === 'officer' || currentUser.role === 'professor' || currentUser.role === 'admin';
 
     controls.style.display = 'block';
-    document.getElementById('officerControls').style.display = (currentUser.role === 'officer') ? 'block' : 'none';
-    document.getElementById('studentControls').style.display = (currentUser.role === 'student' || currentUser.role === 'officer') ? 'block' : 'none';
+    document.getElementById('officerControls').style.display = (currentUser.role === 'officer' || currentUser.role === 'admin') ? 'block' : 'none';
+    document.getElementById('studentControls').style.display = (currentUser.role === 'student' || currentUser.role === 'officer' || currentUser.role === 'admin') ? 'block' : 'none';
 
     // Fetch Data (Parallelized for speed). We run these at the same time but wait for ALL to finish
     await Promise.all([
@@ -285,11 +285,11 @@ async function showApp() {
         populateClassDropdowns();
     }
 
-	if (currentUser.role === 'officer') {
+	if (currentUser.role === 'officer' || currentUser.role === 'admin') {
 		await initializeOfficerAuditTrail();
 	}
     // Call this function when the Officer view loads
-    /*if (currentUser.role === 'officer') {
+    /*if (currentUser.role === 'officer' || currentUser.role === 'admin') {
         loadScheduleList();
     }*/
 }
@@ -970,7 +970,7 @@ async function submitNewSchedule() {
         alert("Schedule added successfully.");
         hideModal('scheduleModal');
         // Refresh your list or dashboard
-        if (currentUser.role === 'professor' || currentUser.role === 'officer') {
+        if (currentUser.role === 'professor' || currentUser.role === 'officer' || currentUser.role === 'admin') {
             loadProfessorDashboard();
         }
     }
@@ -1832,7 +1832,7 @@ class SecurePasswordGenerator {
 
 // Refresh the dashboard every 60 seconds if the user is an Officer/Prof
 setInterval(() => {
-    if (currentUser && (currentUser.role === 'professor' || currentUser.role === 'officer')) {
+    if (currentUser && (currentUser.role === 'professor' || currentUser.role === 'officer' || currentUser.role === 'admin')) {
         loadProfessorDashboard();
     }
 }, 60000);
