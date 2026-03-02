@@ -437,9 +437,29 @@ app.post('/api', async (req, res) => {
 	        }
 			
 	        let classDates = [];
+			const today = getManilaNow().startOf('day');
+	        const occurredPastDatesResult = await pool.query(
+	          `SELECT DISTINCT class_date
+	           FROM attendance
+	           WHERE class_code = $1
+	             AND class_date < $2::date
+	             AND attendance_status NOT IN ('CANCELLED', 'HOLIDAY', 'SUSPENDED')`,
+	          [class_code, today.toISODate()]
+	        );
+	        const occurredPastDates = new Set(
+	          occurredPastDatesResult.rows.map(r => DateTime.fromJSDate(r.class_date).toISODate())
+	        );
+			
 	        let curr = semConfig.start;
 	        while (curr <= semConfig.end) {
-	            if (info.days.includes(curr.toFormat('ccc'))) classDates.push(curr);
+	            if (info.days.includes(curr.toFormat('ccc'))) {
+	              const currentDateIso = curr.toISODate();
+	              const isFutureOrToday = curr >= today;
+	              const didOccurInPast = occurredPastDates.has(currentDateIso);
+	              if (isFutureOrToday || didOccurInPast) {
+	                classDates.push(curr);
+	              }
+	            }
 	            curr = curr.plus({ days: 1 });
 	        }
 	
@@ -496,33 +516,81 @@ app.post('/api', async (req, res) => {
 	    } else if (type === 'person') {
 	        const studentRes = await pool.query('SELECT user_name FROM sys_users WHERE user_id = $1 AND user_status = TRUE', [student_id]);
 	        const attendance = await pool.query(`SELECT a.*, s.class_name FROM attendance a JOIN schedules s ON a.class_code = s.class_code WHERE a.student_id = $1 AND s.semester = $2 AND s.academic_year = $3 ORDER BY s.class_name ASC`, [student_id, semConfig.sem, semConfig.year]);
-	        
+	        const classSchedules = await pool.query(
+	          `SELECT DISTINCT s.class_code, s.class_name, s.days
+	           FROM schedules s
+	           JOIN attendance a ON a.class_code = s.class_code
+	           WHERE a.student_id = $1
+	             AND s.semester = $2
+	             AND s.academic_year = $3`,
+	          [student_id, semConfig.sem, semConfig.year]
+	        );
+
+			const today = getManilaNow().startOf('day');
 	        const subjects = {};
+
+			classSchedules.rows.forEach(row => {
+	          subjects[row.class_code] = {
+	            name: row.class_name,
+	            records: {},
+	            counts: { P: 0, L: 0, A: 0, E: 0, C: 0, H: 0, S: 0, D: 0 } // counts: { P: 0, L: 0, A: 0, E: 0, C: 0, H: 0, S: 0, D: 0, Cr: 0, As: 0 } 
+	          };
+	        });
+			
 	        attendance.rows.forEach(r => {
 			    if (!subjects[r.class_code]) {
-			        subjects[r.class_code] = { 
-			            name: r.class_name, 
-			            records: {}, 
-			            counts: { P: 0, L: 0, A: 0, E: 0, C: 0, H: 0, S: 0, D: 0 } 
-						//counts: { P: 0, L: 0, A: 0, E: 0, C: 0, H: 0, S: 0, D: 0, Cr: 0, As: 0 } 
-			        };
-			    }
-			    const dStr = DateTime.fromJSDate(r.class_date).toISODate();
-			    
-			    // Character Mapping Consistency
-			    let statusChar = r.attendance_status[0].toUpperCase();
-			    if (r.attendance_status === 'HOLIDAY') statusChar = 'H';
-			    if (r.attendance_status === 'SUSPENDED') statusChar = 'S';
-			    if (r.attendance_status === 'CANCELLED') statusChar = 'C';
-				if (r.attendance_status === 'DROPPED') statusChar = 'D';
-				if (r.attendance_status === 'CREDITED') statusChar = 'Cr';
-				if (r.attendance_status === 'ASYNCHRONOUS') statusChar = 'As';
-			
-			    subjects[r.class_code].records[dStr] = statusChar;
-			    if (subjects[r.class_code].counts[statusChar] !== undefined) {
-			        subjects[r.class_code].counts[statusChar]++;
-			    }
-			});
+		        subjects[r.class_code] = { 
+		            name: r.class_name, 
+		            records: {}, 
+		            counts: { P: 0, L: 0, A: 0, E: 0, C: 0, H: 0, S: 0, D: 0 } // counts: { P: 0, L: 0, A: 0, E: 0, C: 0, H: 0, S: 0, D: 0, Cr: 0, As: 0 } 
+		        };
+		    }
+		    const dStr = DateTime.fromJSDate(r.class_date).toISODate();
+		    
+		    // Character Mapping Consistency
+		    let statusChar = r.attendance_status[0].toUpperCase();
+		    if (r.attendance_status === 'HOLIDAY') statusChar = 'H';
+		    if (r.attendance_status === 'SUSPENDED') statusChar = 'S';
+		    if (r.attendance_status === 'CANCELLED') statusChar = 'C';
+			if (r.attendance_status === 'DROPPED') statusChar = 'D';
+			if (r.attendance_status === 'CREDITED') statusChar = 'Cr';
+			if (r.attendance_status === 'ASYNCHRONOUS') statusChar = 'As';
+		
+		    subjects[r.class_code].records[dStr] = statusChar;
+		    if (subjects[r.class_code].counts[statusChar] !== undefined) {
+		        subjects[r.class_code].counts[statusChar]++;
+		    }
+		});
+	
+	        for (const schedule of classSchedules.rows) {
+	          const occurredPastDatesResult = await pool.query(
+	            `SELECT DISTINCT class_date
+	             FROM attendance
+	             WHERE class_code = $1
+	               AND class_date < $2::date
+	               AND attendance_status NOT IN ('CANCELLED', 'HOLIDAY', 'SUSPENDED')`,
+	            [schedule.class_code, today.toISODate()]
+	          );
+	
+	          const occurredPastDates = new Set(
+	            occurredPastDatesResult.rows.map(r => DateTime.fromJSDate(r.class_date).toISODate())
+	          );
+	
+	          let curr = semConfig.start;
+	          while (curr <= semConfig.end) {
+	            if (schedule.days.includes(curr.toFormat('ccc'))) {
+	              const dateIso = curr.toISODate();
+	              const isFutureOrToday = curr >= today;
+	              const didOccurInPast = occurredPastDates.has(dateIso);
+	              if (isFutureOrToday || didOccurInPast) {
+	                if (subjects[schedule.class_code].records[dateIso] === undefined) {
+	                  subjects[schedule.class_code].records[dateIso] = '';
+	                }
+	              }
+	            }
+	            curr = curr.plus({ days: 1 });
+	          }
+	        }
 	
 	        const excuses = await pool.query(`SELECT a.class_date, s.class_name, a.attendance_status, a.reason FROM attendance a JOIN schedules s ON a.class_code = s.class_code WHERE a.student_id = $1 AND a.reason IS NOT NULL AND s.semester = $2 AND s.academic_year = $3 ORDER BY a.class_date DESC`, [student_id, semConfig.sem, semConfig.year]);
 	
