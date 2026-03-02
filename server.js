@@ -709,10 +709,16 @@ app.post('/api', async (req, res) => {
 	  }
 
 	  case 'reset_single_password': {
-	    const { password, target_user_id } = payload;
+	    const { password, target_user_id, role } = payload;
+	    if (!['officer', 'admin'].includes(role)) {
+	      return res.json({ ok: false, error: 'Unauthorized access.' });
+	    }
+	    if (!target_user_id || !password) {
+	      return res.json({ ok: false, error: 'Missing reset details.' });
+	    }
 	    const hashed = await bcrypt.hash(password, 10);
-	    await pool.query("UPDATE sys_users SET password_hash = $1 WHERE user_id = $2 AND user_status = TRUE", [hashed, target_user_id]);
-	    return res.json({ ok: true, message: "Password reset to " + password });
+	    await pool.query("UPDATE sys_users SET password_hash = $1 WHERE user_id = $2 AND user_role = 'student' AND user_status = TRUE", [hashed, target_user_id]);
+	    return res.json({ ok: true, message: "Password reset for " + target_user_id });
 	  }
 
 	  case 'bulk_password_reset': {
