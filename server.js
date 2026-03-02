@@ -106,9 +106,12 @@ app.get('/ping', (req, res) => res.send('System Awake'));
 
 app.get('/health', async (req, res) => {
   try {
-    await pool.query('SELECT 1'); // Minimal query just to check connection
-    res.send('OK');
+    const start = Date.now();
+    await pool.query('SELECT 1');	// Minimal query just to check connection
+    const duration = Date.now() - start;
+    res.send(`OK - Latency: ${duration}ms`);
   } catch (err) {
+    console.error('Health check failed:', err);
     res.status(500).send('DB_ERROR');
   }
 });
@@ -1910,6 +1913,13 @@ const autoTagAbsentees = async () => {
 
 // Run check every 30 minutes
 setInterval(autoTagAbsentees, 30 * 60 * 1000);
+
+// global fallback
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  if (res.headersSent) return next(err);
+  res.status(500).json({ ok: false, error: 'Internal server error' });
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => console.log(`Backend running on port ${PORT}`));	// Add '0.0.0.0' to ensure the server is accessible externally within Railway
