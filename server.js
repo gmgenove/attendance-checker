@@ -12,8 +12,7 @@ app.use(express.json());
 app.use(cors());
 app.use(express.static(path.join(__dirname, 'public')));
 
-/* for checking DB connection
-console.log("DB URL IS:", process.env.DATABASE_URL);
+/* diagnostics: checking DB connection
 console.log("ALL ENVS:", Object.keys(process.env).filter(key => key.includes('DB') || key.includes('DATABASE')));
 const dbUrl = process.env.DATABASE_URL;
 const maskedUrl = dbUrl ? dbUrl.replace(/:([^:@]+)@/, ':****@') : 'NOT FOUND';
