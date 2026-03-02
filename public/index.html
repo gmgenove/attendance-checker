@@ -83,6 +83,12 @@
             .live-roster-row {display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:nowrap;}
             .live-roster-details {flex:1; min-width:0;}
             .live-roster-actions {display:flex; gap:4px; align-items:center; flex-shrink:0; margin-top:0; flex-wrap:nowrap;}
+            .audit-filter-grid {display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:10px; margin-bottom: 12px;}
+            .audit-filter-actions {display:flex; gap:8px; flex-wrap:wrap; margin-bottom: 10px;}
+            .audit-table-wrap {max-height: 360px; overflow:auto; border:1px solid #e2e8f0; border-radius: 10px;}
+            .audit-table {width:100%; border-collapse: collapse; font-size: 12px; background:#fff;}
+            .audit-table th, .audit-table td {padding: 8px; border-bottom: 1px solid #f1f5f9; text-align:left; vertical-align: top;}
+            .audit-table th {position: sticky; top: 0; background: #f8fafc; z-index: 1;}
             /* Mobile Responsiveness */
             @media (max-width: 480px) { .grid { grid-template-columns: 1fr; } .admin-actions { grid-template-columns: 1fr; row-gap: 10px; } .admin-report-btn { grid-column: auto; } .btn-outline { flex-direction: row; justify-content: flex-start; padding-left: 20px; } .live-roster-row {flex-direction: column; align-items: stretch;} .live-roster-actions {margin-top: 8px; flex-wrap: wrap; justify-content: flex-start; gap: 6px;} }
         </style>
@@ -173,6 +179,43 @@
                                 <button onclick="showModal('classReports')" class="btn-outline admin-report-btn" style="margin-top:5px;">
                                     <i class="fa fa-file-pdf-o"></i> Generate Attendance Report (PDF)
                                 </button>
+                            </div>
+                        </div>
+
+                        <div class="card" id="officerAuditTrailCard" style="border-top: 4px solid #0f766e;">
+                            <h3><i class="fa fa-history"></i> Attendance Audit Trail</h3>
+                            <p class="small muted">Filter by student, class, and date to quickly pull the exact transaction history for dispute review.</p>
+                            <div class="audit-filter-grid">
+                                <select id="auditClassFilter">
+                                    <option value="">All Classes</option>
+                                </select>
+                                <select id="auditStudentFilter">
+                                    <option value="">All Students</option>
+                                </select>
+                                <input type="date" id="auditDateFilter" />
+                            </div>
+                            <div class="audit-filter-actions">
+                                <button id="auditApplyBtn" style="background:#0f766e; color:white; border:none;"><i class="fa fa-filter"></i> Apply Filters</button>
+                                <button id="auditClearBtn" class="btn-outline" style="padding: 10px 12px;"><i class="fa fa-undo"></i> Reset</button>
+                            </div>
+                            <div id="auditTrailMeta" class="small muted" style="margin-bottom: 8px;"></div>
+                            <div class="audit-table-wrap">
+                                <table class="audit-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Date/Time</th>
+                                            <th>Student</th>
+                                            <th>Class</th>
+                                            <th>Event</th>
+                                            <th>Status</th>
+                                            <th>Actor</th>
+                                            <th>Reason</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="auditTrailBody">
+                                        <tr><td colspan="7" class="small muted">Use the filters above to view attendance transactions.</td></tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                         
