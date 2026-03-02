@@ -286,12 +286,70 @@ async function showApp() {
     }
 
 	if (currentUser.role === 'officer' || currentUser.role === 'admin') {
+		await initializeOfficerPasswordTools();
 		await initializeOfficerAuditTrail();
 	}
     // Call this function when the Officer view loads
     /*if (currentUser.role === 'officer' || currentUser.role === 'admin') {
         loadScheduleList();
     }*/
+}
+
+async function initializeOfficerPasswordTools() {
+    const classSelect = document.getElementById('officerActionClassSelect');
+    const studentSelect = document.getElementById('officerResetStudentSelect');
+    const resetBtn = document.getElementById('officerResetStudentBtn');
+    const creditBtn = document.getElementById('officerCreditStudentBtn');
+    const dropBtn = document.getElementById('officerDropStudentBtn');
+    const statusEl = document.getElementById('officerResetStatus');
+    if (!classSelect || !studentSelect || !resetBtn || !creditBtn || !dropBtn || !statusEl) return;
+
+    statusEl.textContent = 'Loading classes and students...';
+
+    const data = await getDropdownData();
+    if (!data.ok) {
+        statusEl.textContent = 'Unable to load classes/students right now.';
+        return;
+    }
+
+    classSelect.innerHTML = `<option value="">Select Class</option>${(data.classes || []).map(c => `<option value="${c.code}">${c.code} • ${c.name}</option>`).join('')}`;
+    studentSelect.innerHTML = `<option value="">Select Student</option>${(data.students || []).map(s => `<option value="${s.user_id}">${s.user_name} [${s.user_id}]</option>`).join('')}`;
+    statusEl.textContent = 'Choose a class + student for credit/drop, or student only for password reset.';
+
+    if (!resetBtn.dataset.bound) {
+        resetBtn.addEventListener('click', async () => {
+            const studentId = studentSelect.value;
+            if (!studentId) {
+                statusEl.textContent = 'Please select a student first.';
+                return;
+            }
+
+            statusEl.textContent = 'Generating temporary password...';
+            const success = await reset_single_password(studentId);
+            statusEl.textContent = success
+                ? `Password reset complete for ${studentId}.`
+                : 'Password reset failed. Please try again.';
+        });
+
+        const runStatusUpdate = async (type) => {
+            const classCode = classSelect.value;
+            const studentId = studentSelect.value;
+            if (!classCode || !studentId) {
+                statusEl.textContent = 'Please select both class and student first.';
+                return;
+            }
+
+            const success = await applyOfficerClassStatusUpdate(classCode, studentId, type);
+            statusEl.textContent = success
+                ? `${type === 'CREDITED' ? 'Credited' : 'Dropped'} ${studentId} for ${classCode}.`
+                : `Unable to ${type === 'CREDITED' ? 'credit' : 'drop'} ${studentId}.`;
+        };
+
+        creditBtn.addEventListener('click', () => runStatusUpdate('CREDITED'));
+        dropBtn.addEventListener('click', () => runStatusUpdate('DROPPED'));
+
+        resetBtn.dataset.bound = 'true';
+    }
 }
 
 async function initializeOfficerAuditTrail() {
@@ -1511,13 +1569,13 @@ async function copyToClipboard(text) {
 window.reset_single_password = async (studentId) => {
     if (!studentId) {
         alert('Missing student ID.');
-        return;
+        return false;
     }
 
     const generated = SecurePasswordGenerator.generate(12, 1, 1, 1, 1, 0);
 	const tempPass = generated.password;
 	const confirmation = confirm(`Reset password for ${studentId} to '${tempPass}'?`);
-    if (!confirmation) return;
+    if (!confirmation) return false;
 
     const res = await api('reset_single_password', {
         role: currentUser?.role,
@@ -1528,9 +1586,11 @@ window.reset_single_password = async (studentId) => {
     if (res.ok) {
 		const copied = await copyToClipboard(tempPass);
         alert((res.message || 'Password reset successful.') + (copied ? '\n\nGenerated password copied to clipboard.' : '\n\nCould not auto-copy. Please copy it manually.'));
-    } else {
-        alert('Error: ' + (res.error || 'Failed to reset password.'));
+	    return true;
     }
+	
+	alert('Error: ' + (res.error || 'Failed to reset password.'));
+    return false;
 };
 
 async function checkGlobalStatus() {
@@ -1561,20 +1621,34 @@ async function checkGlobalStatus() {
     }
 }
 
-window.bulkStatusUpdate = async (studentId, type) => {
-    const classCode = "BPAOUMN-1B"; // Get current active class
-    const confirmMsg = `Are you sure you want to mark this student as ${type} for the rest of the semester?`;
-    
-    if (confirm(confirmMsg)) {
-        const res = await api('credit_attendance', { 
-            class_code: classCode, 
-            student_id: studentId,
-            type: type,
-            actor_id: currentUser.id 
-        });
-        alert(res.message);
-        loadProfessorDashboard();
+async function applyOfficerClassStatusUpdate(classCode, studentId, type) {
+    const actionText = type === 'CREDITED' ? 'credit' : 'drop';
+    const confirmMsg = `Are you sure you want to ${actionText} ${studentId} for ${classCode} for the rest of the semester?`;
+    if (!confirm(confirmMsg)) return false;
+
+    const res = await api('credit_attendance', {
+        class_code: classCode,
+        student_id: studentId,
+        type,
+        actor_id: currentUser.id
+    });
+
+    alert(res.message || (res.ok ? 'Update successful.' : 'Update failed.'));
+    if (res.ok) {
+        if (typeof loadProfessorDashboard === 'function') await loadProfessorDashboard();
+        if (typeof loadTodaySchedule === 'function') await loadTodaySchedule();
+        return true;
     }
+    return false;
+}
+
+window.bulkStatusUpdate = async (studentId, type) => {
+    const classCode = selectedMonitorClassCode || getDefaultMonitorClassCode(currentScheduleData);
+    if (!classCode) {
+        alert('No class selected. Use the officer action panel and pick a class first.');
+        return false;
+	}
+	return applyOfficerClassStatusUpdate(classCode, studentId, type);
 };
 
 window.handleStatusChange = async () => {
