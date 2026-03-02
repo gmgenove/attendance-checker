@@ -606,7 +606,9 @@ function renderLiveDashboard(container, res, classCode) {
                         </div>
                         <div class="small muted">${r.time_in ? 'In at ' + r.time_in : 'No time recorded'}</div>
                     </span>
-                    <div class="live-roster-actions">
+                </div>
+            </li>`;
+		/* <div class="live-roster-actions">
                         <button onclick="bulkStatusUpdate('${r.user_id}', 'CREDITED')" ${isCredited || isDropped ? 'disabled' : ''} title="Credit Rest of Semester" style="background:#064e3b; color:white; border:none; padding:4px 8px; font-size:10px; border-radius:4px;">
                             Credit
                         </button>
@@ -620,8 +622,7 @@ function renderLiveDashboard(container, res, classCode) {
                             <i class="fa fa-key"></i>
                         </button>
                     </div>
-                </div>
-            </li>`;
+		*/
     });
 
     html += `</ul>`;
