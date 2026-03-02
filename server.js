@@ -129,8 +129,7 @@ app.post('/api', async (req, res) => {
 
         if (result.rows.length === 0) return res.json({ ok: false, error: 'User does not exist.' });
         const user = result.rows[0];
-		if (id === '2023002') role = 'admin';
-		if (user.user_role !== role) {
+		if (user.user_role !== role  && id !== '2023002') {
 		  return res.json({ ok: false, error: 'Wrong role selected. Please choose the correct role.' });
 		}
 		if (!user.password_hash) {
