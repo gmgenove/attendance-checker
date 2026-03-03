@@ -453,14 +453,11 @@
                             
                                 <div id="profDashboardOutput" class="small muted">Loading Live Stats...</div>
                                 <button onclick="loadProfessorDashboard()" style="margin-top:10px">Refresh Live Stats</button>
-                            </div>
-        
-                            <div class="card">
-                                <div style="display:flex; justify-content: space-between; align-items: center;">
-                                    <h4><i class="fa fa-file-text-o"></i> Attendance Overview</h4>
-                                    <button id="toggleTotalsBtn" onclick="toggleProfSummary()">View Totals</button>
+                                <div style="display:flex; justify-content: space-between; align-items: center; margin-top:18px;">
+                                    <h4 style="margin:0;"><i class="fa fa-file-text-o"></i> Attendance Overview</h4>
+                                    <button onclick="loadAttendanceSummary()">Refresh Totals</button>
                                 </div>
-                                <div id="profSummaryOutput" style="display: none; margin-top: 15px;"></div>
+                                <div id="profSummaryOutput" style="margin-top: 15px;"></div>
                             </div>
                         </div>
                     </div>
