@@ -425,9 +425,11 @@ async function loadOfficerAuditTrail() {
         const stamp = new Date(record.transaction_time).toLocaleString();
         const studentName = auditLookup.students.get(record.student_id) || record.student_id;
         const className = auditLookup.classes.get(record.class_code) || '';
-		const actorDisplay = record.actor_name
-            ? `${record.actor_name}${record.actor_id ? `<div class="small muted">${record.actor_id}</div>` : ''}`
-            : (record.actor_id || '-');
+		const normalizedActorId = ['undefined', 'null', ''].includes(String(record.actor_id || '').trim()) ? null : record.actor_id;
+        const normalizedActorName = ['undefined', 'null', ''].includes(String(record.actor_name || '').trim()) ? null : record.actor_name;
+        const actorDisplay = normalizedActorName
+            ? `${normalizedActorName}${normalizedActorId ? `<div class="small muted">${normalizedActorId}</div>` : ''}`
+            : (normalizedActorId || '-');
         const reason = record.reason || '-';
         return `
             <tr>
