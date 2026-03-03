@@ -1535,45 +1535,34 @@ document.getElementById('generateReport').onclick = async () => {
 
 async function loadAttendanceSummary() {
     const container = document.getElementById('profSummaryOutput');
-    container.innerHTML = '<div class="small muted"><i class="fa fa-spinner fa-spin"></i> Calculating totals...</div>';
+    if (!container) return;
+
+    container.innerHTML = '<span class="small muted"><i class="fa fa-spinner fa-spin"></i> Totals</span>';
     const classCode = selectedMonitorClassCode || currentScheduleData?.[0]?.class_code;
     if (!classCode) {
-        container.innerHTML = '<div class="small muted">No active class found, so totals cannot be generated yet.</div>';
+        container.innerHTML = '<span class="small muted">No class selected for totals.</span>';
         return;
     }
     
     const res = await api('prof_summary', { class_code: classCode });
-    if (res.ok) {
-        let tableHtml = `
-            <div class="small muted" style="margin-bottom:8px;">Class: <strong>${classCode}</strong></div>
-            <table style="width:100%; border-collapse: collapse; font-size: 12px; margin-top: 15px;">
-                <thead>
-                    <tr style="background: #f1f5f9; text-align: left;">
-                        <th style="padding: 8px; border: 1px solid #e2e8f0;">Student Name</th>
-                        <th style="padding: 8px; border: 1px solid #e2e8f0; color: #10b981;">P</th>
-                        <th style="padding: 8px; border: 1px solid #e2e8f0; color: #f59e0b;">L</th>
-                        <th style="padding: 8px; border: 1px solid #e2e8f0; color: #ef4444;">A</th>
-                    </tr>
-                </thead>
-                <tbody>
-        `;
-
-        res.summary.forEach(row => {
-            tableHtml += `
-                <tr>
-                    <td style="padding: 8px; border: 1px solid #e2e8f0;"><strong>${row.user_name}</strong></td>
-                    <td style="padding: 8px; border: 1px solid #e2e8f0;">${row.present_count}</td>
-                    <td style="padding: 8px; border: 1px solid #e2e8f0;">${row.late_count}</td>
-                    <td style="padding: 8px; border: 1px solid #e2e8f0;">${row.absent_count}</td>
-                </tr>
-            `;
-        });
-
-        tableHtml += `</tbody></table>`;
-        container.innerHTML = tableHtml;
-    } else {
-        container.innerHTML = `<div class="small muted">Failed to load totals: ${res.error || 'Unknown error'}</div>`;
+    if (!res.ok || !Array.isArray(res.summary)) {
+        container.innerHTML = `<span class="small muted">Totals unavailable: ${res.error || 'Unknown error'}</span>`;
+        return;
     }
+
+    const aggregate = res.summary.reduce((acc, row) => {
+        acc.present += Number(row.present_count || 0);
+        acc.late += Number(row.late_count || 0);
+        acc.absent += Number(row.absent_count || 0);
+        return acc;
+    }, { present: 0, late: 0, absent: 0 });
+
+    container.innerHTML = `
+        <span style="font-size:11px; color:#64748b;">${classCode}</span>
+        <span style="padding:3px 8px; border-radius:999px; background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; font-weight:600;">P ${aggregate.present}</span>
+        <span style="padding:3px 8px; border-radius:999px; background:#fffbeb; color:#b45309; border:1px solid #fde68a; font-weight:600;">L ${aggregate.late}</span>
+        <span style="padding:3px 8px; border-radius:999px; background:#fef2f2; color:#b91c1c; border:1px solid #fecaca; font-weight:600;">A ${aggregate.absent}</span>
+    `;
 }
 
 function signout() {
