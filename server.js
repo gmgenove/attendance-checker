@@ -60,6 +60,27 @@ const hasAssignedProfessor = async (classCode, semConfig) => {
   return { found: true, assigned: Boolean(result.rows[0].professor_id) };
 };
 
+const getClassWideStatusForDate = async (classCode, classDate) => {
+  const result = await pool.query(
+    `SELECT attendance_status, reason
+     FROM attendance
+     WHERE class_code = $1
+       AND class_date = $2::date
+       AND attendance_status IN ('HOLIDAY', 'ASYNCHRONOUS', 'SUSPENDED', 'CANCELLED')
+     ORDER BY CASE attendance_status
+       WHEN 'HOLIDAY' THEN 1
+       WHEN 'SUSPENDED' THEN 2
+       WHEN 'CANCELLED' THEN 3
+       WHEN 'ASYNCHRONOUS' THEN 4
+       ELSE 99
+     END
+     LIMIT 1`,
+    [classCode, classDate]
+  );
+
+  return result.rows[0] || null;
+};
+
 const logAttendanceTransaction = async ({
   classDate,
   classCode,
@@ -178,12 +199,29 @@ app.post('/api', async (req, res) => {
 
 			// 2. Filter query by Day, Semester, Cycle and Academic Year
 			const query = `
-			    SELECT s.*, u.user_name as professor_name, a.attendance_status as my_status, a.time_in, a.reason
+			    SELECT s.*, u.user_name as professor_name, a.attendance_status as my_status, a.time_in, a.reason,
+			      class_override.attendance_status as class_status,
+			      class_override.reason as class_reason
 			    FROM schedules s
 			    LEFT JOIN sys_users u ON s.professor_id = u.user_id AND u.user_status = TRUE
 			    LEFT JOIN attendance a ON s.class_code = a.class_code 
 			        AND a.student_id = $1 AND a.class_date = $2::date
-			    WHERE 
+			    LEFT JOIN LATERAL (
+			      SELECT attendance_status, reason
+			      FROM attendance ca
+			      WHERE ca.class_code = s.class_code
+			        AND ca.class_date = $2::date
+			        AND ca.attendance_status IN ('HOLIDAY', 'ASYNCHRONOUS', 'SUSPENDED', 'CANCELLED')
+			      ORDER BY CASE ca.attendance_status
+			        WHEN 'HOLIDAY' THEN 1
+			        WHEN 'SUSPENDED' THEN 2
+			        WHEN 'CANCELLED' THEN 3
+			        WHEN 'ASYNCHRONOUS' THEN 4
+			        ELSE 99
+			      END
+			      LIMIT 1
+			    ) class_override ON TRUE
+				WHERE 
 			        ($3 = ANY(s.days) -- Matches 'Tue', 'Fri', etc.
 			        AND s.semester = $4 
 			        AND s.academic_year = $5
@@ -239,6 +277,14 @@ app.post('/api', async (req, res) => {
 			}
 			if (!profAssignment.assigned) {
 			  return res.json({ ok: false, error: 'Student transactions are disabled until a professor is assigned.' });
+			}
+
+			const classWideStatus = await getClassWideStatusForDate(class_code, dateStr);
+			if (classWideStatus && classWideStatus.attendance_status !== 'ASYNCHRONOUS') {
+			  return res.json({
+			    ok: false,
+			    error: `Check-in unavailable: class is marked ${classWideStatus.attendance_status.toLowerCase()}.`
+			  });
 			}
 			// A. Check for existing attendance (Duplicate Prevention)
 			const existing = await pool.query(
@@ -872,6 +918,14 @@ app.post('/api', async (req, res) => {
 		  return res.json({ ok: false, error: 'Student transactions are disabled until a professor is assigned.' });
 		}
 
+		const classWideStatus = await getClassWideStatusForDate(class_code, today);
+		if (classWideStatus) {
+		  return res.json({
+		    ok: false,
+		    error: `Excuse filing unavailable: class is marked ${classWideStatus.attendance_status.toLowerCase()}.`
+		  });
+		}
+		
 		// Existing check for duplicates...
 	    const existing = await pool.query(
 	        'SELECT attendance_status FROM attendance WHERE class_date = $1::date AND class_code = $2 AND student_id = $3',
