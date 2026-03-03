@@ -1178,6 +1178,8 @@ async function updateCheckinUI(cls) {
     const excuseLink = document.getElementById(`excuse-link-${safeCode}`);
 
     const hasAssignedProfessor = Boolean(cls.professor_id);
+	const classWideStatus = cls.class_status;
+    const classWideReason = cls.class_reason || cls.reason || '';
     if (!hasAssignedProfessor) {
         if (btn) {
             btn.disabled = true;
@@ -1203,7 +1205,32 @@ async function updateCheckinUI(cls) {
         const now = new Date();
         const adjustmentEnd = new Date(config.adjustment_end);
         const isWithinAdjustment = now <= adjustmentEnd;
-        // 2. Handle already-recorded attendance first (PRESENT/LATE/etc.)
+        // 2. Handle class-wide statuses first (cancelled/suspended/holiday/async)
+        if (classWideStatus && ['CANCELLED', 'SUSPENDED', 'HOLIDAY', 'ASYNCHRONOUS'].includes(classWideStatus)) {
+            if (btn) btn.style.display = 'none';
+            if (excuseLink) excuseLink.style.display = 'none';
+
+            const actionGrid = document.querySelector(`#btn-${safeCode}`)?.parentElement;
+            if (actionGrid) actionGrid.style.display = 'none';
+
+            const styleMap = {
+                ASYNCHRONOUS: 'background: #e0f2fe; border: 1px solid #0369a1; color: #0369a1;',
+                HOLIDAY: 'background: #eff6ff; border: 1px solid #1d4ed8; color: #1d4ed8;',
+                SUSPENDED: 'background: #fff7ed; border: 1px solid #c2410c; color: #9a3412;',
+                CANCELLED: 'background: #fef2f2; border: 1px solid #b91c1c; color: #991b1b;'
+            };
+
+            statusSpan.innerHTML = `
+                <div style="padding: 10px; border-radius: 8px; text-align: center; ${styleMap[classWideStatus] || ''}">
+                    <strong><i class="fa fa-ban"></i> ${classWideStatus}</strong>
+                    <div class="small" style="margin-top: 5px;">${classWideReason || 'No additional notes provided.'}</div>
+                    <div class="small" style="margin-top: 3px;">Check-in and excuse filing are unavailable.</div>
+                </div>
+            `;
+            return;
+        }
+
+        // 3. Handle already-recorded attendance first (PRESENT/LATE/etc.)
         const relaxableStatuses = ['ASYNCHRONOUS', 'ABSENT'];
         const isPendingRecord = record?.status === 'PENDING';
         const isRelaxedRecord = isPendingRecord || (isWithinAdjustment && record && relaxableStatuses.includes(record.status));
@@ -1220,7 +1247,7 @@ async function updateCheckinUI(cls) {
             return;
         }
 
-        // 3. Handle Terminal Statuses (Excused, Holiday, Credited, etc.)
+        // 4. Handle Terminal Statuses (Excused, Holiday, Credited, etc.)
         const specialStatuses = ['EXCUSED', 'SUSPENDED', 'CANCELLED', 'HOLIDAY', 'ABSENT', 'ASYNCHRONOUS', 'CREDITED', 'DROPPED'];
         const finalStatus = record?.status || cls.my_status;
         const isRelaxedSpecialStatus = isWithinAdjustment && relaxableStatuses.includes(finalStatus);
@@ -1268,7 +1295,7 @@ async function updateCheckinUI(cls) {
             return; 
         }
     
-        // 4. Handle Self-Service (Credit/Drop)
+        // 5. Handle Self-Service (Credit/Drop)
         const selfServiceContainer = document.getElementById(`self-service-container-${safeCode}`);
         if (!record || record.status === 'not_recorded' || isRelaxedRecord) {
             selfServiceContainer.innerHTML = ''; // Clear previous
@@ -1306,7 +1333,7 @@ async function updateCheckinUI(cls) {
             };
         }
 
-        // 5. Handle Check-In Countdown
+        // 6. Handle Check-In Countdown
 		if (!hasAssignedProfessor) {
             statusSpan.textContent = 'Check-in and excuse filing are disabled until a professor is assigned.';
             statusSpan.style.color = '#b45309';
