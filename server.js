@@ -457,6 +457,7 @@ app.post('/api', async (req, res) => {
 	    const { class_code } = payload;
 		const summary = await pool.query(`
 		    SELECT  
+			    u.user_id,
 		        u.user_name,
 		        COUNT(CASE WHEN a.attendance_status = 'PRESENT' THEN 1 END) as present_count,
 		        COUNT(CASE WHEN a.attendance_status = 'LATE' THEN 1 END) as late_count,
