@@ -619,6 +619,11 @@ function renderLiveDashboard(container, res, classCode) {
                         </div>
                         <div class="small muted">${r.time_in ? 'In at ' + r.time_in : 'No time recorded'}</div>
                     </span>
+					<div class="live-roster-actions">
+                        <button onclick="showAttendanceHistory('${classCode}', '${r.user_id}')" title="View Attendance History" style="background:#eef2ff; color:#3730a3; border:1px solid #c7d2fe; padding:4px 8px; font-size:10px; border-radius:4px;">
+                            History
+                        </button>
+                    </div>
                 </div>
             </li>`;
 		/* <div class="live-roster-actions">
