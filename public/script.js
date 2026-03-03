@@ -6,6 +6,7 @@ let selectedTimelineSubject = '';
 let selectedTimelineRange = 'week';
 let timelineSubjects = [];
 let selectedMonitorClassCode = '';
+let cachedCheckinConfig = null;
 let dropdownCache = { data: null, fetchedAt: 0 };
 const DROPDOWN_CACHE_TTL_MS = 5 * 60 * 1000;
 let isProfControlsCollapsed = false;
@@ -555,6 +556,45 @@ async function loadProfessorDashboard() {
         // Ensure search filter works after re-rendering
         document.getElementById('studentSearch').dispatchEvent(new Event('input'));
     }
+}
+
+function parseClassStartDateTime(startTime, now) {
+    let parsed = luxon.DateTime.fromFormat(startTime, 'HH:mm:ss');
+    if (!parsed.isValid) parsed = luxon.DateTime.fromFormat(startTime, 'h:mm a');
+    if (!parsed.isValid) return null;
+
+    return parsed.set({
+        year: now.year,
+        month: now.month,
+        day: now.day
+    });
+}
+
+async function getCheckinConfig() {
+    if (cachedCheckinConfig) return cachedCheckinConfig;
+
+    const configRes = await api('getConfig');
+    if (!configRes?.ok || !configRes.config) return null;
+
+    cachedCheckinConfig = configRes.config;
+    return cachedCheckinConfig;
+}
+
+async function hasActiveCheckinWindow() {
+    if (!Array.isArray(currentScheduleData) || currentScheduleData.length === 0) return false;
+
+    const config = await getCheckinConfig();
+    if (!config) return true; // Fallback: keep refresh behavior if config is unavailable.
+
+    const now = luxon.DateTime.now().setZone('Asia/Manila');
+    return currentScheduleData.some((cls) => {
+        const startTime = parseClassStartDateTime(cls.start_time, now);
+        if (!startTime) return false;
+
+        const enableFrom = startTime.minus({ minutes: config.checkin_window_minutes });
+        const absentThreshold = startTime.plus({ minutes: config.absent_window_minutes });
+        return now >= enableFrom && now <= absentThreshold;
+    });
 }
 
 function renderLiveDashboard(container, res, classCode) {
@@ -1966,6 +2006,8 @@ class SecurePasswordGenerator {
 // Refresh the dashboard every 60 seconds if the user is an Officer/Prof
 setInterval(() => {
     if (currentUser && (currentUser.role === 'professor' || currentUser.role === 'officer' || currentUser.role === 'admin')) {
-        loadProfessorDashboard();
+        hasActiveCheckinWindow().then((isWindowActive) => {
+            if (isWindowActive) loadProfessorDashboard();
+        });
     }
 }, 60000);
