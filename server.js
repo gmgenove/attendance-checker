@@ -333,20 +333,24 @@ app.post('/api', async (req, res) => {
         const whereClause = filters.length > 0 ? `WHERE ${filters.join(' AND ')}` : '';
         const result = await pool.query(
           `SELECT
-              transaction_id,
-              class_date,
-              class_code,
-              student_id,
-              event_type,
-              attendance_status,
-              reason,
-              time_in,
-              actor_id,
-              details,
-              transaction_time
-            FROM attendance_transactions
+              t.transaction_id,
+              t.class_date,
+              t.class_code,
+              t.student_id,
+              t.event_type,
+              t.attendance_status,
+              t.reason,
+              t.time_in,
+              t.actor_id,
+              u.user_name AS actor_name,
+              t.details,
+              t.transaction_time
+            FROM attendance_transactions t
+            LEFT JOIN sys_users u
+              ON t.actor_id = u.user_id
+              AND u.user_status = TRUE
             ${whereClause}
-            ORDER BY transaction_time DESC
+            ORDER BY t.transaction_time DESC
             LIMIT $${values.length}`,
           values
         );
