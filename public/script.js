@@ -436,7 +436,7 @@ async function loadOfficerAuditTrail() {
                 <td>${record.class_code}${className ? `<div class="small muted">${className}</div>` : ''}</td>
                 <td>${record.event_type || '-'}</td>
                 <td>${record.attendance_status || '-'}</td>
-                <td>${record.actor_id || '-'}</td>
+                <td>${record.actorDisplay}</td>
                 <td>${reason}</td>
             </tr>
         `;
