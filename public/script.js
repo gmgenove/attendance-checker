@@ -267,10 +267,6 @@ async function showApp() {
         const shouldCollapse = savedCollapsedState ? JSON.parse(savedCollapsedState) : true;
         setProfControlsCollapsed(shouldCollapse);
     }
-    
-    // Restricted summary card
-    const summaryCard = document.querySelector('#profSummaryOutput').closest('.card');
-    if (summaryCard) summaryCard.style.display = isElevated ? 'block' : 'none';
 
     if (isElevated) {
         const monitorFilter = document.getElementById('monitorClassFilter');
@@ -524,12 +520,16 @@ async function loadProfessorDashboard() {
                 <span class="small muted">Live stats will appear once the class starts.</span>
             </div>`;
         if (searchWrapper) searchWrapper.style.display = 'none'; // Hide if no data
+		const summary = document.getElementById('profSummaryOutput');
+        if (summary) summary.innerHTML = '<div class="small muted">No active class found, so totals cannot be generated yet.</div>';
         return;
     }
     // 2. Automatically pull the code from the current schedule. Since there are no simultaneous classes, index 0 is the current target
     if (!classCode) {
         container.innerHTML = '<div class="small muted">No class selected for monitoring.</div>';
         if (searchWrapper) searchWrapper.style.display = 'none';
+		const summary = document.getElementById('profSummaryOutput');
+        if (summary) summary.innerHTML = '<div class="small muted">No class selected for attendance totals.</div>';
         return;
     }
 
@@ -546,13 +546,15 @@ async function loadProfessorDashboard() {
                     <span class="small muted">Live stats will appear once the class starts.</span>
                 </div>`;
             if (searchWrapper) searchWrapper.style.display = 'none'; // Hide if no session
+			await loadAttendanceSummary();
             return;
         }
         // Show search wrapper now that we have a roster to search through
         if (searchWrapper) searchWrapper.style.display = 'block';
 
-        // 4. Render the Live Dashboard
+        // 4. Render the Live Dashboard + Overview in a single monitor surface
         renderLiveDashboard(container, res, classCode);
+		await loadAttendanceSummary();
         // Ensure search filter works after re-rendering
         document.getElementById('studentSearch').dispatchEvent(new Event('input'));
     }
@@ -1815,30 +1817,6 @@ window.toggleSettings = () => {
     const card = document.getElementById('settingsCard');
     card.style.display = card.style.display === 'none' ? 'block' : 'none';
     document.getElementById('settingsMsg').textContent = '';
-};
-
-window.toggleProfSummary = () => {
-    const summaryDiv = document.getElementById('profSummaryOutput');
-    const btn = document.getElementById('toggleTotalsBtn');
-    
-    if (!summaryDiv || !btn) return;
-
-    if (summaryDiv.style.display === 'none') {
-        // Show it
-        summaryDiv.style.display = 'block';
-        btn.textContent = 'Hide Totals';
-        btn.style.background = '#64748b'; // Change color to indicate "active" state
-        
-        // Optional: Trigger the data load only when opened to save resources
-        if (summaryDiv.innerHTML.trim() === "") {
-            loadAttendanceSummary(); 
-        }
-    } else {
-        // Hide it
-        summaryDiv.style.display = 'none';
-        btn.textContent = 'View Totals';
-        btn.style.background = ''; // Revert to original CSS
-    }
 };
 
 document.getElementById('changePasswordForm').addEventListener('submit', async (e) => {
