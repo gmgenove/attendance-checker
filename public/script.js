@@ -421,12 +421,20 @@ async function loadOfficerAuditTrail() {
         return;
     }
 
+	const normalizeAuditField = value => {
+        if (value === null || value === undefined) return null;
+        const trimmed = String(value).trim();
+        if (!trimmed) return null;
+        const normalized = trimmed.toLowerCase();
+        return ['undefined', 'null', 'nan'].includes(normalized) ? null : trimmed;
+    };
+
     tbody.innerHTML = records.map(record => {
         const stamp = new Date(record.transaction_time).toLocaleString();
         const studentName = auditLookup.students.get(record.student_id) || record.student_id;
         const className = auditLookup.classes.get(record.class_code) || '';
-		const normalizedActorId = ['undefined', 'null', ''].includes(String(record.actor_id || '').trim()) ? null : record.actor_id;
-        const normalizedActorName = ['undefined', 'null', ''].includes(String(record.actor_name || '').trim()) ? null : record.actor_name;
+		const normalizedActorId = normalizeAuditField(record.actor_id);
+        const normalizedActorName = normalizeAuditField(record.actor_name);
         const actorDisplay = normalizedActorName
             ? `${normalizedActorName}${normalizedActorId ? `<div class="small muted">${normalizedActorId}</div>` : ''}`
             : (normalizedActorId || '-');
@@ -438,7 +446,7 @@ async function loadOfficerAuditTrail() {
                 <td>${record.class_code}${className ? `<div class="small muted">${className}</div>` : ''}</td>
                 <td>${record.event_type || '-'}</td>
                 <td>${record.attendance_status || '-'}</td>
-                <td>${record.actorDisplay}</td>
+                <td>${actorDisplay}</td>
                 <td>${reason}</td>
             </tr>
         `;
