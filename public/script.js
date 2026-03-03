@@ -425,6 +425,9 @@ async function loadOfficerAuditTrail() {
         const stamp = new Date(record.transaction_time).toLocaleString();
         const studentName = auditLookup.students.get(record.student_id) || record.student_id;
         const className = auditLookup.classes.get(record.class_code) || '';
+		const actorDisplay = record.actor_name
+            ? `${record.actor_name}${record.actor_id ? `<div class="small muted">${record.actor_id}</div>` : ''}`
+            : (record.actor_id || '-');
         const reason = record.reason || '-';
         return `
             <tr>
