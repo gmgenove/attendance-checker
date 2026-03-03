@@ -32,7 +32,6 @@
             @keyframes subtle-shake { 0% { transform: translateX(0); } 25% { transform: translateX(2px); } 50% { transform: translateX(-2px); } 75% { transform: translateX(2px); } 100% { transform: translateX(0); } }
             @keyframes pulse-green { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
             @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
-            #profSummaryOutput { animation: fadeIn 0.3s ease-in-out; }
             .fa-circle { animation: pulse-green 2s infinite; }
             .reminder-active {animation: subtle-shake 0.5s ease-in-out;}
             .password-wrapper { position: relative; display: block; align-items: center; width: 100%; max-width: 260px; }
@@ -450,15 +449,8 @@
                                     <input type="text" id="studentSearch" placeholder="Search student name..." style="width: 100%; box-sizing: border-box; padding-left: 35px;" autocomplete="off"/>
                                     <span class="fa fa-search" style="position: absolute; left: 12px; top: 13px; color: #94a3b8;"></span>
                                 </div>
-                            
-                                <div style="display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin-top:10px;">
-                                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                                        <button onclick="loadProfessorDashboard()">Refresh Live Stats</button>
-                                        <button onclick="loadAttendanceSummary()" class="btn-outline">Refresh Totals</button>
-                                    </div>
-                                    <div id="profSummaryOutput" class="small muted" style="display:flex; gap:6px; flex-wrap:wrap; align-items:center; justify-content:flex-end;"></div>
-                                </div>
-                                <div id="profDashboardOutput" class="small muted" style="margin-top:12px;">Loading Live Stats...</div>
+                                <button onclick="loadProfessorDashboard()">Refresh Live Stats</button>
+                                <div id="profDashboardOutput" class="small muted" style="margin-top:12px;">Loading Live Stats...</div>       
                             </div>
                         </div>
                     </div>
