@@ -520,43 +520,49 @@ async function loadProfessorDashboard() {
                 <span class="small muted">Live stats will appear once the class starts.</span>
             </div>`;
         if (searchWrapper) searchWrapper.style.display = 'none'; // Hide if no data
-		const summary = document.getElementById('profSummaryOutput');
-        if (summary) summary.innerHTML = '<div class="small muted">No active class found, so totals cannot be generated yet.</div>';
-        return;
-    }
-    // 2. Automatically pull the code from the current schedule. Since there are no simultaneous classes, index 0 is the current target
-    if (!classCode) {
-        container.innerHTML = '<div class="small muted">No class selected for monitoring.</div>';
-        if (searchWrapper) searchWrapper.style.display = 'none';
-		const summary = document.getElementById('profSummaryOutput');
-        if (summary) summary.innerHTML = '<div class="small muted">No class selected for attendance totals.</div>';
         return;
     }
 
-    const res = await api('prof_dashboard', { class_code: classCode });
+	if (!classCode) {
+        container.innerHTML = '<div class="small muted">No class selected for monitoring.</div>';
+        if (searchWrapper) searchWrapper.style.display = 'none';
+        return;
+    }
+
+    const [res, totalsRes] = await Promise.all([
+        api('prof_dashboard', { class_code: classCode }),
+        api('prof_summary', { class_code: classCode })
+    ]);
+
+    const totalsByStudent = new Map();
+    if (totalsRes?.ok && Array.isArray(totalsRes.summary)) {
+        totalsRes.summary.forEach((row) => {
+            if (!row.user_id) return;
+            totalsByStudent.set(row.user_id, {
+                present: Number(row.present_count || 0),
+                late: Number(row.late_count || 0),
+                absent: Number(row.absent_count || 0)
+            });
+        });
+    }
+	
     if (res.ok) {
-        // 3. Logic check: Is this session currently active? 
-        // A class is "Active" if it's a regular day OR an authorized makeup
         const hasActiveSession = res.is_makeup_session || res.is_regular_day;
-        // IF NO CLASS: Show a simple placeholder message
         if (!hasActiveSession) {
             container.innerHTML = `
                 <div style="text-align:center; padding: 20px; background: #f8fafc; border-radius: 8px; border: 1px dashed #cbd5e1;">
                     <p style="margin:0;">No active class session for <strong>${classCode}</strong> today.</p>
                     <span class="small muted">Live stats will appear once the class starts.</span>
                 </div>`;
-            if (searchWrapper) searchWrapper.style.display = 'none'; // Hide if no session
-			await loadAttendanceSummary();
+            if (searchWrapper) searchWrapper.style.display = 'none';
             return;
         }
-        // Show search wrapper now that we have a roster to search through
-        if (searchWrapper) searchWrapper.style.display = 'block';
+		
+        if (searchWrapper) searchWrapper.style.display = 'block';	// Show search wrapper now that we have a roster to search through
 
-        // 4. Render the Live Dashboard + Overview in a single monitor surface
-        renderLiveDashboard(container, res, classCode);
-		await loadAttendanceSummary();
-        // Ensure search filter works after re-rendering
-        document.getElementById('studentSearch').dispatchEvent(new Event('input'));
+        // 4. Render Live Dashboard where each student row includes history + totals
+        renderLiveDashboard(container, res, classCode, totalsByStudent);
+        document.getElementById('studentSearch').dispatchEvent(new Event('input'));		// Ensure search filter works after re-rendering
     }
 }
 
@@ -599,7 +605,7 @@ async function hasActiveCheckinWindow() {
     });
 }
 
-function renderLiveDashboard(container, res, classCode) {
+function renderLiveDashboard(container, res, classCode, totalsByStudent = new Map()) {
     // Calculate total students in the roster
     const totalStudents = res.roster.length;
 
@@ -665,6 +671,9 @@ function renderLiveDashboard(container, res, classCode) {
                         <button onclick="showAttendanceHistory('${classCode}', '${r.user_id}')" title="View Attendance History" style="background:#eef2ff; color:#3730a3; border:1px solid #c7d2fe; padding:4px 8px; font-size:10px; border-radius:4px;">
                             History
                         </button>
+						<span style="padding:2px 6px; border-radius:999px; background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; font-weight:600; font-size:9px;">P ${(totalsByStudent.get(r.user_id)?.present ?? 0)}</span>
+                        <span style="padding:2px 6px; border-radius:999px; background:#fffbeb; color:#b45309; border:1px solid #fde68a; font-weight:600; font-size:9px;">L ${(totalsByStudent.get(r.user_id)?.late ?? 0)}</span>
+                        <span style="padding:2px 6px; border-radius:999px; background:#fef2f2; color:#b91c1c; border:1px solid #fecaca; font-weight:600; font-size:9px;">A ${(totalsByStudent.get(r.user_id)?.absent ?? 0)}</span>
                     </div>
                 </div>
             </li>`;
@@ -688,7 +697,6 @@ function renderLiveDashboard(container, res, classCode) {
     html += `</ul>`;
     container.innerHTML = html;
 }
-
 
 async function showAttendanceHistory(classCode, studentId) {
     const res = await api('get_attendance_transactions', {
@@ -1532,38 +1540,6 @@ document.getElementById('generateReport').onclick = async () => {
         out.textContent = res.error;
     }
 };
-
-async function loadAttendanceSummary() {
-    const container = document.getElementById('profSummaryOutput');
-    if (!container) return;
-
-    container.innerHTML = '<span class="small muted"><i class="fa fa-spinner fa-spin"></i> Totals</span>';
-    const classCode = selectedMonitorClassCode || currentScheduleData?.[0]?.class_code;
-    if (!classCode) {
-        container.innerHTML = '<span class="small muted">No class selected for totals.</span>';
-        return;
-    }
-    
-    const res = await api('prof_summary', { class_code: classCode });
-    if (!res.ok || !Array.isArray(res.summary)) {
-        container.innerHTML = `<span class="small muted">Totals unavailable: ${res.error || 'Unknown error'}</span>`;
-        return;
-    }
-
-    const aggregate = res.summary.reduce((acc, row) => {
-        acc.present += Number(row.present_count || 0);
-        acc.late += Number(row.late_count || 0);
-        acc.absent += Number(row.absent_count || 0);
-        return acc;
-    }, { present: 0, late: 0, absent: 0 });
-
-    container.innerHTML = `
-        <span style="font-size:11px; color:#64748b;">${classCode}</span>
-        <span style="padding:3px 8px; border-radius:999px; background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; font-weight:600;">P ${aggregate.present}</span>
-        <span style="padding:3px 8px; border-radius:999px; background:#fffbeb; color:#b45309; border:1px solid #fde68a; font-weight:600;">L ${aggregate.late}</span>
-        <span style="padding:3px 8px; border-radius:999px; background:#fef2f2; color:#b91c1c; border:1px solid #fecaca; font-weight:600;">A ${aggregate.absent}</span>
-    `;
-}
 
 function signout() {
     localStorage.removeItem('currentUser');
