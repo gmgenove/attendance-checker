@@ -740,9 +740,22 @@ async function renderCycleTimeline() {
             .map(window => ({ ...window, cycleName: cycle.cycle_name }))
     );
 
-    const statusText = activeWindows.length > 0
-        ? `Today is <strong>${activeWindows[0].mode === 'sync' ? 'Synchronous' : 'Asynchronous'}</strong> for ${activeWindows.map(window => `<strong>${window.cycleName}</strong>`).join(', ')}.`
-        : 'Today is outside the active cycle windows.';
+    let statusText = 'Today is outside the active cycle windows.';
+    if (activeWindows.length > 0) {
+        const modeBuckets = activeWindows.reduce((bucket, window) => {
+            const modeLabel = window.mode === 'sync' ? 'Synchronous' : 'Asynchronous';
+            if (!bucket[modeLabel]) bucket[modeLabel] = [];
+            bucket[modeLabel].push(`<strong>${window.cycleName}</strong>`);
+            return bucket;
+        }, {});
+
+        const statusSegments = Object.entries(modeBuckets)
+            .map(([modeLabel, cycles]) => `${modeLabel} for ${cycles.join(', ')}`);
+
+        statusText = statusSegments.length === 1
+            ? `Today is <strong>${statusSegments[0]}</strong>.`
+            : `Today is <strong>${statusSegments.join('</strong> and <strong>')}</strong>.`;
+    };
 
     const optionsHtml = ['<option value="">All Subjects</option>']
         .concat(timelineSubjects.map(subject =>
