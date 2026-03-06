@@ -1639,7 +1639,8 @@ window.reset_single_password = async (studentId) => {
     }
 
     const generated = SecurePasswordGenerator.generate(12, 1, 1, 1, 1, 0);
-	const tempPass = generated.password;
+	//const tempPass = generated.password;
+	const tempass = "password123";
 	const confirmation = confirm(`Reset password for ${studentId} to '${tempPass}'?`);
     if (!confirmation) return false;
 
@@ -1651,7 +1652,8 @@ window.reset_single_password = async (studentId) => {
 
     if (res.ok) {
 		const copied = await copyToClipboard(tempPass);
-        alert((res.message || 'Password reset successful.') + (copied ? '\n\nGenerated password copied to clipboard.' : '\n\nCould not auto-copy. Please copy it manually.'));
+        //alert((res.message || 'Password reset successful.') + (copied ? '\n\nGenerated password copied to clipboard.' : '\n\nCould not auto-copy. Please copy it manually.'));
+		alert((res.message || 'Password reset successful.') + (copied ? '\n\nNew password copied to clipboard.' : '\n\nCould not auto-copy. Please copy it manually.'));
 	    return true;
     }
 	
