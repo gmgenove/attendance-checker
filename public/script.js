@@ -1640,7 +1640,7 @@ window.reset_single_password = async (studentId) => {
 
     const generated = SecurePasswordGenerator.generate(12, 1, 1, 1, 1, 0);
 	//const tempPass = generated.password;
-	const tempass = "password123";
+	const tempPass = "password123";
 	const confirmation = confirm(`Reset password for ${studentId} to '${tempPass}'?`);
     if (!confirmation) return false;
 
