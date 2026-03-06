@@ -1639,8 +1639,7 @@ window.reset_single_password = async (studentId) => {
     }
 
     const generated = SecurePasswordGenerator.generate(12, 1, 1, 1, 1, 0);
-	//const tempPass = generated.password;
-	const tempPass = "password123";
+	const tempPass = generated.password;	//const tempPass = "password123";
 	const confirmation = confirm(`Reset password for ${studentId} to '${tempPass}'?`);
     if (!confirmation) return false;
 
@@ -1652,8 +1651,7 @@ window.reset_single_password = async (studentId) => {
 
     if (res.ok) {
 		const copied = await copyToClipboard(tempPass);
-        //alert((res.message || 'Password reset successful.') + (copied ? '\n\nGenerated password copied to clipboard.' : '\n\nCould not auto-copy. Please copy it manually.'));
-		alert((res.message || 'Password reset successful.') + (copied ? '\n\nNew password copied to clipboard.' : '\n\nCould not auto-copy. Please copy it manually.'));
+        alert((res.message || 'Password reset successful.') + (copied ? '\n\nGenerated password copied to clipboard.' : '\n\nCould not auto-copy. Please copy it manually.'));
 	    return true;
     }
 	
@@ -1894,20 +1892,20 @@ class SecurePasswordGenerator {
      * Combines Math.random and Crypto.getRandomValues for security
      */
     static randomInt(n) {
-        let x = Math.floor(Math.random() * n); // Low security source, always available
-        
-        // High security source (Web Crypto API)
         const cryptoObj = window.crypto || window.msCrypto;
-        if (cryptoObj && cryptoObj.getRandomValues) {
-            let cryptoRoll = new Uint32Array(1);
-            do {
-                cryptoObj.getRandomValues(cryptoRoll);
-            } while (cryptoRoll[0] - (cryptoRoll[0] % n) > 4294967296 - n);
-            
-            x = (x + (cryptoRoll[0] % n)) % n; // Mix both sources
+        if (!cryptoObj || !cryptoObj.getRandomValues) {
+            throw new Error('Secure random generator is unavailable in this browser.');
         }
-        
-        return x;
+
+		const cryptoRoll = new Uint32Array(1);
+        const maxUInt32 = 2 ** 32;
+        const limit = maxUInt32 - (maxUInt32 % n);
+
+        do {
+            cryptoObj.getRandomValues(cryptoRoll);
+        } while (cryptoRoll[0] >= limit);
+
+        return cryptoRoll[0] % n;
     }
 	
 	/*
