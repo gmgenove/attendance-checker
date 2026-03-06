@@ -768,7 +768,13 @@ app.post('/api', async (req, res) => {
 	      return res.json({ ok: false, error: 'Missing reset details.' });
 	    }
 	    const hashed = await bcrypt.hash(password, 10);
-	    await pool.query("UPDATE sys_users SET password_hash = $1 WHERE user_id = $2 AND user_role = 'student' AND user_status = TRUE", [hashed, target_user_id]);
+	    const resetResult = await pool.query(
+	      "UPDATE sys_users SET password_hash = $1 WHERE user_id = $2 AND user_role IN ('student', 'officer') AND user_status = TRUE",
+	      [hashed, target_user_id]
+	    );
+	    if (resetResult.rowCount === 0) {
+	      return res.json({ ok: false, error: 'User not found or role is not eligible for reset.' });
+	    }
 	    return res.json({ ok: true, message: "Password reset for " + target_user_id });
 	  }
 
