@@ -436,7 +436,7 @@ async function loadOfficerAuditTrail() {
             ? `${normalizedActorName}${normalizedActorId ? `<div class="small muted">${normalizedActorId}</div>` : ''}`
             : (normalizedActorId || '-');
         const reason = record.reason || '-';
-		const date_time = record.class_date ? record.class_date + "/" + luxon.DateTime.fromFormat(record.time_in, 'hh:mm:ss a') : luxon.DateTime.fromFormat(record.time_in, 'hh:mm:ss a');
+		const date_time = record.class_date ? record.class_date + "/" + record.time_in : record.time_in;
         return `
             <tr>
                 <td>${date_time}</td>
