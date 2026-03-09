@@ -432,19 +432,21 @@ async function loadOfficerAuditTrail() {
         const className = auditLookup.classes.get(record.class_code) || '';
 		const normalizedActorId = normalizeAuditField(record.actor_id);
         const normalizedActorName = normalizeAuditField(record.actor_name);
+		const date_time = new Date(record.class_date ? record.class_date + " " + record.time_in : record.time_in).toLocaleString();
         const actorDisplay = normalizedActorName
             ? `${normalizedActorName}${normalizedActorId ? `<div class="small muted">${normalizedActorId}</div>` : ''}`
             : (normalizedActorId || '-');
         const reason = record.reason || '-';
         return `
             <tr>
-                <td>${stamp}</td>
+                <td>${date_time}</td>
                 <td>${studentName}<div class="small muted">${record.student_id}</div></td>
                 <td>${record.class_code}${className ? `<div class="small muted">${className}</div>` : ''}</td>
                 <td>${record.event_type || '-'}</td>
                 <td>${record.attendance_status || '-'}</td>
                 <td>${actorDisplay}</td>
                 <td>${reason}</td>
+				<td>${stamp}</td>
             </tr>
         `;
     }).join('');
