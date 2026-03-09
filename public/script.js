@@ -432,11 +432,11 @@ async function loadOfficerAuditTrail() {
         const className = auditLookup.classes.get(record.class_code) || '';
 		const normalizedActorId = normalizeAuditField(record.actor_id);
         const normalizedActorName = normalizeAuditField(record.actor_name);
-		const date_time = record.class_date ? record.class_date + "/" + DateTime.fromFormat(record.time_in, 'hh:mm:ss a') : DateTime.fromFormat(record.time_in, 'hh:mm:ss a');
         const actorDisplay = normalizedActorName
             ? `${normalizedActorName}${normalizedActorId ? `<div class="small muted">${normalizedActorId}</div>` : ''}`
             : (normalizedActorId || '-');
         const reason = record.reason || '-';
+		const date_time = record.class_date ? record.class_date + "/" + luxon.DateTime.fromFormat(record.time_in, 'hh:mm:ss a') : luxon.DateTime.fromFormat(record.time_in, 'hh:mm:ss a');
         return `
             <tr>
                 <td>${date_time}</td>
