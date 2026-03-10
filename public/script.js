@@ -436,10 +436,10 @@ async function loadOfficerAuditTrail() {
             ? `${normalizedActorName}${normalizedActorId ? `<div class="small muted">${normalizedActorId}</div>` : ''}`
             : (normalizedActorId || '-');
         const reason = record.reason || '-';
-		const date_time = record.class_date ? record.class_date + "/" + record.time_in : record.time_in;
+		const dateTimeString = new Date(record.class_date.split("T")[0] + "T" + record.time_in).toLocaleString("en-US", { hour12: true });
         return `
             <tr>
-                <td>${date_time}</td>
+                <td>${dateTimeString}</td>
                 <td>${studentName}<div class="small muted">${record.student_id}</div></td>
                 <td>${record.class_code}${className ? `<div class="small muted">${className}</div>` : ''}</td>
                 <td>${record.event_type || '-'}</td>
