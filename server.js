@@ -1937,11 +1937,20 @@ const autoTagAbsentees = async () => {
             INSERT INTO attendance (class_date, class_code, student_id, attendance_status, reason, time_in)
             SELECT $1, $2, u.user_id, 'HOLIDAY', $3, '00:00:00'
             FROM sys_users u
-            WHERE u.user_role IN ('student', 'officer') AND u.user_status = TRUE
-            AND NOT EXISTS (
-              SELECT 1 FROM attendance a 
-              WHERE a.class_date = $1::date AND a.class_code = $2 AND a.student_id = u.user_id AND u.user_status = TRUE
-            )
+			WHERE u.user_role IN ('student', 'officer')
+              AND u.user_status = TRUE
+              AND NOT EXISTS (
+                SELECT 1
+                FROM attendance exclusions
+                WHERE exclusions.class_code = $2
+                  AND exclusions.student_id = u.user_id
+                  AND exclusions.class_date <= $1::date
+                  AND exclusions.attendance_status IN ('DROPPED', 'CREDITED')
+              )
+              AND NOT EXISTS (
+                SELECT 1 FROM attendance a
+                WHERE a.class_date = $1::date AND a.class_code = $2 AND a.student_id = u.user_id
+              )
             RETURNING class_date, class_code, student_id, attendance_status, reason, time_in
           )
           INSERT INTO attendance_transactions
@@ -1970,11 +1979,20 @@ const autoTagAbsentees = async () => {
             INSERT INTO attendance (class_date, class_code, student_id, attendance_status, reason, time_in)
             SELECT $1, $2, u.user_id, 'ASYNCHRONOUS', 'Scheduled Asynchronous Week', '00:00:00'
             FROM sys_users u
-            WHERE u.user_role IN ('student', 'officer') AND u.user_status = TRUE
-            AND NOT EXISTS (
-              SELECT 1 FROM attendance a 
-              WHERE a.class_date = $1::date AND a.class_code = $2 AND a.student_id = u.user_id
-            )
+            WHERE u.user_role IN ('student', 'officer')
+              AND u.user_status = TRUE
+              AND NOT EXISTS (
+                SELECT 1
+                FROM attendance exclusions
+                WHERE exclusions.class_code = $2
+                  AND exclusions.student_id = u.user_id
+                  AND exclusions.class_date <= $1::date
+                  AND exclusions.attendance_status IN ('DROPPED', 'CREDITED')
+              )
+              AND NOT EXISTS (
+                SELECT 1 FROM attendance a
+                WHERE a.class_date = $1::date AND a.class_code = $2 AND a.student_id = u.user_id
+              )
             RETURNING class_date, class_code, student_id, attendance_status, reason, time_in
           )
           INSERT INTO attendance_transactions
@@ -2005,11 +2023,20 @@ const autoTagAbsentees = async () => {
             INSERT INTO attendance (class_date, class_code, student_id, attendance_status, time_in)
             SELECT $1, $2, u.user_id, 'ABSENT', '00:00:00'
             FROM sys_users u
-            WHERE u.user_role IN ('student', 'officer') AND u.user_status = TRUE
-            AND NOT EXISTS (
-              SELECT 1 FROM attendance a 
-              WHERE a.class_date = $1::date AND a.class_code = $2 AND a.student_id = u.user_id AND u.user_status = TRUE
-            )
+            WHERE u.user_role IN ('student', 'officer')
+              AND u.user_status = TRUE
+              AND NOT EXISTS (
+                SELECT 1
+                FROM attendance exclusions
+                WHERE exclusions.class_code = $2
+                  AND exclusions.student_id = u.user_id
+                  AND exclusions.class_date <= $1::date
+                  AND exclusions.attendance_status IN ('DROPPED', 'CREDITED')
+              )
+              AND NOT EXISTS (
+                SELECT 1 FROM attendance a
+                WHERE a.class_date = $1::date AND a.class_code = $2 AND a.student_id = u.user_id
+              )
             RETURNING class_date, class_code, student_id, attendance_status, reason, time_in
           )
           INSERT INTO attendance_transactions
