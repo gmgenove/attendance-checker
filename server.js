@@ -60,6 +60,23 @@ const hasAssignedProfessor = async (classCode, semConfig) => {
   return { found: true, assigned: Boolean(result.rows[0].professor_id) };
 };
 
+const isClassInAsynchronousCycle = async (classCode, classDate, semConfig) => {
+  const result = await pool.query(
+    `SELECT ac.cycle_status
+     FROM schedules s
+     LEFT JOIN academic_cycles ac ON s.cycle_name = ac.cycle_name
+       AND $2::date BETWEEN ac.start_date AND ac.end_date
+     WHERE s.class_code = $1
+       AND s.semester = $3
+       AND s.academic_year = $4
+     LIMIT 1`,
+    [classCode, classDate, semConfig.sem, semConfig.year]
+  );
+
+  if (result.rows.length === 0) return false;
+  return result.rows[0].cycle_status === 'ASYNCHRONOUS';
+};
+
 const getClassWideStatusForDate = async (classCode, classDate) => {
   const result = await pool.query(
     `SELECT attendance_status, reason
@@ -308,10 +325,18 @@ app.post('/api', async (req, res) => {
 			}
 
 			const classWideStatus = await getClassWideStatusForDate(class_code, dateStr);
-			if (classWideStatus && classWideStatus.attendance_status !== 'ASYNCHRONOUS') {
+			if (classWideStatus) {
 			  return res.json({
 			    ok: false,
 			    error: `Check-in unavailable: class is marked ${classWideStatus.attendance_status.toLowerCase()}.`
+			  });
+			}
+
+			const isAsyncCycleToday = await isClassInAsynchronousCycle(class_code, dateStr, semConfig);
+			if (isAsyncCycleToday) {
+			  return res.json({
+			    ok: false,
+			    error: 'Check-in unavailable: class is marked asynchronous.'
 			  });
 			}
 			// A. Check for existing attendance (Duplicate Prevention)
@@ -2009,8 +2034,9 @@ const autoTagAbsentees = async () => {
   }
 };
 
-// Run check every 30 minutes
-setInterval(autoTagAbsentees, 30 * 60 * 1000);
+// Run once at startup, then keep maintenance tight to catch multiple same-day classes.
+autoTagAbsentees();
+setInterval(autoTagAbsentees, 5 * 60 * 1000);	// Run check every 5 minutes
 
 // global fallback
 app.use((err, req, res, next) => {
