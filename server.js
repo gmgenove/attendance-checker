@@ -98,6 +98,29 @@ const getClassWideStatusForDate = async (classCode, classDate) => {
   return result.rows[0] || null;
 };
 
+const syncAttendanceTransactionSequence = async () => {
+  await pool.query(`
+    SELECT setval(
+      pg_get_serial_sequence('attendance_transactions', 'transaction_id'),
+      COALESCE((SELECT MAX(transaction_id) FROM attendance_transactions), 0) + 1,
+      false
+    )
+  `);
+};
+
+const runAutoTagInsert = async (sql, params) => {
+  try {
+    await pool.query(sql, params);
+  } catch (err) {
+    if (err.code !== '23505' || !String(err.constraint || '').includes('attendance_transactions_pkey')) {
+      throw err;
+    }
+
+    await syncAttendanceTransactionSequence();
+    await pool.query(sql, params);
+  }
+};
+
 const logAttendanceTransaction = async ({
   classDate,
   classCode,
@@ -134,14 +157,7 @@ const logAttendanceTransaction = async ({
       throw err;
     }
 
-    await pool.query(`
-      SELECT setval(
-        pg_get_serial_sequence('attendance_transactions', 'transaction_id'),
-        COALESCE((SELECT MAX(transaction_id) FROM attendance_transactions), 0) + 1,
-        false
-      )
-    `);
-
+    await syncAttendanceTransactionSequence();
     await pool.query(insertSql, values);
   }
 };
@@ -1932,7 +1948,7 @@ const autoTagAbsentees = async () => {
       // A. AUTOMATIC HOLIDAY TAGGING
       if (isHoliday) {
         // Tag everyone as HOLIDAY for this class if not already tagged
-        await pool.query(`
+        await runAutoTagInsert(`
           WITH inserted AS (
             INSERT INTO attendance (class_date, class_code, student_id, attendance_status, reason, time_in)
             SELECT $1, $2, u.user_id, 'HOLIDAY', $3, '00:00:00'
@@ -1974,7 +1990,7 @@ const autoTagAbsentees = async () => {
 
       // B. ASYNCHRONOUS CYCLE TAGGING: If the cycle status for this specific date is 'ASYNCHRONOUS'
 	  if (!inAdjustmentPeriod && sched.cycle_status === 'ASYNCHRONOUS') {
-        await pool.query(`
+        await runAutoTagInsert(`
           WITH inserted AS (
             INSERT INTO attendance (class_date, class_code, student_id, attendance_status, reason, time_in)
             SELECT $1, $2, u.user_id, 'ASYNCHRONOUS', 'Scheduled Asynchronous Week', '00:00:00'
@@ -2018,7 +2034,7 @@ const autoTagAbsentees = async () => {
       //if (!inAdjustmentPeriod && now > classEnd.plus({ minutes: 30 })) {
 	  if (now > classEnd.plus({ minutes: 30 })) {
         // Mark missing students as ABSENT
-        await pool.query(`
+        await runAutoTagInsert(`
           WITH inserted AS (
             INSERT INTO attendance (class_date, class_code, student_id, attendance_status, time_in)
             SELECT $1, $2, u.user_id, 'ABSENT', '00:00:00'
