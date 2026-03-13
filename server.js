@@ -93,12 +93,40 @@ const logAttendanceTransaction = async ({
   details = null,
   transactionTime = getManilaTimestamp()
 }) => {
-  await pool.query(
-    `INSERT INTO attendance_transactions
-      (class_date, class_code, student_id, event_type, attendance_status, reason, time_in, actor_id, details, transaction_time)
-     VALUES ($1::date, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10::timestamptz)`,
-    [classDate, classCode, studentId, eventType, status, reason, timeIn, actorId, details ? JSON.stringify(details) : null, transactionTime]
-  );
+  const values = [
+    classDate,
+    classCode,
+    studentId,
+    eventType,
+    status,
+    reason,
+    timeIn,
+    actorId,
+    details ? JSON.stringify(details) : null,
+    transactionTime
+  ];
+
+  const insertSql = `INSERT INTO attendance_transactions
+    (class_date, class_code, student_id, event_type, attendance_status, reason, time_in, actor_id, details, transaction_time)
+   VALUES ($1::date, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10::timestamptz)`;
+
+  try {
+    await pool.query(insertSql, values);
+  } catch (err) {
+    if (err.code !== '23505' || !String(err.constraint || '').includes('attendance_transactions_pkey')) {
+      throw err;
+    }
+
+    await pool.query(`
+      SELECT setval(
+        pg_get_serial_sequence('attendance_transactions', 'transaction_id'),
+        COALESCE((SELECT MAX(transaction_id) FROM attendance_transactions), 0) + 1,
+        false
+      )
+    `);
+
+    await pool.query(insertSql, values);
+  }
 };
 
 const makeupCache = {}; // Prevents redundant DB hits during a single report run
