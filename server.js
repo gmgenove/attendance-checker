@@ -1603,12 +1603,12 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
             //page.drawText(dateObj.toFormat('MM-dd'), { x: xPos + 5, y: y - 15, size: 6, font, rotate: degrees(-90) });	// Vertical Date (MM-dd)
         });
 
-        const totalX = startX + (Math.min(sortedDates.length, 35) * colWidth) + 5;
+        const totalX = startX + (Math.min(sortedDates.length, 35) * colWidth) + 2;
         page.drawText('P', { x: totalX, y, size: 7, font: bold });
-        page.drawText('L', { x: totalX + 15, y, size: 7, font: bold });
-        page.drawText('A', { x: totalX + 30, y, size: 7, font: bold });
-        page.drawText('%', { x: totalX + 45, y, size: 7, font: bold });
-		y -= 23; // Space for the rotated dates
+        page.drawText('L', { x: totalX + 12, y, size: 7, font: bold });
+        page.drawText('A', { x: totalX + 24, y, size: 7, font: bold });
+        page.drawText('%', { x: totalX + 36, y, size: 7, font: bold });
+		y -= 18; // Compact spacing for date headers + totals
         page.drawLine({ start: { x: 25, y: y + 5 }, end: { x: 980, y: y + 5 }, thickness: 1 });
 
         // 3. DRAW SUBJECT ROWS
@@ -1624,7 +1624,7 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
                 page.drawText('--- SUBJECT CREDITED / EXEMPTED ---', { 
                     x: startX, y, size: 7, font: bold, color: rgb(0.1, 0.4, 0.7) 
                 });
-                page.drawText('100%', { x: totalX + 15, y, size: 7, font: bold });
+                page.drawText('100%', { x: totalX + 18, y, size: 7, font: bold });
             } else {
                 sortedDates.slice(0, 35).forEach((dStr, i) => {
                     const status = sub.records[dStr] || '';
@@ -1648,13 +1648,13 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
                 const perc = totalPossible > 0 ? Math.round((presentTotal / totalPossible) * 100) : 0;
 
                 page.drawText(`${c.P || 0}`, { x: totalX, y, size: 7, font });
-                page.drawText(`${c.L || 0}`, { x: totalX + 15, y, size: 7, font });
-                page.drawText(`${c.A || 0}`, { x: totalX + 30, y, size: 7, font });
-                page.drawText(`${perc}%`, { x: totalX + 45, y, size: 7, font: bold });
+                page.drawText(`${c.L || 0}`, { x: totalX + 12, y, size: 7, font });
+                page.drawText(`${c.A || 0}`, { x: totalX + 24, y, size: 7, font });
+                page.drawText(`${perc}%`, { x: totalX + 36, y, size: 7, font: bold });
             }
             page.drawLine({ start: { x: 20, y: y - 2 }, end: { x: 990, y: y - 2 }, thickness: 0.1, color: rgb(0.8, 0.8, 0.8) });
         });
-        y -= 30; // Gap between different schedule blocks
+        y -= 18; // Reduced gap between different schedule blocks
     }
 
     // --- FOOTER SECTION ---
