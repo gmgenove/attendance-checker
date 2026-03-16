@@ -551,7 +551,15 @@ app.post('/api', async (req, res) => {
 	    if (semConfig.sem === "None") return res.json({ ok: false, error: "No active semester found." });
 	
 	    if (type === 'class') {
-	        const classInfo = await pool.query(`SELECT * FROM schedules WHERE class_code = $1 AND semester = $2 AND academic_year = $3`, [class_code, semConfig.sem, semConfig.year]);
+			const classInfo = await pool.query(
+	          `SELECT s.*, u.user_name AS professor_name
+	           FROM schedules s
+	           LEFT JOIN sys_users u ON s.professor_id = u.user_id
+	           WHERE s.class_code = $1
+	             AND s.semester = $2
+	             AND s.academic_year = $3`,
+	          [class_code, semConfig.sem, semConfig.year]
+	        );
 	        if (classInfo.rows.length === 0) return res.json({ ok: false, error: "Class not found." });
 	        const info = classInfo.rows[0];
 			if (!info.professor_id) {
@@ -565,8 +573,19 @@ app.post('/api', async (req, res) => {
 	           FROM attendance
 	           WHERE class_code = $1
 	             AND class_date < $2::date
-	             AND attendance_status NOT IN ('CANCELLED', 'HOLIDAY', 'SUSPENDED')`,
+	             AND attendance_status NOT IN ('CANCELLED', 'HOLIDAY', 'SUSPENDED', 'ASYNCHRONOUS')`,
 	          [class_code, today.toISODate()]
+	        );
+
+			const asynchronousDatesResult = await pool.query(
+	          `SELECT DISTINCT class_date
+	           FROM attendance
+	           WHERE class_code = $1
+	             AND attendance_status = 'ASYNCHRONOUS'`,
+	          [class_code]
+	        );
+	        const asynchronousDates = new Set(
+	          asynchronousDatesResult.rows.map(r => DateTime.fromJSDate(r.class_date).toISODate())
 	        );
 	        const occurredPastDates = new Set(
 	          occurredPastDatesResult.rows.map(r => DateTime.fromJSDate(r.class_date).toISODate())
@@ -578,7 +597,7 @@ app.post('/api', async (req, res) => {
 	              const currentDateIso = curr.toISODate();
 	              const isFutureOrToday = curr >= today;
 	              const didOccurInPast = occurredPastDates.has(currentDateIso);
-	              if (isFutureOrToday || didOccurInPast) {
+	              if ((isFutureOrToday || didOccurInPast) && !asynchronousDates.has(currentDateIso)) {
 	                classDates.push(curr);
 	              }
 	            }
