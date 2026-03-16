@@ -1659,7 +1659,7 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
     }
 
     // --- FOOTER SECTION ---
-	page.drawText('LEGEND: P-Present | L-Late | A-Absent | E-Excuse | Cr-Credited | D-Dropped | *-Make-up Session', { x: 20, y: 30, size: 6, font })
+	page.drawText('LEGEND: P-Present | L-Late | A-Absent | E-Excuse | Cr-Credited | D-Dropped | As-Asynchronous | *-Make-up Session', { x: 20, y: 30, size: 6, font })
     /*const footerY = 80;
     page.drawText('LEGEND: P-Present | L-Late | A-Absent | H-Holiday | S-Suspended | Cr-Credited | *-Make-up', { x: 40, y: footerY + 30, size: 7, font });
     page.drawLine({ start: { x: 40, y: footerY }, end: { x: 250, y: footerY }, thickness: 0.5 });
@@ -1844,7 +1844,6 @@ const initDb = async () => {
 	  remarks TEXT,
       PRIMARY KEY (class_date, class_code, student_id)
     );
-
 
 	CREATE TABLE IF NOT EXISTS attendance_transactions (
       transaction_id BIGSERIAL PRIMARY KEY,
