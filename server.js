@@ -1658,7 +1658,7 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
     }
 
     // --- FOOTER SECTION ---
-	page.drawText('LEGEND: P-Present | L-Late | A-Absent | E-Excuse | Cr-Credited | D-Dropped | *-Make-up Session', { x: 20, y: 30, size: 6, font })
+	page.drawText('LEGEND: P-Present | L-Late | A-Absent | E-Excuse | Cr-Credited | D-Dropped | As-Asynchronous | *-Make-up Session', { x: 20, y: 30, size: 6, font })
     /*const footerY = 80;
     page.drawText('LEGEND: P-Present | L-Late | A-Absent | H-Holiday | S-Suspended | Cr-Credited | *-Make-up', { x: 40, y: footerY + 30, size: 7, font });
     page.drawLine({ start: { x: 40, y: footerY }, end: { x: 250, y: footerY }, thickness: 0.5 });
@@ -1727,6 +1727,7 @@ async function appendExcuseLogPage(pdfDoc, title, excuses, font, bold, secondary
     if (y < 60) { page = pdfDoc.addPage([1008, 612]); y = drawHeaders(page); }
 
     if (isClassWide) {	// RENDER SINGLE CLASS-WIDE ROW
+	  if (title === "STUDENT EXCUSE LOG" && first.attendance_status === "ASYNCHRONOUS") continue;
       page.drawText(dateStr, { x: 30, y, size: 9, font: bold });
       page.drawText(`CLASS-WIDE: ${first.attendance_status}`, { x: 150, y, size: 9, font: bold });
       page.drawText(first.reason || "Scheduled Event", { x: 450, y, size: 9, font });
