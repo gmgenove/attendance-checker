@@ -1466,15 +1466,16 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
     const xPos = startX + (i * colWidth);
 	const isMakeupDay = makeupDateSet.has(d.toISODate()); // Helper to check attendance table
     page.drawText(`D${i+1}${isMakeupDay ? '*' : ''}`, { x: xPos, y, size: 7, font: bold });
-    page.drawText(d.toFormat('MM/dd'), { x: xPos, y: y - 8, size: 5, font });
+	page.drawText(dateObj.toFormat('ccc'), { x: xPos, y: y - 8, size: 6, font });	// Day Name (Tue, Wed, etc.)
+    page.drawText(d.toFormat('MM/dd'), { x: xPos, y: y - 15, size: 6, font });
   });
 
   // TOTALS HEADER
-  const totalX = startX + (35 * colWidth) + 5;
+  const totalX = startX + (35 * colWidth) + 2;
   page.drawText('P', { x: totalX, y, size: 8, font: bold });
-  page.drawText('L', { x: totalX + 20, y, size: 8, font: bold });
-  page.drawText('A', { x: totalX + 40, y, size: 8, font: bold });
-  page.drawText('%', { x: totalX + 60, y, size: 8, font: bold });
+  page.drawText('L', { x: totalX + 14, y, size: 8, font: bold });
+  page.drawText('A', { x: totalX + 28, y, size: 8, font: bold });
+  page.drawText('%', { x: totalX + 42, y, size: 8, font: bold });
 
   y -= 20;
   page.drawLine({ start: { x: 20, y }, end: { x: 990, y }, thickness: 0.5 });
@@ -1524,9 +1525,9 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
 
 	// Draw Totals
 	page.drawText(`${presentTotal}`, { x: totalX, y, size: 7, font });
-	page.drawText(`${c.L}`, { x: totalX + 20, y, size: 7, font });
-	page.drawText(`${c.A}`, { x: totalX + 40, y, size: 7, font });
-	page.drawText(`${perc}%`, { x: totalX + 60, y, size: 7, font: bold });
+	page.drawText(`${c.L}`, { x: totalX + 14, y, size: 7, font });
+	page.drawText(`${c.A}`, { x: totalX + 28, y, size: 7, font });
+	page.drawText(`${perc}%`, { x: totalX + 42, y, size: 7, font: bold });
     
     // Horizontal row line
     page.drawLine({ start: { x: 20, y: y - 2 }, end: { x: 990, y: y - 2 }, thickness: 0.1, color: rgb(0.8, 0.8, 0.8) });
