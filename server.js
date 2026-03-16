@@ -1531,7 +1531,7 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
     // Horizontal row line
     page.drawLine({ start: { x: 20, y: y - 2 }, end: { x: 990, y: y - 2 }, thickness: 0.1, color: rgb(0.8, 0.8, 0.8) });
 	// Footer Legend
-    page.drawText('LEGEND: P-Present | L-Late | A-Absent | E-Excuse | H-Holiday | C-Cancelled | S-Suspended | D-Dropped | Cr-Credited | As-Asynchronous | *-Make-up Session', { x: 20, y: 30, size: 6, font })
+    page.drawText('LEGEND: P-Present | L-Late | A-Absent | E-Excuse | D-Dropped | *-Make-up Session', { x: 20, y: 30, size: 6, font })
   });
 }
 
@@ -1658,7 +1658,7 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
     }
 
     // --- FOOTER SECTION ---
-	page.drawText('LEGEND: P-Present | L-Late | A-Absent | E-Excuse | H-Holiday | C-Cancelled | S-Suspended | D-Dropped | Cr-Credited | As-Asynchronous | *-Make-up Session', { x: 20, y: 30, size: 6, font })
+	page.drawText('LEGEND: P-Present | L-Late | A-Absent | E-Excuse | D-Dropped | *-Make-up Session', { x: 20, y: 30, size: 6, font })
     /*const footerY = 80;
     page.drawText('LEGEND: P-Present | L-Late | A-Absent | H-Holiday | S-Suspended | Cr-Credited | *-Make-up', { x: 40, y: footerY + 30, size: 7, font });
     page.drawLine({ start: { x: 40, y: footerY }, end: { x: 250, y: footerY }, thickness: 0.5 });
