@@ -1466,7 +1466,7 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
     const xPos = startX + (i * colWidth);
 	const isMakeupDay = makeupDateSet.has(d.toISODate()); // Helper to check attendance table
     page.drawText(`D${i+1}${isMakeupDay ? '*' : ''}`, { x: xPos, y, size: 7, font: bold });
-	page.drawText(dateObj.toFormat('ccc'), { x: xPos, y: y - 8, size: 6, font });	// Day Name (Tue, Wed, etc.)
+	page.drawText(d.toFormat('ccc'), { x: xPos, y: y - 8, size: 6, font });	// Day Name (Tue, Wed, etc.)
     page.drawText(d.toFormat('MM/dd'), { x: xPos, y: y - 15, size: 6, font });
   });
 
