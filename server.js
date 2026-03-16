@@ -687,6 +687,7 @@ app.post('/api', async (req, res) => {
 		        };
 		    }
 		    const dStr = DateTime.fromJSDate(r.class_date).toISODate();
+			if (r.attendance_status === 'ASYNCHRONOUS') return;
 		    
 		    // Character Mapping Consistency
 		    let statusChar = r.attendance_status[0].toUpperCase();
@@ -695,7 +696,6 @@ app.post('/api', async (req, res) => {
 		    if (r.attendance_status === 'CANCELLED') statusChar = 'C';
 			if (r.attendance_status === 'DROPPED') statusChar = 'D';
 			if (r.attendance_status === 'CREDITED') statusChar = 'Cr';
-			if (r.attendance_status === 'ASYNCHRONOUS') statusChar = 'As';
 		
 		    subjects[r.class_code].records[dStr] = statusChar;
 		    if (subjects[r.class_code].counts[statusChar] !== undefined) {
@@ -709,12 +709,23 @@ app.post('/api', async (req, res) => {
 	             FROM attendance
 	             WHERE class_code = $1
 	               AND class_date < $2::date
-	               AND attendance_status NOT IN ('CANCELLED', 'HOLIDAY', 'SUSPENDED')`,
+	               AND attendance_status NOT IN ('CANCELLED', 'HOLIDAY', 'SUSPENDED', 'ASYNCHRONOUS')`,
 	            [schedule.class_code, today.toISODate()]
 	          );
-	
+
+			  const asynchronousDatesResult = await pool.query(
+	            `SELECT DISTINCT class_date
+	             FROM attendance
+	             WHERE class_code = $1
+	               AND attendance_status = 'ASYNCHRONOUS'`,
+	            [schedule.class_code]
+	          );
+
 	          const occurredPastDates = new Set(
 	            occurredPastDatesResult.rows.map(r => DateTime.fromJSDate(r.class_date).toISODate())
+	          );
+			  const asynchronousDates = new Set(
+	            asynchronousDatesResult.rows.map(r => DateTime.fromJSDate(r.class_date).toISODate())
 	          );
 	
 	          let curr = semConfig.start;
@@ -723,7 +734,7 @@ app.post('/api', async (req, res) => {
 	              const dateIso = curr.toISODate();
 	              const isFutureOrToday = curr >= today;
 	              const didOccurInPast = occurredPastDates.has(dateIso);
-	              if (isFutureOrToday || didOccurInPast) {
+	              if ((isFutureOrToday || didOccurInPast) && !asynchronousDates.has(dateIso)) {
 	                if (subjects[schedule.class_code].records[dateIso] === undefined) {
 	                  subjects[schedule.class_code].records[dateIso] = '';
 	                }
