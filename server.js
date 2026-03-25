@@ -629,6 +629,7 @@ app.post('/api', async (req, res) => {
                  r.attendance_status === 'DROPPED' ? 'D' :
 				 r.attendance_status === 'CREDITED' ? 'Cr' :
 				 r.attendance_status === 'ASYNCHRONOUS' ? 'As' :
+				 r.attendance_status === 'PENDING' ? 'Pe' :
                  (r.attendance_status === 'EXCUSED' ? 'E' : r.attendance_status[0].toUpperCase());		// Default (P, L, A, E)
 			
 			    roster[r.student_id].records[dStr] = statusChar;
@@ -696,6 +697,7 @@ app.post('/api', async (req, res) => {
 			if (r.attendance_status === 'DROPPED') statusChar = 'D';
 			if (r.attendance_status === 'CREDITED') statusChar = 'Cr';
 			if (r.attendance_status === 'ASYNCHRONOUS') statusChar = 'As';
+			if (r.attendance_status === 'PENDING') statusChar = 'Pe';
 		
 		    subjects[r.class_code].records[dStr] = statusChar;
 		    if (subjects[r.class_code].counts[statusChar] !== undefined) {
@@ -1504,6 +1506,7 @@ async function generateClassMatrixPDF(pdfDoc, info, dates, roster, semConfig, fo
 	  if (status === 'C') statusColor = rgb(0.4, 0.4, 0.4);	  // Dark Grey (Cancelled)
 	  if (status === 'D') statusColor = rgb(0.5, 0.5, 0.5);   // Gray (Dropped)
 	  if (status === 'Cr') statusColor = rgb(0.1, 0.4, 0.7);  // Credited
+	  if (status === 'Pe') statusColor = rgb(0.85, 0.45, 0.0); // Pending
 
 	  page.drawText(status, { 
 	    x: startX + (i * colWidth), 
@@ -1637,6 +1640,7 @@ async function generateStudentMatrixPDF(pdfDoc, student, sid, subjects, sem, fon
 					if (status === 'C') color = rgb(0.4, 0.4, 0.4); // Dark Grey (Cancelled)
 					if (status === 'D') color = rgb(0.5, 0.5, 0.5); // Gray (Dropped
 					if (status === 'Cr') color = rgb(0.1, 0.4, 0.7); // Credited
+					if (status === 'Pe') color = rgb(0.85, 0.45, 0.0); // Pending
 
                     page.drawText(status, { x: startX + (i * colWidth), y, size: 7, font, color });
                 });
@@ -2053,12 +2057,16 @@ const autoTagAbsentees = async () => {
 	  // During adjustment periods, we intentionally skip strict auto-absence tagging.
       //if (!inAdjustmentPeriod && now > classEnd.plus({ minutes: 30 })) {
 	  if (now > classEnd.plus({ minutes: 30 })) {
-        // Mark missing students as ABSENT
+        // Mark missing students as ABSENT, and convert pre-authorized PENDING make-up entries to ABSENT when no check-in happened.
         await runAutoTagInsert(`
-          WITH inserted AS (
+          WITH upserted AS (
             INSERT INTO attendance (class_date, class_code, student_id, attendance_status, time_in)
             SELECT $1, $2, u.user_id, 'ABSENT', '00:00:00'
             FROM sys_users u
+			LEFT JOIN attendance existing
+              ON existing.class_date = $1::date
+             AND existing.class_code = $2
+             AND existing.student_id = u.user_id
             WHERE u.user_role IN ('student', 'officer')
               AND u.user_status = TRUE
               AND NOT EXISTS (
@@ -2069,10 +2077,16 @@ const autoTagAbsentees = async () => {
                   AND exclusions.class_date <= $1::date
                   AND exclusions.attendance_status IN ('DROPPED', 'CREDITED')
               )
-              AND NOT EXISTS (
-                SELECT 1 FROM attendance a
-                WHERE a.class_date = $1::date AND a.class_code = $2 AND a.student_id = u.user_id
+              AND (
+                existing.student_id IS NULL
+                OR existing.attendance_status = 'PENDING'
               )
+			ON CONFLICT (class_date, class_code, student_id)
+            DO UPDATE SET
+              attendance_status = 'ABSENT',
+              reason = NULL,
+              time_in = '00:00:00'
+            WHERE attendance.attendance_status = 'PENDING'
             RETURNING class_date, class_code, student_id, attendance_status, reason, time_in
           )
           INSERT INTO attendance_transactions
@@ -2086,9 +2100,9 @@ const autoTagAbsentees = async () => {
             reason,
             time_in,
             'SYSTEM_AUTO_TAG',
-            jsonb_build_object('source', 'autoTagAbsentees', 'mode', 'absent_after_window'),
+            jsonb_build_object('source', 'autoTagAbsentees', 'mode', 'absent_after_window', 'includes_pending_conversion', true),
             NOW()
-          FROM inserted
+          FROM upserted
         `, [dateStr, sched.class_code]);
       }
     }
