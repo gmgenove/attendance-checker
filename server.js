@@ -98,6 +98,20 @@ const getClassWideStatusForDate = async (classCode, classDate) => {
   return result.rows[0] || null;
 };
 
+const hasAuthorizedMakeupForDate = async (classCode, classDate) => {
+  const result = await pool.query(
+    `SELECT 1
+     FROM attendance
+     WHERE class_code = $1
+       AND class_date = $2::date
+       AND attendance_status = 'PENDING'
+     LIMIT 1`,
+    [classCode, classDate]
+  );
+
+  return result.rows.length > 0;
+};
+
 const syncAttendanceTransactionSequence = async () => {
   await pool.query(`
     SELECT setval(
@@ -348,8 +362,11 @@ app.post('/api', async (req, res) => {
 			  });
 			}
 
-			const isAsyncCycleToday = await isClassInAsynchronousCycle(class_code, dateStr, semConfig);
-			if (isAsyncCycleToday) {
+			const [isAsyncCycleToday, hasAuthorizedMakeupToday] = await Promise.all([
+			  isClassInAsynchronousCycle(class_code, dateStr, semConfig),
+			  hasAuthorizedMakeupForDate(class_code, dateStr)
+			]);
+			if (isAsyncCycleToday && !hasAuthorizedMakeupToday) {
 			  return res.json({
 			    ok: false,
 			    error: 'Check-in unavailable: class is marked asynchronous.'
