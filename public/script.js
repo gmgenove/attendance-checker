@@ -229,7 +229,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     // Run these on load
-    checkHolidayAndDisplay();
+    //checkHolidayAndDisplay();
     restoreSession();
 
     // Check health 2 seconds after load (to let DB server wake up)
@@ -1673,7 +1673,8 @@ async function checkGlobalStatus() {
         if (res.isHoliday) {
             // Blue theme for Holidays
             alertBox.className = "card alert-holiday"; // Blue theme for Holidays
-            title.innerHTML = `📅 Holiday: ${res.holidayName}`;
+            //title.innerHTML = `📅 Holiday: ${res.holidayName}`;
+			title.innerHTML = `🎉 ${res.holidayName}! (${res.holidayType})`;
             body.innerHTML = "Automatic holiday tagging is active for all classes today.";
         } else if (res.isSuspended || res.isCancelled) {
             // Check if the reason contains a Prof cancellation or Admin suspension
