@@ -1127,17 +1127,20 @@ app.post('/api', async (req, res) => {
 		const semConfig = await getCurrentSemConfig();
 		if (semConfig.sem === "None") return res.json({ ok: false, error: "No active semester." });
 
-		// Check if professor is already scheduled for another class on this date/time
+		// Check if professor is already assigned to another active class on this date.
+		// Exclude the selected class so an async/cancelled mark can still be converted to a make-up session.
 	    const conflictCheck = await pool.query(`
 	        SELECT s.class_name 
+	        SELECT DISTINCT s.class_name 
 	        FROM schedules s
 	        JOIN attendance a ON s.class_code = a.class_code
 	        WHERE a.class_date = $1::date AND s.professor_id = (
 	            SELECT professor_id FROM schedules WHERE class_code = $2 AND semester = $3 AND academic_year = $4
 	        ) AND s.semester = $3 AND s.academic_year = $4
+	          AND s.class_code <> $2
+	          AND a.attendance_status NOT IN ('ASYNCHRONOUS', 'CANCELLED', 'SUSPENDED', 'HOLIDAY')
 	    `, [date, class_code, semConfig.sem, semConfig.year]);
-	
-	    if (conflictCheck.rows.length > 0) {
+		if (conflictCheck.rows.length > 0) {
 	        return res.json({ 
 	            ok: false, 
 	            error: `Conflict: Professor is already assigned to ${conflictCheck.rows[0].class_name} on this date.` 
