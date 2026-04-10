@@ -1130,7 +1130,6 @@ app.post('/api', async (req, res) => {
 		// Check if professor is already assigned to another active class on this date.
 		// Exclude the selected class so an async/cancelled mark can still be converted to a make-up session.
 	    const conflictCheck = await pool.query(`
-	        SELECT s.class_name 
 	        SELECT DISTINCT s.class_name 
 	        FROM schedules s
 	        JOIN attendance a ON s.class_code = a.class_code
