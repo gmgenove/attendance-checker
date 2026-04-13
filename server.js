@@ -1156,6 +1156,7 @@ app.post('/api', async (req, res) => {
 	          AND s.class_code <> $2
 	          AND a.attendance_status NOT IN ('ASYNCHRONOUS', 'CANCELLED', 'SUSPENDED', 'HOLIDAY')
 	    `, [date, class_code, semConfig.sem, semConfig.year]);
+
 		if (conflictCheck.rows.length > 0) {
 	        return res.json({ 
 	            ok: false, 
@@ -1168,7 +1169,11 @@ app.post('/api', async (req, res) => {
 			INSERT INTO attendance (class_date, class_code, student_id, attendance_status, time_in)
 			SELECT $1, $2, user_id, 'PENDING', '00:00:00'
 			FROM sys_users WHERE user_role IN ('student', 'officer') AND user_status = TRUE
-			ON CONFLICT DO NOTHING
+			ON CONFLICT (class_date, class_code, student_id)
+			DO UPDATE SET
+			  attendance_status = 'PENDING',
+			  reason = NULL,
+			  time_in = '00:00:00'
 		`, [date, class_code]);
 
 		await logAttendanceTransaction({
@@ -1970,11 +1975,17 @@ const autoTagAbsentees = async () => {
 
     // 2. Find all classes scheduled for today + Authorized Make-up sessions
 	const schedules = await pool.query(`
-      SELECT s.*, ac.cycle_status 
-      FROM schedules s
-      LEFT JOIN academic_cycles ac ON s.cycle_name = ac.cycle_name 
-        AND $4::date BETWEEN ac.start_date AND ac.end_date
-      WHERE s.professor_id IS NOT NULL
+	      SELECT s.*, ac.cycle_status,
+	        EXISTS (
+	          SELECT 1 FROM attendance a
+	          WHERE a.class_code = s.class_code
+	            AND a.class_date = $4::date
+	            AND a.attendance_status = 'PENDING'
+	        ) AS has_makeup_session
+	      FROM schedules s
+	      LEFT JOIN academic_cycles ac ON s.cycle_name = ac.cycle_name 
+	        AND $4::date BETWEEN ac.start_date AND ac.end_date
+        WHERE s.professor_id IS NOT NULL
         AND (
           ($1 = ANY(s.days) AND s.semester = $2 AND s.academic_year = $3)
           OR EXISTS (
@@ -2032,11 +2043,40 @@ const autoTagAbsentees = async () => {
       }
 
       // B. ASYNCHRONOUS CYCLE TAGGING: If the cycle status for this specific date is 'ASYNCHRONOUS'
-	  if (!inAdjustmentPeriod && sched.cycle_status === 'ASYNCHRONOUS') {
-        await runAutoTagInsert(`
-          WITH inserted AS (
-            INSERT INTO attendance (class_date, class_code, student_id, attendance_status, reason, time_in)
-            SELECT $1, $2, u.user_id, 'ASYNCHRONOUS', 'Scheduled Asynchronous Week', '00:00:00'
+	      // but a make-up session is authorized, keep the date check-in eligible.
+		  if (!inAdjustmentPeriod && sched.cycle_status === 'ASYNCHRONOUS') {
+			if (sched.has_makeup_session) {
+			  await runAutoTagInsert(`
+			    WITH updated AS (
+			      UPDATE attendance
+			      SET attendance_status = 'PENDING',
+			          reason = NULL,
+			          time_in = '00:00:00'
+			      WHERE class_date = $1::date
+			        AND class_code = $2
+			        AND attendance_status = 'ASYNCHRONOUS'
+			      RETURNING class_date, class_code, student_id, attendance_status, reason, time_in
+			    )
+			    INSERT INTO attendance_transactions
+			      (class_date, class_code, student_id, event_type, attendance_status, reason, time_in, actor_id, details, transaction_time)
+			    SELECT
+			      class_date,
+			      class_code,
+			      student_id,
+			      'AUTO_RESTORE_MAKEUP',
+			      attendance_status,
+			      reason,
+			      time_in,
+			      'SYSTEM_AUTO_TAG',
+			      jsonb_build_object('source', 'autoTagAbsentees', 'mode', 'restore_makeup_from_async'),
+			      NOW()
+			    FROM updated
+			  `, [dateStr, sched.class_code]);
+			} else {
+	        await runAutoTagInsert(`
+	          WITH inserted AS (
+	            INSERT INTO attendance (class_date, class_code, student_id, attendance_status, reason, time_in)
+			SELECT $1, $2, u.user_id, 'ASYNCHRONOUS', 'Scheduled Asynchronous Week', '00:00:00'
             FROM sys_users u
             WHERE u.user_role IN ('student', 'officer')
               AND u.user_status = TRUE
@@ -2066,11 +2106,12 @@ const autoTagAbsentees = async () => {
             time_in,
             'SYSTEM_AUTO_TAG',
             jsonb_build_object('source', 'autoTagAbsentees', 'mode', 'asynchronous_cycle'),
-            NOW()
-          FROM inserted
-        `, [dateStr, sched.class_code]);
-        continue; // Move to next class, don't mark as absent
-      }
+                        NOW()
+	          FROM inserted
+	        `, [dateStr, sched.class_code]);
+	        continue; // Move to next class, don't mark as absent
+			}
+	      }
 
 	  // C. REGULAR ABSENTEE MAINTENANCE (Only if Synchronous or No Cycle Defined). Tag ABSENT if 30 minutes have passed since class ended. 
 	  // During adjustment periods, we intentionally skip strict auto-absence tagging.
