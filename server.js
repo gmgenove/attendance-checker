@@ -1042,15 +1042,14 @@ app.post('/api', async (req, res) => {
 		
 		// Existing check for duplicates...
 	    const existing = await pool.query(
-	        'SELECT attendance_status FROM attendance WHERE class_date = $1::date AND class_code = $2 AND student_id = $3',
+	        'SELECT attendance_status, reason FROM attendance WHERE class_date = $1::date AND class_code = $2 AND student_id = $3',
 	        [today, class_code, student_id]
 	    );
 	
-	    const inAdjustmentPeriod = isWithinAdjustmentPeriod(semConfig, now);
 		if (existing.rows.length > 0) {
-	        const existingStatus = existing.rows[0].attendance_status;
-	        const canOverrideDuringAdjustment = inAdjustmentPeriod && ['ASYNCHRONOUS', 'ABSENT', 'PENDING'].includes(existingStatus);
-	        if (!canOverrideDuringAdjustment) {
+	        const { attendance_status: existingStatus, reason: existingReason } = existing.rows[0];
+	        const hasExistingExcuse = existingStatus === 'EXCUSED' || (existingReason && existingReason.trim().length > 0);
+	        if (hasExistingExcuse) {
 	            return res.json({ ok: false, error: "Already filed for today." });
 	        }
 	    }
